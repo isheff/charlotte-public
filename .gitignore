@@ -1,3 +1,7 @@
+# Eclim makes and updates these files
+.classpath
+.project
+
 # Compiled class file
 *.class
 
