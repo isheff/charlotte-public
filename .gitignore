@@ -2,6 +2,9 @@
 .classpath
 .project
 
+# Not sure where this comes from
+workbench.xmi
+
 # Compiled class file
 *.class
 
