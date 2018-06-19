@@ -7,4 +7,140 @@ option objc_class_prefix = "CHARLOTTE";
 
 package charlotte;
 
-import "google/protobuf/any.proto";
+// To use Any: import "google/protobuf/any.proto";
+// To use Empty: import "google/protobuf/empty.proto";
+
+
+// BASIC CRYPTO PRIMITIVES
+
+message Hash {
+  oneof hashalgorithm_oneof {
+    bytes sha3 = 1;
+  }
+}
+
+message PublicKey {
+  message ElipticCurveP256 { // I suppose we may someday want to edit how we store P256s?
+    bytes byteString = 1;
+  }
+  oneof keyalgorithm_oneof {    
+    ElipticCurveP256 elipticCurveP256 = 1;
+  }
+}
+
+message CryptoId { // distinct from PublicKeys, because it might be a hash of a public key, I guess
+  oneof idtype_oneof {
+    PublicKey publicKey = 1;
+    Hash hash = 2;
+  }
+}
+
+message Signature {
+  message SignatureAlgorithmSHA256WithECDSA {
+    bytes byteString = 1;
+  }
+  CryptoId cryptoId = 1;
+  oneof signaturealgorithm_oneof {
+    SignatureAlgorithmSHA256WithECDSA sha256WithEcdsa = 2;
+  }
+}
+
+
+// BLOCKS
+
+message Reference {
+  Hash hash = 1; // the block we're referencing
+  repeated Hash availabilityAttestations = 2; // ids of avail. attestations (where to find it)
+  repeated Reference integrityAttestations = 3; // ids of relevant integrity attestations (and where to find those)
+}
+
+message IntegrityAttestation {
+  message ChainSlot {
+    Reference block = 1;
+    Reference root = 2;
+    uint64 slot = 3;
+    Reference parent = 4;
+  }
+  message SignedChainSlot { // I really wish I could make Signed a generic
+    ChainSlot chainSlot = 1;
+    Signature signature = 2;
+  }
+  oneof integrityattestationtype_oneof {
+    SignedChainSlot signedChainSlot = 1;
+  }
+}
+
+message AvailabilityAttestation {
+  message StoreForever {
+    repeated Reference block = 1;
+  }
+  message SignedStoreForever { // I really wish I could make Signed a generic
+    StoreForever storeForever = 1;
+    Signature signature = 2;
+  }
+  oneof availabilityattestationtype_oneof {
+    SignedStoreForever signedStoreForever = 1;
+  }
+}
+
+message Block {
+  oneof blocktype_oneof {
+    AvailabilityAttestation availabilityAttestation = 1;
+    IntegrityAttestation integrityAttestation = 2;
+    string str = 3; // why not?
+    // This is probably the best place for an Any type, but for now, keep it minimum
+  }
+}
+
+
+// SERVICES
+
+// a statement by a CryptoId that you can contact it at this url:port
+message SignedAddress {
+  message Address {
+    string url = 1;
+    uint32 port = 2;
+  }
+  Address address = 1;
+  Signature signature = 2;
+}
+
+// a challenge: can you prove that this channel (e.g. a TLS channel) connects to a specific cryptoID?
+message Challenge {
+  string str = 1; // should be randomly selected
+  Hash hash = 2; // specifies a hash algorithm only. need not have content.
+}
+
+// I made wrappers for all the inputs and outputs because maybe someday we'll want to expand them.
+message ChallengeInput {
+  Challenge challenge = 1;
+}
+message ResponseToChallenge {
+  Signature signature = 1;
+}
+message SendBlocksInput {
+  Block block = 1;
+}
+message SendBlocksResponse {}
+message SendAddressesInput {
+  SignedAddress address = 1;
+}
+message SendAddressesResponse {}
+
+service CharlotteNode {
+  // Using the hash algorithm provided,
+  // hash( bytestring"Response to Challenge with Hash: " concat hash(challenge.str))
+  // then sign that and return the signature.
+  // used to guarangee that an open channel (possibly TLS) corresponds to a crypto ID
+  // When using crypto IDs to do your TLS, this would not be necessary.
+  rpc ChallengeResponse(Challenge) returns (ResponseToChallenge) {}
+
+  // send blocks to this server.
+  // used for gossiping / flooding
+  rpc SendBlocks(stream SendBlocksInput) returns (stream SendBlocksResponse) {}
+
+  // Gossip addresses of known participants.
+  // Participants must sign their addresses, allowing others to put a url:port to a CryptoID.
+  rpc SendAddresses(stream SendAddressesInput) returns (stream SendAddressesResponse) {}
+}
+
