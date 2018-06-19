@@ -144,3 +144,43 @@ service CharlotteNode {
   rpc SendAddresses(stream SendAddressesInput) returns (stream SendAddressesResponse) {}
 }
 
+
+// WILBUR
+
+message AvailabilityPolicy {
+  oneof availabilitypolicytype_oneof {
+    AvailabilityAttestation fillInTheBlank = 1;
+  }
+}
+// just wrappers for the rpc input and output
+message RequestAvailabilityAttestationInput {
+  AvailabilityPolicy policy = 1;
+}
+message RequestAvailabilityAttestationResponse {
+  Reference reference = 1;
+}
+service Wilbur { // anything running a Wilbur service should also run a CharlotteNode
+  rpc RequestAvailabilityAttestation(RequestAvailabilityAttestationInput) returns (RequestAvailabilityAttestationResponse) {}
+}
+
+
+
+// FERN
+
+message IntegrityPolicy {
+  oneof integritypolicytype_oneof {
+    IntegrityAttestation fillInTheBlank = 1;
+    // Eventually, I suppose, some kind of consensus request goes in here.
+  }
+}
+// just wrappers for the RPC input and output
+message RequestIntegrityAttestationInput {
+  IntegrityPolicy policy = 1;
+}
+message RequestIntegrityAttestationResponse {
+  Reference reference = 1;
+}
+service Fern { // anything running a Fern service should also run a CharlotteNode
+  rpc RequestIntegrityAttestation(RequestIntegrityAttestationInput) returns (RequestIntegrityAttestationResponse) {}
+}
+
