@@ -116,16 +116,21 @@ message ChallengeInput {
   Challenge challenge = 1;
 }
 message ResponseToChallenge {
-  Signature signature = 1;
+  string errorMessage = 1;
+  Signature signature = 2;
 }
 message SendBlocksInput {
   Block block = 1;
 }
-message SendBlocksResponse {}
+message SendBlocksResponse {
+  string errorMessage = 1;
+}
 message SendAddressesInput {
   SignedAddress address = 1;
 }
-message SendAddressesResponse {}
+message SendAddressesResponse {
+  string errorMessage = 1;
+}
 
 service CharlotteNode {
   // Using the hash algorithm provided,
@@ -157,7 +162,8 @@ message RequestAvailabilityAttestationInput {
   AvailabilityPolicy policy = 1;
 }
 message RequestAvailabilityAttestationResponse {
-  Reference reference = 1;
+  string errorMessage = 1;
+  Reference reference = 2;
 }
 service Wilbur { // anything running a Wilbur service should also run a CharlotteNode
   rpc RequestAvailabilityAttestation(RequestAvailabilityAttestationInput) returns (RequestAvailabilityAttestationResponse) {}
@@ -178,7 +184,8 @@ message RequestIntegrityAttestationInput {
   IntegrityPolicy policy = 1;
 }
 message RequestIntegrityAttestationResponse {
-  Reference reference = 1;
+  string errorMessage = 1;
+  Reference reference = 2;
 }
 service Fern { // anything running a Fern service should also run a CharlotteNode
   rpc RequestIntegrityAttestation(RequestIntegrityAttestationInput) returns (RequestIntegrityAttestationResponse) {}
