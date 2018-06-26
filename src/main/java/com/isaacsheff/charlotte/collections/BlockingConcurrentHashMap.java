@@ -63,17 +63,52 @@ public class BlockingConcurrentHashMap<K,V> extends ConcurrentHashMap<K,V> imple
    *
    * @param key the associated key
    * @param value the value to be written to that key.
-   * @return the value written to that key. This will always be the value entered.
+   * @return the value written to that key.
    */
   @Override
   public V put(K key, V value) {
-    super.put(key, value);
+    V v = super.put(key, value);
+    fillHolder(key, value);
+    return v;
+  }
+
+  /**
+   * Put a value in the map, iff there isn't one already associated with this key.
+   * Note: In rare circumstances, a the following chain of events can occur:
+   * <ul>
+   * <li>    put(k, v1) starts                                        </li>
+   * <li>      get(k) returns v1                                      </li>
+   * <li>      put(k, v2) returns v2                                  </li>
+   * <li>      get(k, v2) returns v2                                  </li>
+   * <li>      remove(k) returns v2                                   </li>
+   * <li>      get(k) returns null                                    </li>
+   * <li>      pendingGet(k) returns v1   THIS IS THE ERRONIOUS PART  </li>
+   * <li>    put(k,v1) finishes                                       </li>
+   * </ul>
+   * This could be removed, for instance, by synchronizing this method.
+   * Basically, it's messy and inefficient to avoid this, and I don't need to.
+   * @param key the associated key
+   * @param value the value to be written ot that key
+   * @return  the value now associated with that key.
+   */
+  @Override 
+  public V putIfAbsent(K key, V value) {
+    V v = super.putIfAbsent(key, value);
+    fillHolder(key, v);
+    return v;
+  }
+
+  /**
+   * If there are threads waiting to get this value, give it to them.
+   * Removes the holder from the set of pending holders, and passes the given value to all waiting threads.
+   */
+  private void fillHolder(K key, V value) {
     ConcurrentHolder<V> holder = pendingHolders.remove(key);
     if (holder != null) {
       holder.put(value);
     }
-    return value;
   }
+
 
 
   /**
