@@ -18,7 +18,7 @@ import com.isaacsheff.charlotte.collections.BlockingConcurrentHashMap;
 import com.isaacsheff.charlotte.collections.BlockingMap;
 
 import com.isaacsheff.charlotte.proto.Block;
-import com.isaacsheff.charlotte.proto.Challenge;
+import com.isaacsheff.charlotte.proto.ChallengeInput;
 import com.isaacsheff.charlotte.proto.CharlotteNodeGrpc;
 import com.isaacsheff.charlotte.proto.CryptoId;
 import com.isaacsheff.charlotte.proto.Hash;
@@ -181,7 +181,7 @@ public class CharlotteNodeService extends CharlotteNodeGrpc.CharlotteNodeImplBas
    * @param challenge the incomming challenge
    * @param responseObserver used to send back the response
    */
-  public void challengeResponse(Challenge request, StreamObserver<ResponseToChallenge> responseObserver) {
+  public void challengeResponse(ChallengeInput request, StreamObserver<ResponseToChallenge> responseObserver) {
     responseObserver.onNext(ChallengeResponseCalculator.challengeResponse(getKeyPair(), request));
     responseObserver.onCompleted();
   }

@@ -134,11 +134,11 @@ message SendAddressesResponse {
 
 service CharlotteNode {
   // Using the hash algorithm provided,
-  // hash( bytestring"Response to Challenge with Hash: " concat hash(challenge.str))
+  // ( bytestring"Response to Challenge with Hash: " concat hash(challenge.str))
   // then sign that and return the signature.
   // used to guarangee that an open channel (possibly TLS) corresponds to a crypto ID
   // When using crypto IDs to do your TLS, this would not be necessary.
-  rpc ChallengeResponse(Challenge) returns (ResponseToChallenge) {}
+  rpc ChallengeResponse(ChallengeInput) returns (ResponseToChallenge) {}
 
   // send blocks to this server.
   // used for gossiping / flooding
