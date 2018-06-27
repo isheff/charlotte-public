@@ -1,5 +1,8 @@
 package com.isaacsheff.charlotte.node;
 
+import java.security.KeyPair;
+import java.security.Security;
+
 import com.isaacsheff.charlotte.proto.Challenge;
 import com.isaacsheff.charlotte.proto.ResponseToChallenge;
 
@@ -10,6 +13,11 @@ import com.isaacsheff.charlotte.proto.ResponseToChallenge;
 public class ChallengeResponseCalculator {
 
   /**
+   * This line is required to use bouncycastle encryption libraries.
+   */
+  static {Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());}
+
+  /**
    * TODO: do this right!.
    * <pre>
    * Using the hash algorithm provided,
@@ -18,10 +26,11 @@ public class ChallengeResponseCalculator {
    * used to guarangee that an open channel (possibly TLS) corresponds to a crypto ID
    * When using crypto IDs to do your TLS, this would not be necessary.
    * </pre>
+   * @param keyPair the key pair to use in signing the response
    * @param challenge the incomming challenge
    * @return the calculated response
    */
-  public static ResponseToChallenge challengeResponse(Challenge challenge) {
+  public static ResponseToChallenge challengeResponse(KeyPair keyPair, Challenge challenge) {
     return ResponseToChallenge.newBuilder().build();
   }
 

@@ -1,7 +1,17 @@
 package com.isaacsheff.charlotte.node;
 
+import java.security.GeneralSecurityException;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
+import java.security.Security;
+import java.security.spec.ECGenParameterSpec;
 import java.util.Collections;
 import java.util.LinkedList;
+import java.util.ServiceConfigurationError;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import com.isaacsheff.charlotte.collections.BlockingConcurrentHashMap;
@@ -29,10 +39,21 @@ import io.grpc.stub.StreamObserver;
  * It can be extended for more interesting implementations.
  */
 public class CharlotteNodeService extends CharlotteNodeGrpc.CharlotteNodeImplBase {
+
+  /**
+   * This line is required to use bouncycastle encryption libraries.
+   */
+  static {Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());}
+
   /**
    * Use logger for logging events on a CharlotteNodeService.
    */
   private static final Logger logger = Logger.getLogger(CharlotteNodeService.class.getName());
+
+  /**
+   * The public/private key pair for this service.
+   */
+  private final KeyPair  keyPair;
 
   /**
    * The map of all known blocks.
@@ -48,20 +69,54 @@ public class CharlotteNodeService extends CharlotteNodeGrpc.CharlotteNodeImplBas
 
   /**
    * Create a new service with the given map of blocks, and the given map of addresses.
-   * Neither input is checked for correctness.
+   * No input is checked for correctness.
    * @param blockMap a map of known hashes and blocks
    * @param addressMap a map of known cryptoIds to ip addresses
+   * @param keyPair the public/private key pair for this service
    */
-  public CharlotteNodeService(BlockingMap<Hash, Block> blockMap, BlockingMap<CryptoId, SignedAddress> addressMap) {
+  public CharlotteNodeService(BlockingMap<Hash, Block> blockMap,
+                              BlockingMap<CryptoId, SignedAddress> addressMap,
+                              KeyPair keyPair) {
     this.blockMap = blockMap;
     this.addressMap = addressMap;
+    this.keyPair = keyPair;
   }
 
   /**
    * Create a new service with an empty map of blocks and an empty map of addresses.
+   * @param keyPair the public/private key pair for this service
+   */
+  public CharlotteNodeService(KeyPair keyPair) {
+    this(new BlockingConcurrentHashMap<Hash, Block>(),
+         new BlockingConcurrentHashMap<CryptoId, SignedAddress>(),
+         keyPair);
+  }
+
+  /**
+   * Create a new service with an empty map of blocks and an empty map of addresses, and generate crypto keys for it.
    */
   public CharlotteNodeService() {
-    this(new BlockingConcurrentHashMap<Hash, Block>(), new BlockingConcurrentHashMap<CryptoId, SignedAddress>());
+    this(new BlockingConcurrentHashMap<Hash, Block>(),
+         new BlockingConcurrentHashMap<CryptoId, SignedAddress>(),
+         generateDefaultKeyPair());
+  }
+
+  /**
+   * Make a default key pair.
+   * This will be an eliptic curve key with BouncyCastle as the provider.
+   * The curve is P-256.
+   * @return the key pair
+   */
+  private static KeyPair generateDefaultKeyPair() {
+    try {
+      KeyPairGenerator keyGen = KeyPairGenerator.getInstance("EC", "BC");
+      keyGen.initialize(new ECGenParameterSpec("P-256"));
+      return keyGen.generateKeyPair();
+    } catch(GeneralSecurityException e) {
+      // actually throws NoSuchProviderException, NoSuchAlgorithmException, or InvalidAlgorithmParameterException
+      logger.log(Level.SEVERE, "Key generation exception popped up when it really should not have: ", e);
+      throw (new ServiceConfigurationError("Key generation exception popped up when it really should not have: "+e));
+    }
   }
 
   /**
@@ -76,6 +131,13 @@ public class CharlotteNodeService extends CharlotteNodeGrpc.CharlotteNodeImplBas
    */
   public BlockingMap<CryptoId, SignedAddress> getAddressMap() {
     return addressMap;
+  }
+
+  /**
+   * @return the KeyPair associated with this service
+   */
+  public KeyPair getKeyPair() {
+    return keyPair;
   }
 
 
@@ -120,7 +182,7 @@ public class CharlotteNodeService extends CharlotteNodeGrpc.CharlotteNodeImplBas
    * @param responseObserver used to send back the response
    */
   public void challengeResponse(Challenge request, StreamObserver<ResponseToChallenge> responseObserver) {
-    responseObserver.onNext(ChallengeResponseCalculator.challengeResponse(request));
+    responseObserver.onNext(ChallengeResponseCalculator.challengeResponse(getKeyPair(), request));
     responseObserver.onCompleted();
   }
 
