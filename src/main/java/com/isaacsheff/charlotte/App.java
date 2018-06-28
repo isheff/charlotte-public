@@ -5,6 +5,7 @@ import java.security.Security;
 
 import com.isaacsheff.charlotte.node.ChallengeResponseCalculator;
 import com.isaacsheff.charlotte.node.CharlotteNodeService;
+import com.isaacsheff.charlotte.node.CharlotteNode;
 import com.isaacsheff.charlotte.proto.Challenge;
 import com.isaacsheff.charlotte.proto.ChallengeInput;
 
@@ -22,5 +23,8 @@ public class App {
     ChallengeInput challenge = ChallengeInput.newBuilder().setChallenge(Challenge.newBuilder().setStr("hi")).build();
     System.out.println("DOES IT WORK?: " + (null != (ChallengeResponseCalculator.checkChallengeResponse(challenge,
                                 ChallengeResponseCalculator.challengeResponse(keyPair, challenge)))));
+    CharlotteNode node = new CharlotteNode(5555);
+    node.run();
+
   }
 }

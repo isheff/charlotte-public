@@ -1,14 +1,10 @@
 package com.isaacsheff.charlotte.node;
 
 import java.security.GeneralSecurityException;
-import java.security.InvalidAlgorithmParameterException;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
-import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
 import java.security.Security;
 import java.security.spec.ECGenParameterSpec;
-import java.util.Collections;
 import java.util.LinkedList;
 import java.util.ServiceConfigurationError;
 import java.util.logging.Level;
@@ -168,7 +164,6 @@ public class CharlotteNodeService extends CharlotteNodeGrpc.CharlotteNodeImplBas
   }
 
   /**
-   * TODO: store crypto private key somewhere and use it here.
    * Proves our identity over the network.
    * <pre>
    * Using the hash algorithm provided,

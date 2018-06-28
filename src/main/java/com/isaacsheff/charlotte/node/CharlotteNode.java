@@ -1,8 +1,28 @@
 package com.isaacsheff.charlotte.node;
 
 import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.io.PipedInputStream;
+import java.io.PipedOutputStream;
+import java.math.BigInteger;
+import java.security.KeyPair;
+import java.security.PrivateKey;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.Date;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import org.bouncycastle.asn1.x500.X500Name;
+import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
+import org.bouncycastle.cert.X509CertificateHolder;
+import org.bouncycastle.cert.X509v3CertificateBuilder;
+import org.bouncycastle.openssl.jcajce.JcaPEMWriter;
+import org.bouncycastle.operator.ContentSigner;
+import org.bouncycastle.operator.OperatorCreationException;
+import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
+import org.bouncycastle.util.io.pem.PemObject;
 
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
@@ -43,8 +63,52 @@ public class CharlotteNode implements Runnable {
   public CharlotteNode(CharlotteNodeService service, ServerBuilder<?> serverBuilder, int port) {
     this.port = port;
     this.service = service;
-    this.server = serverBuilder.addService(getService()).build();
+    try{
+      serverBuilder.useTransportSecurity( getCertStream(service.getKeyPair()),
+                                          getPrivateStream(service.getKeyPair().getPrivate()));
+    } catch (Exception e) {
+      logger.log(Level.WARNING, "something broke when we went to make the certs. TLS is not working: ", e);
+    }
+    this.server = serverBuilder.addService(service).build();
   }
+  /**
+   * Creates a private key PEM file from the key, and pipes the bytes into the InputStream it returns.
+   * Literally the bytes of the PEM formatted file.
+   */
+  private static PipedInputStream getPrivateStream(PrivateKey key) throws IOException {
+    PipedInputStream stream = new PipedInputStream(10000);
+    JcaPEMWriter writer = new JcaPEMWriter(new OutputStreamWriter(new PipedOutputStream(stream)));
+    writer.writeObject(new PemObject("PRIVATE KEY", key.getEncoded()));
+    writer.close();
+    return stream;
+  }
+
+  /**
+   * Creates an X509 certificte from the keypair, and pipes the bytes into the InputStream it returns.
+   * Literally the bytes of the certificate file as a PEM formatted file.
+   */
+  private static PipedInputStream getCertStream(KeyPair keyPair) throws IOException, OperatorCreationException {
+    PipedInputStream certStream = new PipedInputStream(10000);
+    JcaPEMWriter writer = new JcaPEMWriter(new OutputStreamWriter(new PipedOutputStream(certStream)));
+    LocalDateTime startDate = LocalDate.now().atStartOfDay();
+
+    X509v3CertificateBuilder builder = new X509v3CertificateBuilder(
+        new X500Name("CN=ca"), // bullshit value we just made up
+        new BigInteger("0"),   // bullshit value we just made up
+        Date.from(startDate.atZone(ZoneId.systemDefault()).toInstant()),
+        Date.from(startDate.plusDays(3650).atZone(ZoneId.systemDefault()).toInstant()), // 10 years from now
+        new X500Name("CN=ca"), // bullshit value we just made up
+        SubjectPublicKeyInfo.getInstance(keyPair.getPublic().getEncoded()));
+    JcaContentSignerBuilder csBuilder = new JcaContentSignerBuilder("SHA256WITHECDSA");
+    ContentSigner signer = csBuilder.build(keyPair.getPrivate());
+    X509CertificateHolder holder = builder.build(signer);
+    writer.writeObject(new PemObject("CERTIFICATE", holder.toASN1Structure().getEncoded()));
+
+    writer.close();
+    return certStream;
+  }
+
+
 
 
   /**
