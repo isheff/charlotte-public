@@ -139,12 +139,13 @@ public class ChallengeResponseCalculator {
    * @return The CryptoId of the responder, OR null, if the response is wrong
    */
   public static CryptoId checkChallengeResponse(ChallengeInput challenge, ResponseToChallenge response) {
+    // First, check whether all the relevant fields are present and non-empty
     if (! response.hasSignature()) { return null; } // the response has no signature enclosed.
     if (! response.getSignature().hasCryptoId()) { return null; } // the response has no cryptoID.
     if (! response.getSignature().getCryptoId().hasPublicKey()) { return null; } // the cryptoID has no public key.
     if (! response.getSignature().getCryptoId().getPublicKey().hasElipticCurveP256()) { return null; } // wrong key
     if (  response.getSignature().getCryptoId().getPublicKey().getElipticCurveP256().getByteString().isEmpty()) {
-      logger.info("tried to verify a challenge response which reatured the empty string as a key");
+      logger.info("tried to verify a challenge response which featured the empty string as a key");
       return null; // the key is the empty string
     }
     if (! response.getSignature().hasSha256WithEcdsa()) { return null; } // wrong signature type
@@ -159,10 +160,11 @@ public class ChallengeResponseCalculator {
     }
 
 
+    // second, parse the public key from X.509 bytes to a java PublicKey object
     java.security.PublicKey publicKey = null;
     try {
       publicKey = KeyFactory.getInstance("EC", "BC").generatePublic(new X509EncodedKeySpec(
-          response.getSignature().getSha256WithEcdsa().getByteString().toByteArray()));
+          response.getSignature().getCryptoId().getPublicKey().getElipticCurveP256().getByteString().toByteArray()));
     } catch(NoSuchAlgorithmException e) {
       logSevereAndServiceConfigurationError("Key Parsing generated NoSuchAlgorithm when shouldn't have, on EC: ", e);
     } catch(NoSuchProviderException e) {
@@ -172,6 +174,7 @@ public class ChallengeResponseCalculator {
       return null; // the key was invalid
     }
 
+    // Parse the signature into a java Signature object, and then verify it with the public key
     java.security.Signature signature = initSignature();
     try {
       signature.initVerify(publicKey);
@@ -187,13 +190,13 @@ public class ChallengeResponseCalculator {
       return null; // the signature didn't verify
     }
     try {
-      if (!signature.verify(response.getSignature().getCryptoId().getPublicKey().
-            getElipticCurveP256().getByteString().toByteArray())){
+      if (!signature.verify(response.getSignature().getSha256WithEcdsa().getByteString().toByteArray())){
         logger.info("tried to verify a challenge response, but the signature didn't verify.");
         return null; // the signature didn't verify
       }
     } catch (SignatureException e) {
-      logger.info("tried to verify a challenge response, but there was a SignatureException while verifying.");
+      logger.log(Level.INFO,
+                 "tried to verify a challenge response, but there was a SignatureException while verifying.",e);
       return null; // the signature didn't verify, or something went wrong.
     }
 
