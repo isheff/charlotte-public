@@ -84,7 +84,7 @@ public class CharlotteNode implements Runnable {
     // These are meant to be used in two different threads, but we'll give them a big buffer, so it'll be ok.
     // I'm not sure if it would be better to get an outputstream to write to a byte[], and then pass that to 
     //  an input stream, instead of this piping thing.
-    PipedInputStream stream = new PipedInputStream(10000);
+    PipedInputStream stream = new PipedInputStream(1000); // if this buffer is too small, it will cause deadlock
     JcaPEMWriter writer = new JcaPEMWriter(new OutputStreamWriter(new PipedOutputStream(stream)));
     writer.writeObject(new PemObject("PRIVATE KEY", key.getEncoded()));
     writer.close();
@@ -105,7 +105,7 @@ public class CharlotteNode implements Runnable {
     // These are meant to be used in two different threads, but we'll give them a big buffer, so it'll be ok.
     // I'm not sure if it would be better to get an outputstream to write to a byte[], and then pass that to 
     //  an input stream, instead of this piping thing.
-    PipedInputStream certStream = new PipedInputStream(10000);
+    PipedInputStream certStream = new PipedInputStream(1000); // if this buffer is too small, it will cause deadlock
     JcaPEMWriter writer = new JcaPEMWriter(new OutputStreamWriter(new PipedOutputStream(certStream)));
 
     // make "signer," which we'll use in signing (self-signing) the certificate
