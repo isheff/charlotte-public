@@ -74,8 +74,16 @@ public class CharlotteNode implements Runnable {
   /**
    * Creates a private key PEM file from the key, and pipes the bytes into the InputStream it returns.
    * Literally the bytes of the PEM formatted file.
+   * @param key the private key we want as a PEM file
+   * @return an inputStream which will effectively read the PEM file
+   * @throws IOException if something goes wrong with the streams or something.
    */
   private static PipedInputStream getPrivateStream(PrivateKey key) throws IOException {
+    // In order to get from a PEMObject to an InputStream, I'm going to use a pair of Piped Output and Input Streams.
+    // The bytes put into one can be read from the other.
+    // These are meant to be used in two different threads, but we'll give them a big buffer, so it'll be ok.
+    // I'm not sure if it would be better to get an outputstream to write to a byte[], and then pass that to 
+    //  an input stream, instead of this piping thing.
     PipedInputStream stream = new PipedInputStream(10000);
     JcaPEMWriter writer = new JcaPEMWriter(new OutputStreamWriter(new PipedOutputStream(stream)));
     writer.writeObject(new PemObject("PRIVATE KEY", key.getEncoded()));
@@ -86,12 +94,28 @@ public class CharlotteNode implements Runnable {
   /**
    * Creates an X509 certificte from the keypair, and pipes the bytes into the InputStream it returns.
    * Literally the bytes of the certificate file as a PEM formatted file.
+   * @param keyPair the public/private key pair to become a self-signed X.509 PEM certificate
+   * @return an InputStream that effectively reads the PEM file
+   * @throws IOException if something goes wrong with the streams or something
+   * @throws OperatorCreationException if something goes wrong with making the certificate
    */
   private static PipedInputStream getCertStream(KeyPair keyPair) throws IOException, OperatorCreationException {
+    // In order to get from a PEMObject to an InputStream, I'm going to use a pair of Piped Output and Input Streams.
+    // The bytes put into one can be read from the other.
+    // These are meant to be used in two different threads, but we'll give them a big buffer, so it'll be ok.
+    // I'm not sure if it would be better to get an outputstream to write to a byte[], and then pass that to 
+    //  an input stream, instead of this piping thing.
     PipedInputStream certStream = new PipedInputStream(10000);
     JcaPEMWriter writer = new JcaPEMWriter(new OutputStreamWriter(new PipedOutputStream(certStream)));
+
+    // make "signer," which we'll use in signing (self-signing) the certificate
+    JcaContentSignerBuilder csBuilder = new JcaContentSignerBuilder("SHA256WITHECDSA");
+    ContentSigner signer = csBuilder.build(keyPair.getPrivate());
+
+    // useful for setting dates in the certificate file
     LocalDateTime startDate = LocalDate.now().atStartOfDay();
 
+    // configure the certificate itself
     X509v3CertificateBuilder builder = new X509v3CertificateBuilder(
         new X500Name("CN=ca"), // bullshit value we just made up
         new BigInteger("0"),   // bullshit value we just made up
@@ -99,9 +123,11 @@ public class CharlotteNode implements Runnable {
         Date.from(startDate.plusDays(3650).atZone(ZoneId.systemDefault()).toInstant()), // 10 years from now
         new X500Name("CN=ca"), // bullshit value we just made up
         SubjectPublicKeyInfo.getInstance(keyPair.getPublic().getEncoded()));
-    JcaContentSignerBuilder csBuilder = new JcaContentSignerBuilder("SHA256WITHECDSA");
-    ContentSigner signer = csBuilder.build(keyPair.getPrivate());
+
+    // make the certificate using the configuration, signed with signer
     X509CertificateHolder holder = builder.build(signer);
+
+    // write the certificate to the stream in PEM format
     writer.writeObject(new PemObject("CERTIFICATE", holder.toASN1Structure().getEncoded()));
 
     writer.close();
