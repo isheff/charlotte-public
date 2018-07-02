@@ -4,6 +4,7 @@ import java.security.KeyPair;
 import java.security.Security;
 
 import com.isaacsheff.charlotte.node.ChallengeResponseCalculator;
+import com.isaacsheff.charlotte.node.CharlotteNodeClient;
 import com.isaacsheff.charlotte.node.CharlotteNodeService;
 import com.isaacsheff.charlotte.node.CharlotteNode;
 import com.isaacsheff.charlotte.proto.Challenge;
@@ -24,7 +25,10 @@ public class App {
     System.out.println("DOES IT WORK?: " + (null != (ChallengeResponseCalculator.checkChallengeResponse(challenge,
                                 ChallengeResponseCalculator.challengeResponse(keyPair, challenge)))));
     CharlotteNode node = new CharlotteNode(5555);
-    node.run();
-
+    (new Thread(node)).start();
+    CharlotteNodeClient client = new CharlotteNodeClient(node.getCert(),"128.84.155.11",5555);
+    System.out.println("Client created.");
+    client.testChallengeResponseBlocking();
+    System.out.println("blocking test complete.");
   }
 }

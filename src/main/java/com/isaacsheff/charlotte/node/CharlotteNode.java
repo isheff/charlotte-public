@@ -1,6 +1,9 @@
 package com.isaacsheff.charlotte.node;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStreamWriter;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
@@ -14,7 +17,11 @@ import java.util.Date;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.bouncycastle.asn1.ASN1Encodable;
+import org.bouncycastle.asn1.DERSequence;
 import org.bouncycastle.asn1.x500.X500Name;
+import org.bouncycastle.asn1.x509.Extension;
+import org.bouncycastle.asn1.x509.GeneralName;
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
 import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cert.X509v3CertificateBuilder;
@@ -55,6 +62,11 @@ public class CharlotteNode implements Runnable {
   private final CharlotteNodeService service;
 
   /**
+   * The X.509 public cert, in effect
+   */
+  private final byte[] cert;
+
+  /**
    * Construct a CharlotteNode given a service, a serverBuilder on which to run the service, and a port.
    * @param service the object which controls what the node does on each RPC call
    * @param serverBuilder makes a server which listens for RPCs, given a service
@@ -63,14 +75,26 @@ public class CharlotteNode implements Runnable {
   public CharlotteNode(CharlotteNodeService service, ServerBuilder<?> serverBuilder, int port) {
     this.port = port;
     this.service = service;
+    byte[] myCert = null;
     try{
-      serverBuilder.useTransportSecurity( getCertStream(service.getKeyPair()),
+      myCert =  getCertStream(service.getKeyPair());
+    } catch (Exception e) {
+      logger.log(Level.WARNING, "something broke when we went to make the certs. TLS is not working: ", e);
+    }
+    this.cert = myCert;
+    try{
+      serverBuilder.useTransportSecurity( getCert(),
                                           getPrivateStream(service.getKeyPair().getPrivate()));
     } catch (Exception e) {
       logger.log(Level.WARNING, "something broke when we went to make the certs. TLS is not working: ", e);
     }
     this.server = serverBuilder.addService(service).build();
   }
+
+  public InputStream getCert() {
+    return new ByteArrayInputStream(cert);
+  }
+
   /**
    * Creates a private key PEM file from the key, and pipes the bytes into the InputStream it returns.
    * Literally the bytes of the PEM formatted file.
@@ -99,14 +123,9 @@ public class CharlotteNode implements Runnable {
    * @throws IOException if something goes wrong with the streams or something
    * @throws OperatorCreationException if something goes wrong with making the certificate
    */
-  private static PipedInputStream getCertStream(KeyPair keyPair) throws IOException, OperatorCreationException {
-    // In order to get from a PEMObject to an InputStream, I'm going to use a pair of Piped Output and Input Streams.
-    // The bytes put into one can be read from the other.
-    // These are meant to be used in two different threads, but we'll give them a big buffer, so it'll be ok.
-    // I'm not sure if it would be better to get an outputstream to write to a byte[], and then pass that to 
-    //  an input stream, instead of this piping thing.
-    PipedInputStream certStream = new PipedInputStream(1000); // if this buffer is too small, it will cause deadlock
-    JcaPEMWriter writer = new JcaPEMWriter(new OutputStreamWriter(new PipedOutputStream(certStream)));
+  private static byte[] getCertStream(KeyPair keyPair) throws IOException, OperatorCreationException {
+    ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+    JcaPEMWriter writer = new JcaPEMWriter(new OutputStreamWriter(outputStream));
 
     // make "signer," which we'll use in signing (self-signing) the certificate
     JcaContentSignerBuilder csBuilder = new JcaContentSignerBuilder("SHA256WITHECDSA");
@@ -124,6 +143,13 @@ public class CharlotteNode implements Runnable {
         new X500Name("CN=ca"), // bullshit value we just made up
         SubjectPublicKeyInfo.getInstance(keyPair.getPublic().getEncoded()));
 
+    builder.addExtension(Extension.subjectAlternativeName, false, new DERSequence(new ASN1Encodable[] {
+            new GeneralName(GeneralName.dNSName, "localhost"),
+            new GeneralName(GeneralName.dNSName, "isheff.cs.cornell.edu"),
+            new GeneralName(GeneralName.iPAddress, "127.0.0.1"),
+            new GeneralName(GeneralName.iPAddress, "128.84.155.11")
+        }));
+
     // make the certificate using the configuration, signed with signer
     X509CertificateHolder holder = builder.build(signer);
 
@@ -131,7 +157,7 @@ public class CharlotteNode implements Runnable {
     writer.writeObject(new PemObject("CERTIFICATE", holder.toASN1Structure().getEncoded()));
 
     writer.close();
-    return certStream;
+    return outputStream.toByteArray();
   }
 
 
