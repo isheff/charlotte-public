@@ -10,6 +10,19 @@ import com.isaacsheff.charlotte.node.CharlotteNode;
 import com.isaacsheff.charlotte.proto.Challenge;
 import com.isaacsheff.charlotte.proto.ChallengeInput;
 
+
+import com.isaacsheff.charlotte.yaml.User;
+
+import java.io.File;
+
+import org.apache.commons.lang3.builder.ReflectionToStringBuilder;
+
+import org.apache.commons.lang3.builder.ToStringStyle;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+
 /**
  * Hello world!
  *
@@ -30,5 +43,14 @@ public class App {
     System.out.println("Client created.");
     client.testChallengeResponseBlocking();
     System.out.println("blocking test complete.");
+
+    ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
+    try {
+      User user = mapper.readValue(new File("src/test/text.yaml"), User.class);
+      System.out.println(ReflectionToStringBuilder.toString(user,ToStringStyle.MULTI_LINE_STYLE));
+    } catch (Exception e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    }
   }
 }
