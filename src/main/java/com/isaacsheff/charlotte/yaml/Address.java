@@ -18,6 +18,7 @@ public class Address {
     return line2;
   }
   public void setLine2(String line2) {
+    System.out.println("SET LINE 2 CALLED: " + line2);
     this.line2 = line2;
   }
 
