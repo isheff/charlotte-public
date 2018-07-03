@@ -2,11 +2,17 @@
 ---
 name: Test User
 age: 30
-address:
-  line1: My Address Line 1
-  line2: Address line 2
-  city: Washington D.C.
-  zip: 20000
+addresses:
+  home:
+    line1: My Address Line 1
+    line2: Address line 2
+    city: Washington D.C.
+    zip: 20000
+  work:
+    line1: My Other Address Line 1
+    line2: Other Address line 2
+    city: The Other Washington
+    zip: 20001
 roles: 
   - User
   - Editor

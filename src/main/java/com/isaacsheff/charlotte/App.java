@@ -2,6 +2,7 @@ package com.isaacsheff.charlotte;
 
 import java.security.KeyPair;
 import java.security.Security;
+import java.util.Map;
 
 import com.isaacsheff.charlotte.node.ChallengeResponseCalculator;
 import com.isaacsheff.charlotte.node.CharlotteNodeClient;
@@ -12,6 +13,7 @@ import com.isaacsheff.charlotte.proto.ChallengeInput;
 
 
 import com.isaacsheff.charlotte.yaml.User;
+import com.isaacsheff.charlotte.yaml.Address;
 
 import java.io.File;
 
@@ -48,6 +50,11 @@ public class App {
     try {
       User user = mapper.readValue(new File("src/test/text.yaml"), User.class);
       System.out.println(ReflectionToStringBuilder.toString(user,ToStringStyle.MULTI_LINE_STYLE));
+      for (Map.Entry<String, Address> address : user.getAddresses().entrySet()) {
+        System.out.println(address.getKey());
+        System.out.println(ReflectionToStringBuilder.toString(address.getValue(),ToStringStyle.MULTI_LINE_STYLE));
+      }
+      System.out.println(ReflectionToStringBuilder.toString(user.getAddresses(),ToStringStyle.MULTI_LINE_STYLE));
     } catch (Exception e) {
       // TODO Auto-generated catch block
       e.printStackTrace();
