@@ -12,8 +12,8 @@ import com.isaacsheff.charlotte.proto.Challenge;
 import com.isaacsheff.charlotte.proto.ChallengeInput;
 
 
-import com.isaacsheff.charlotte.yaml.User;
-import com.isaacsheff.charlotte.yaml.Address;
+import com.isaacsheff.charlotte.yaml.CharlotteNodeConfig;
+import com.isaacsheff.charlotte.yaml.ContactInfo;
 
 import java.io.File;
 
@@ -48,13 +48,8 @@ public class App {
 
     ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
     try {
-      User user = mapper.readValue(new File("src/test/text.yaml"), User.class);
-      System.out.println(ReflectionToStringBuilder.toString(user,ToStringStyle.MULTI_LINE_STYLE));
-      for (Map.Entry<String, Address> address : user.getAddresses().entrySet()) {
-        System.out.println(address.getKey());
-        System.out.println(ReflectionToStringBuilder.toString(address.getValue(),ToStringStyle.MULTI_LINE_STYLE));
-      }
-      System.out.println(ReflectionToStringBuilder.toString(user.getAddresses(),ToStringStyle.MULTI_LINE_STYLE));
+      CharlotteNodeConfig config = mapper.readValue(new File("src/test/config.yaml"), CharlotteNodeConfig.class);
+      System.out.println(config.get("bob").getUrl());
     } catch (Exception e) {
       // TODO Auto-generated catch block
       e.printStackTrace();
