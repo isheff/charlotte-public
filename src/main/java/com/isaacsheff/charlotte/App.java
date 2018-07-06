@@ -35,6 +35,7 @@ public class App {
    */
   static {Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());}
   public static void main( String[] args ) {
+    System.out.pri
     KeyPair keyPair = (new CharlotteNodeService()).getKeyPair();
     ChallengeInput challenge = ChallengeInput.newBuilder().setChallenge(Challenge.newBuilder().setStr("hi")).build();
     System.out.println("DOES IT WORK?: " + (null != (ChallengeResponseCalculator.checkChallengeResponse(challenge,
