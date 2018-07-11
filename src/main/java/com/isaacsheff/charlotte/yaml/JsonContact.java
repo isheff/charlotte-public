@@ -7,6 +7,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * Represents contact information for a server (url, port, X509 cert).
  * This is meant to be used with Jackson XML / JSON / YAML parser.
  * Really, I'm just going to use YAML.
+ * These contacts are expected to have a URL, TCP Port, and X509 certificate (public key).
  * @author Isaac Sheff
  */
 public class JsonContact {
@@ -29,6 +30,7 @@ public class JsonContact {
   /**
    * Create a new JsonContact.
    * This is meant to be used by the Jackson parser.
+   * These contacts are expected to have a URL, TCP Port, and X509 certificate (public key).
    * @param x509 the filename of the x509 certificate, relative to the location of the config file.
    * @param url Some kind of identifier for the server, maybe an IP, maybe a DNS thing, whatever. 
    * @param port The TCP port we should try and call this server on 
