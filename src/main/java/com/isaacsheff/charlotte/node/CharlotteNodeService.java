@@ -85,6 +85,14 @@ public class CharlotteNodeService extends CharlotteNodeGrpc.CharlotteNodeImplBas
     return blockMap;
   }
 
+  /**
+   * @param hash the hash of the desired block
+   * @return the block corresponding to this hash. Warning: WILL WAIT until such a block arrives
+   */
+  public Block getBlock(Hash hash) {
+    return getBlockMap().blockingGet(hash);
+  }
+
 
   /**
    * @return The configuration of this service, parsed from a yaml config file, and some x509 key files.
