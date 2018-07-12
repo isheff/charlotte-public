@@ -95,58 +95,18 @@ message Block {
 
 // SERVICES
 
-// a statement by a CryptoId that you can contact it at this url:port
-message SignedAddress {
-  message Address {
-    string url = 1;
-    uint32 port = 2;
-  }
-  Address address = 1;
-  Signature signature = 2;
-}
 
-// a challenge: can you prove that this channel (e.g. a TLS channel) connects to a specific cryptoID?
-message Challenge {
-  string str = 1; // should be randomly selected
-  Hash hash = 2; // specifies a hash algorithm only. need not have content.
-}
-
-// I made wrappers for all the inputs and outputs because maybe someday we'll want to expand them.
-message ChallengeInput {
-  Challenge challenge = 1;
-}
-message ResponseToChallenge {
-  string errorMessage = 1;
-  Signature signature = 2;
-}
 message SendBlocksInput {
   Block block = 1;
 }
 message SendBlocksResponse {
   string errorMessage = 1;
 }
-message SendAddressesInput {
-  SignedAddress address = 1;
-}
-message SendAddressesResponse {
-  string errorMessage = 1;
-}
 
 service CharlotteNode {
-  // Using the hash algorithm provided,
-  // ( bytestring"Response to Challenge with Hash: " concat hash(challenge.str))
-  // then sign that and return the signature.
-  // used to guarangee that an open channel (possibly TLS) corresponds to a crypto ID
-  // When using crypto IDs to do your TLS, this would not be necessary.
-  rpc ChallengeResponse(ChallengeInput) returns (ResponseToChallenge) {}
-
   // send blocks to this server.
   // used for gossiping / flooding
   rpc SendBlocks(stream SendBlocksInput) returns (stream SendBlocksResponse) {}
-
-  // Gossip addresses of known participants.
-  // Participants must sign their addresses, allowing others to put a url:port to a CryptoID.
-  rpc SendAddresses(stream SendAddressesInput) returns (stream SendAddressesResponse) {}
 }
 
 

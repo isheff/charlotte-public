@@ -13,7 +13,7 @@ import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
 import org.bouncycastle.openssl.jcajce.JcaPEMWriter;
 import org.bouncycastle.util.io.pem.PemObject;
 
-import com.google.protobuf.ByteString;
+import com.isaacsheff.charlotte.node.SignatureUtil;
 import com.isaacsheff.charlotte.proto.CryptoId;
 
 import io.grpc.ManagedChannel;
@@ -105,10 +105,7 @@ public class Contact {
     holder = generateHolder();
     publicKey = generatePublicKey();
     sslContext = getContext();
-    cryptoId = CryptoId.newBuilder().setPublicKey(
-                com.isaacsheff.charlotte.proto.PublicKey.newBuilder().setElipticCurveP256(
-                   com.isaacsheff.charlotte.proto.PublicKey.ElipticCurveP256.newBuilder().setByteString(
-                     ByteString.copyFrom(getPublicKey().getEncoded())))).build();
+    cryptoId = SignatureUtil.createCryptoId(getPublicKey());
   }
 
   /**

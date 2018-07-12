@@ -5,12 +5,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import com.isaacsheff.charlotte.proto.Challenge;
-import com.isaacsheff.charlotte.proto.ChallengeInput;
 import com.isaacsheff.charlotte.proto.CharlotteNodeGrpc;
 import com.isaacsheff.charlotte.proto.CharlotteNodeGrpc.CharlotteNodeBlockingStub;
 import com.isaacsheff.charlotte.proto.CharlotteNodeGrpc.CharlotteNodeStub;
-import com.isaacsheff.charlotte.proto.ResponseToChallenge;
 
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
@@ -58,16 +55,6 @@ public class CharlotteNodeClient {
     channel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
   }
 
-  public void testChallengeResponseBlocking() {
-    ChallengeInput challenge = ChallengeInput.newBuilder().setChallenge(
-                                 Challenge.newBuilder().setStr("this is a challenge")).build();
-    try {
-      ResponseToChallenge response = blockingStub.challengeResponse(challenge);
-      logger.info("response retrieved from server in blocking Challenge RPC");
-    } catch (StatusRuntimeException e) {
-      logger.log(Level.WARNING, "RPC failed: ", e);
-    }
-  }
 
 
 }
