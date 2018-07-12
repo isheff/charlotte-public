@@ -21,6 +21,7 @@ import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import com.isaacsheff.charlotte.proto.CryptoId;
 
 /**
  * Represents a fully read / parsed / etc Configuration file for a Charlotte Node.
@@ -56,6 +57,11 @@ public class Config extends Contact {
   private final ConcurrentMap<String, ConcurrentMap<Integer, Contact>> contactsByUrl;
 
   /**
+   * A map from CryptoIds to Contacts
+   */
+  private final ConcurrentMap<CryptoId, Contact> contactsByCryptoId;
+
+  /**
    * The private / public crypto keys for this CharlotteNode
    */
   private final KeyPair keyPair;
@@ -72,10 +78,26 @@ public class Config extends Contact {
     privateKeyBytes = readFile("Private Key File", path.resolve(getPrivateKeyFileName()));
     contacts = new ConcurrentHashMap<String, Contact>(getJsonContacts().size());
     contactsByUrl = new ConcurrentHashMap<String, ConcurrentMap<Integer, Contact>>();
+    contactsByCryptoId = new ConcurrentHashMap<CryptoId, Contact>();
+    // for each entry in the Map of Contacts
     for (Map.Entry<String, JsonContact> entry : getJsonContacts().entrySet()) {
-      contactsByUrl.putIfAbsent(entry.getValue().getUrl(), new ConcurrentHashMap<Integer, Contact>())
-                   .putIfAbsent(entry.getValue().getPort(),
-                       contacts.putIfAbsent(entry.getKey(), new Contact(entry.getValue(), path)));
+      // Create a Contact from the JsonContact
+      // Insert (if none exists yet) the Contact in the contects map
+      // Create, if necessary, a Map for this contact's url in the contactsByUrl
+      // Insert (if none exists yet) this Contact in for the port and url in contactsByUrl
+      // Insert (if none exists yet) this Contact in for its cryptoId in contactsByCryptoId
+      Contact newContact = new Contact(entry.getValue(), path);
+      Contact contact = contacts.putIfAbsent(entry.getKey(), newContact);
+      if (contact == null) {
+        contact = newContact;
+      }
+      ConcurrentMap<Integer, Contact> newMap = new ConcurrentHashMap<Integer, Contact>();
+      ConcurrentMap<Integer, Contact> existingMap = contactsByUrl.putIfAbsent(contact.getUrl(), newMap);
+      if (existingMap == null) {
+        existingMap = newMap;
+      }
+      existingMap.putIfAbsent(contact.getPort(), contact);
+      contactsByCryptoId.putIfAbsent(contact.getCryptoId(), contact);
     }
     keyPair = new KeyPair(getPublicKey(), generatePrivateKey());
     // TODO: maybe test the validity of this key pair?
@@ -100,6 +122,7 @@ public class Config extends Contact {
   public Config(String configFileName) {
     this(Paths.get(configFileName));
   }
+
 
   /**
    * @return The literal parsed contents of the config file
@@ -166,7 +189,20 @@ public class Config extends Contact {
    * @param port the port of the Contact Desired
    * @return for Contact with that URL and port, or null (if none known).
    */
-  public Contact getContactByUrlAndPort(String url, Integer port) {return getContactsByUrl(url).get(port);}
+  public Contact getContact(String url, Integer port) {return getContactsByUrl(url).get(port);}
+
+  /**
+   * @return A map from CryptoIds to Contacts
+   */
+  public ConcurrentMap<CryptoId, Contact> getContactsByCryptoId() {return contactsByCryptoId;}
+
+  /**
+   * Get the Contact for a given CryptoId, or null, if there isn't one
+   * @param cryptoId the CryptoId for which you want the contact
+   * @return The Contact with that CryptoId, or null, if there isn't one
+   */
+  public Contact getContact(CryptoId cryptoId) {return(getContactsByCryptoId().get(cryptoId));}
+
 
   /**
    * @return The private / public crypto keys for this CharlotteNode
@@ -191,7 +227,8 @@ public class Config extends Contact {
     try {
       Object object = parser.readObject();
       if (!(object instanceof PrivateKeyInfo)) {
-        logger.log(Level.SEVERE, "Private Key file parsed as a non-PEM object");
+        logger.log(Level.SEVERE, "Private Key file parsed as a non-PrivateKeyInfo object");
+        logger.log(Level.SEVERE, "Private Key file parsed as a non-PrivateKeyInfo object: " + object);
       }
       PrivateKeyInfo privateKeyInfo = (PrivateKeyInfo) object;
       JcaPEMKeyConverter converter = new JcaPEMKeyConverter();

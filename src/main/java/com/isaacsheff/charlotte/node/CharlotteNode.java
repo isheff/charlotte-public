@@ -78,6 +78,7 @@ public class CharlotteNode implements Runnable {
     byte[] myCert = null;
     try{
       myCert =  getCertStream(service.getKeyPair());
+      logger.info(new String(myCert));
     } catch (Exception e) {
       logger.log(Level.WARNING, "something broke when we went to make the certs. TLS is not working: ", e);
     }
@@ -119,7 +120,7 @@ public class CharlotteNode implements Runnable {
    * Creates an X509 certificte from the keypair, and pipes the bytes into the InputStream it returns.
    * Literally the bytes of the certificate file as a PEM formatted file.
    * @param keyPair the public/private key pair to become a self-signed X.509 PEM certificate
-   * @return an InputStream that effectively reads the PEM file
+   * @return a byte[] form of the PEM file
    * @throws IOException if something goes wrong with the streams or something
    * @throws OperatorCreationException if something goes wrong with making the certificate
    */

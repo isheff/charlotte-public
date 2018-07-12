@@ -14,6 +14,8 @@ import com.isaacsheff.charlotte.proto.ChallengeInput;
 
 import com.isaacsheff.charlotte.yaml.CharlotteNodeConfig;
 import com.isaacsheff.charlotte.yaml.ContactInfo;
+import com.isaacsheff.charlotte.yaml.Config;
+import com.isaacsheff.charlotte.yaml.GenerateX509;
 
 import java.io.File;
 
@@ -35,8 +37,8 @@ public class App {
    */
   static {Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());}
   public static void main( String[] args ) {
-    System.out.pri
-    KeyPair keyPair = (new CharlotteNodeService()).getKeyPair();
+    GenerateX509.generateKeyFiles("src/test/server.pem", "src/test/private-key.pem", "isheff.cs.cornell.edu", "128.84.155.11");
+    KeyPair keyPair = (new Config("src/test/config.yaml")).getKeyPair();
     ChallengeInput challenge = ChallengeInput.newBuilder().setChallenge(Challenge.newBuilder().setStr("hi")).build();
     System.out.println("DOES IT WORK?: " + (null != (ChallengeResponseCalculator.checkChallengeResponse(challenge,
                                 ChallengeResponseCalculator.challengeResponse(keyPair, challenge)))));
@@ -47,13 +49,5 @@ public class App {
     client.testChallengeResponseBlocking();
     System.out.println("blocking test complete.");
 
-    ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
-    try {
-      CharlotteNodeConfig config = mapper.readValue(new File("src/test/config.yaml"), CharlotteNodeConfig.class);
-      System.out.println(config.get("bob").getUrl());
-    } catch (Exception e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
-    }
   }
 }

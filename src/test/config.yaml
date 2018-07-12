@@ -1,13 +1,13 @@
 # Test configuration file
 ---
 me: alice
-privatekey: src/test/config.yaml
+privatekey: private-key.pem
 contacts:
   alice:
-    x509: src/test/config.yaml
+    x509: server.pem
     url: alice.com
     port: 9123
   bob:
-    x509: src/test/config.yaml
+    x509: server.pem
     url: bob.com
     port: 9124

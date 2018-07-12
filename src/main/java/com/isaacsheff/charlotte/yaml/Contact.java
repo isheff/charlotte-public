@@ -3,10 +3,18 @@ package com.isaacsheff.charlotte.yaml;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import javax.net.ssl.SSLException;
+
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
+import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.openssl.PEMException;
 import org.bouncycastle.openssl.PEMParser;
 import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
+import org.bouncycastle.openssl.jcajce.JcaPEMWriter;
+import org.bouncycastle.util.io.pem.PemObject;
+
+import com.google.protobuf.ByteString;
+import com.isaacsheff.charlotte.proto.CryptoId;
 
 import io.grpc.ManagedChannel;
 import io.grpc.netty.GrpcSslContexts;
@@ -14,12 +22,15 @@ import io.grpc.netty.NettyChannelBuilder;
 import io.netty.handler.ssl.SslContext;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.io.InputStream;
 import java.io.Reader;
+import java.lang.String;
 import java.nio.file.Path;
 import java.security.PublicKey;
 import java.security.Security;
@@ -66,6 +77,16 @@ public class Contact {
   private final PublicKey publicKey;
 
   /**
+   * The parsed X509 Certificate
+   */
+  private final X509CertificateHolder holder;
+
+  /**
+   * The CryptoId of this contact (made from its public key, but a Protobuf datatype)
+   */
+  private final CryptoId cryptoId;
+
+  /**
    * Generate a Contact using a JsonContact.
    *  (which was parsed from a config file),
    * and the path representing the dir in which the config file was located
@@ -80,10 +101,20 @@ public class Contact {
     if (null == getJsonContact()) {
       logger.log(Level.WARNING, "Creating a Contact with null json / yaml information. Things may break.");
     }
-    this.x509Bytes = readFile("x509", path.resolve(getX509()));
-    this.sslContext = getContext(getX509Stream());
-    this.publicKey = generatePublicKey();
+    x509Bytes = readFile("x509", path.resolve(getX509()));
+    holder = generateHolder();
+    publicKey = generatePublicKey();
+    sslContext = getContext();
+    cryptoId = CryptoId.newBuilder().setPublicKey(
+                com.isaacsheff.charlotte.proto.PublicKey.newBuilder().setElipticCurveP256(
+                   com.isaacsheff.charlotte.proto.PublicKey.ElipticCurveP256.newBuilder().setByteString(
+                     ByteString.copyFrom(getPublicKey().getEncoded())))).build();
   }
+
+  /**
+   * @return The CryptoId of this contact (made from its public key, but a Protobuf datatype)
+   */
+  public CryptoId getCryptoId() {return cryptoId;}
 
   /**
    * @return the PublicKey parsed from the X509 certificate
@@ -126,6 +157,11 @@ public class Contact {
   public InputStreamReader getX509Reader() {return (new InputStreamReader(getX509Stream()));}
 
   /**
+   * @return The parsed X509 Certificate
+   */
+  public X509CertificateHolder getHolder() {return holder;}
+
+  /**
    * Used in opening secure channels to talk to the server this contact represents.
    * @return An Ssl configuration in which the X509 certificate file for this contact is trusted.
    */
@@ -150,25 +186,16 @@ public class Contact {
     return getChannelBuilder().useTransportSecurity().enableRetry().sslContext(getSslContext()).build();
   }
 
-  /**
-   * Generate a PublicKey from the PEM X509 file read in this Contact.
-   * This parsing could go wrong and log SEVERE things, and then return null.
-   * This will be run in the constructor.
-   * @return PublicKey from the PEM X509 file read in this Contact.
-   */
-  private PublicKey generatePublicKey() {
-    PublicKey publicKey = null;
+  private X509CertificateHolder generateHolder() {
+    X509CertificateHolder holder = null;
     Reader reader = getX509Reader();
     PEMParser parser= new PEMParser(reader);
     try {
       Object object = parser.readObject();
-      if (!(object instanceof SubjectPublicKeyInfo)) {
+      if (!(object instanceof X509CertificateHolder)) {
+        logger.log(Level.WARNING, "Object Parsed is not a SubjectPublicKeyInfo: " + object);
       }
-      SubjectPublicKeyInfo publicKeyInfo = (SubjectPublicKeyInfo) object;
-      JcaPEMKeyConverter converter = new JcaPEMKeyConverter();
-      publicKey = converter.getPublicKey(publicKeyInfo);
-    } catch (PEMException e) {
-      logger.log(Level.SEVERE, "X509 cert file could not be parsed as PEM", e);
+      holder = ((X509CertificateHolder) object);
     } catch (IOException e) {
       logger.log(Level.SEVERE, "PEM converter could not pull a PublicKeyInfo from the X509 PEM", e);
     }
@@ -183,6 +210,24 @@ public class Contact {
     } catch (IOException e) {
       logger.log(Level.WARNING,
         "X509 byte[] reader didn't close properly, but we parsed everything, so it's probably ok.", e);
+    }
+    return holder;
+  }
+
+  /**
+   * Generate a PublicKey from the PEM X509 file read in this Contact.
+   * This parsing could go wrong and log SEVERE things, and then return null.
+   * This will be run in the constructor.
+   * @return PublicKey from the PEM X509 file read in this Contact.
+   */
+  private PublicKey generatePublicKey() {
+    PublicKey publicKey = null;
+    try {
+      SubjectPublicKeyInfo publicKeyInfo = getHolder().getSubjectPublicKeyInfo();
+      JcaPEMKeyConverter converter = new JcaPEMKeyConverter();
+      publicKey = converter.getPublicKey(publicKeyInfo);
+    } catch (PEMException e) {
+      logger.log(Level.SEVERE, "X509 cert file could not be parsed as PEM", e);
     }
     return publicKey;
   }
@@ -217,14 +262,27 @@ public class Contact {
    *  represents.
    * This could go wrong and log WARNING things, and then return null.
    * This will be run in the constructor.
-   * @return an Ssl configuration in which the X509 certificate file for this contact is trusted.
    */
-  private static SslContext getContext(InputStream cert) {
+  private SslContext getContext() {
     SslContext context = null;
+    ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+    JcaPEMWriter writer = new JcaPEMWriter(new OutputStreamWriter(outputStream));
     try {
-      context = GrpcSslContexts.forClient().trustManager(cert).build();
-    } catch (Exception e) {
+      writer.writeObject(new PemObject("CERTIFICATE", holder.toASN1Structure().getEncoded()));
+    } catch (IOException e) {
+      logger.log(Level.WARNING, "Something went wrong writing cert to ssl context thing", e);
+    }
+    try {
+      writer.close();
+    } catch (IOException e) {
+      logger.log(Level.WARNING, "Something went wrong closing a writer. This shouldn't happen.", e);
+    }
+    try {
+      context = GrpcSslContexts.forClient().trustManager(new ByteArrayInputStream(outputStream.toByteArray())).build();
+    } catch (IllegalArgumentException e) {
       logger.log(Level.WARNING, "Something went wrong setting trust manager. Maybe your cert is off.", e);
+    } catch (SSLException e) {
+      logger.log(Level.WARNING, "Something went wrong with SSL while setting trust manager. Maybe your cert is off.", e);
     }
     return context;
   }
