@@ -10,8 +10,6 @@ import com.isaacsheff.charlotte.proto.CharlotteNodeGrpc.CharlotteNodeBlockingStu
 import com.isaacsheff.charlotte.proto.CharlotteNodeGrpc.CharlotteNodeStub;
 
 import io.grpc.ManagedChannel;
-import io.grpc.ManagedChannelBuilder;
-import io.grpc.StatusRuntimeException;
 import io.grpc.netty.GrpcSslContexts;
 import io.grpc.netty.NettyChannelBuilder;
 import io.netty.handler.ssl.SslContext;

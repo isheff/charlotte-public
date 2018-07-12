@@ -1,13 +1,7 @@
 package com.isaacsheff.charlotte.node;
 
-import java.security.GeneralSecurityException;
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
-import java.security.Security;
-import java.security.spec.ECGenParameterSpec;
+import java.nio.file.Path;
 import java.util.LinkedList;
-import java.util.ServiceConfigurationError;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import com.isaacsheff.charlotte.collections.BlockingConcurrentHashMap;
@@ -18,6 +12,7 @@ import com.isaacsheff.charlotte.proto.CharlotteNodeGrpc;
 import com.isaacsheff.charlotte.proto.Hash;
 import com.isaacsheff.charlotte.proto.SendBlocksInput;
 import com.isaacsheff.charlotte.proto.SendBlocksResponse;
+import com.isaacsheff.charlotte.yaml.Config;
 
 import io.grpc.stub.StreamObserver;
 
@@ -29,21 +24,10 @@ import io.grpc.stub.StreamObserver;
  * It can be extended for more interesting implementations.
  */
 public class CharlotteNodeService extends CharlotteNodeGrpc.CharlotteNodeImplBase {
-
-  /**
-   * This line is required to use bouncycastle encryption libraries.
-   */
-  static {Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());}
-
   /**
    * Use logger for logging events on a CharlotteNodeService.
    */
   private static final Logger logger = Logger.getLogger(CharlotteNodeService.class.getName());
-
-  /**
-   * The public/private key pair for this service.
-   */
-  private final KeyPair  keyPair;
 
   /**
    * The map of all known blocks.
@@ -51,53 +35,48 @@ public class CharlotteNodeService extends CharlotteNodeGrpc.CharlotteNodeImplBas
    */
   private final BlockingMap<Hash, Block> blockMap;
 
+  /**
+   * The configuration of this service, parsed from a yaml config file, and some x509 key files.
+   */
+  private final Config config;
+
 
   /**
    * Create a new service with the given map of blocks, and the given map of addresses.
    * No input is checked for correctness.
    * @param blockMap a map of known hashes and blocks
-   * @param keyPair the public/private key pair for this service
+   * @param config the Configuration settings for this Service
    */
   public CharlotteNodeService(BlockingMap<Hash, Block> blockMap,
-                              KeyPair keyPair) {
+                              Config config) {
     this.blockMap = blockMap;
-    this.keyPair = keyPair;
+    this.config = config;
   }
 
   /**
    * Create a new service with an empty map of blocks and an empty map of addresses.
-   * @param keyPair the public/private key pair for this service
+   * @param config the Configuration settings for this Service
    */
-  public CharlotteNodeService(KeyPair keyPair) {
-    this(new BlockingConcurrentHashMap<Hash, Block>(),
-         keyPair);
+  public CharlotteNodeService(Config config) {
+    this(new BlockingConcurrentHashMap<Hash, Block>(), config);
   }
 
   /**
-   * Create a new service with an empty map of blocks and an empty map of addresses, and generate crypto keys for it.
+   * Create a new service with an empty map of blocks and an empty map of addresses, parse configuration.
+   * @param path the file path for the configuration file
    */
-  public CharlotteNodeService() {
-    this(new BlockingConcurrentHashMap<Hash, Block>(),
-         generateDefaultKeyPair());
+  public CharlotteNodeService(Path path) {
+    this(new BlockingConcurrentHashMap<Hash, Block>(), new Config(path));
   }
 
   /**
-   * Make a default key pair.
-   * This will be an eliptic curve key with BouncyCastle as the provider.
-   * The curve is P-256.
-   * @return the key pair
+   * Create a new service with an empty map of blocks and an empty map of addresses, parse configuration.
+   * @param filename the file name for the configuration file
    */
-  private static KeyPair generateDefaultKeyPair() {
-    try {
-      KeyPairGenerator keyGen = KeyPairGenerator.getInstance("EC", "BC");
-      keyGen.initialize(new ECGenParameterSpec("P-256"));
-      return keyGen.generateKeyPair();
-    } catch(GeneralSecurityException e) {
-      // actually throws NoSuchProviderException, NoSuchAlgorithmException, or InvalidAlgorithmParameterException
-      logger.log(Level.SEVERE, "Key generation exception popped up when it really should not have: ", e);
-      throw (new ServiceConfigurationError("Key generation exception popped up when it really should not have: "+e));
-    }
+  public CharlotteNodeService(String filename) {
+    this(new BlockingConcurrentHashMap<Hash, Block>(), new Config(filename));
   }
+
 
   /**
    * @return the map of blocks maintained by this service
@@ -108,10 +87,10 @@ public class CharlotteNodeService extends CharlotteNodeGrpc.CharlotteNodeImplBas
 
 
   /**
-   * @return the KeyPair associated with this service
+   * @return The configuration of this service, parsed from a yaml config file, and some x509 key files.
    */
-  public KeyPair getKeyPair() {
-    return keyPair;
+  public Config getConfig() {
+    return config;
   }
 
 
