@@ -13,6 +13,7 @@ import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
 import org.bouncycastle.openssl.jcajce.JcaPEMWriter;
 import org.bouncycastle.util.io.pem.PemObject;
 
+import com.isaacsheff.charlotte.node.CharlotteNodeClient;
 import com.isaacsheff.charlotte.node.SignatureUtil;
 import com.isaacsheff.charlotte.proto.CryptoId;
 
@@ -87,6 +88,12 @@ public class Contact {
   private final CryptoId cryptoId;
 
   /**
+   * For use with actually communicating with the server this Contact represents.
+   * This is the only part of Contact that's really specific to the Charlotte API.
+   */
+  private final CharlotteNodeClient charlotteNodeClient;
+
+  /**
    * Generate a Contact using a JsonContact.
    *  (which was parsed from a config file),
    * and the path representing the dir in which the config file was located
@@ -106,6 +113,7 @@ public class Contact {
     publicKey = generatePublicKey();
     sslContext = getContext();
     cryptoId = SignatureUtil.createCryptoId(getPublicKey());
+    charlotteNodeClient = new CharlotteNodeClient(this);
   }
 
   /**
@@ -183,6 +191,15 @@ public class Contact {
     return getChannelBuilder().useTransportSecurity().enableRetry().sslContext(getSslContext()).build();
   }
 
+  /**
+   * @return a client for use with actually communicating with the server this Contact represents.
+   */
+  public CharlotteNodeClient getCharlotteNodeClient() {return charlotteNodeClient;}
+
+  /**
+   * Generate the X509 Certificate Holder object (BouncyCastle's Certificate Object, essentially) from the bytes we have.
+   * @return the X509 Certificate Holder object from the bytes we have.
+   */
   private X509CertificateHolder generateHolder() {
     X509CertificateHolder holder = null;
     Reader reader = getX509Reader();
@@ -259,6 +276,7 @@ public class Contact {
    *  represents.
    * This could go wrong and log WARNING things, and then return null.
    * This will be run in the constructor.
+   * @return an Ssl configuration in which the X509 certificate file for this contact is trusted
    */
   private SslContext getContext() {
     SslContext context = null;

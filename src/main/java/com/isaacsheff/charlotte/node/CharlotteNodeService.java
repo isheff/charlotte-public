@@ -1,7 +1,9 @@
 package com.isaacsheff.charlotte.node;
 
 import java.nio.file.Path;
+import java.util.Collections;
 import java.util.LinkedList;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import com.isaacsheff.charlotte.collections.BlockingConcurrentHashMap;
@@ -9,10 +11,12 @@ import com.isaacsheff.charlotte.collections.BlockingMap;
 
 import com.isaacsheff.charlotte.proto.Block;
 import com.isaacsheff.charlotte.proto.CharlotteNodeGrpc;
+import com.isaacsheff.charlotte.proto.CryptoId;
 import com.isaacsheff.charlotte.proto.Hash;
 import com.isaacsheff.charlotte.proto.SendBlocksInput;
 import com.isaacsheff.charlotte.proto.SendBlocksResponse;
 import com.isaacsheff.charlotte.yaml.Config;
+import com.isaacsheff.charlotte.yaml.Contact;
 
 import io.grpc.stub.StreamObserver;
 
@@ -22,6 +26,7 @@ import io.grpc.stub.StreamObserver;
  * One Server can run multiple Serivices.
  * This is a Service implementing the charlotte gRPC API.
  * It can be extended for more interesting implementations.
+ * @author Isaac Sheff
  */
 public class CharlotteNodeService extends CharlotteNodeGrpc.CharlotteNodeImplBase {
   /**
@@ -102,18 +107,162 @@ public class CharlotteNodeService extends CharlotteNodeGrpc.CharlotteNodeImplBas
   }
 
 
+  /**
+   * Send this block to the server with this CryptoId.
+   * Shorthand for getConfig().getContact( - ).getCharlotteNodeClient().sendBlock( - ).
+   * @param cryptoid identifies the server we want to send to 
+   * @param block the block we want to send
+   * @return true if we sent the block successfully, false otherwise
+   * @throws NullPointerException if no contact was found with this identity
+   */
+  public boolean sendBlock(CryptoId cryptoid, Block block) {
+    return getConfig().getContact(cryptoid).getCharlotteNodeClient().sendBlock(block);
+  }
 
   /**
-   * TODO: do this right!.
+   * Send this block to the server with this CryptoId.
+   * Shorthand for getConfig().getContact( - ).getCharlotteNodeClient().sendBlock( - ).
+   * @param cryptoid identifies the server we want to send to 
+   * @param block the block we want to send
+   * @return true if we sent the block successfully, false otherwise
+   * @throws NullPointerException if no contact was found with this identity
+   */
+  public boolean sendBlock(CryptoId cryptoid, SendBlocksInput block) {
+    return getConfig().getContact(cryptoid).getCharlotteNodeClient().sendBlock(block);
+  }
+
+  /**
+   * Send this block to the server with this Name (in the config file).
+   * Shorthand for getConfig().getContact( - ).getCharlotteNodeClient().sendBlock( - ).
+   * @param name identifies the server we want to send to 
+   * @param block the block we want to send
+   * @return true if we sent the block successfully, false otherwise
+   * @throws NullPointerException if no contact was found with this identity
+   */
+  public boolean sendBlock(String name, Block block) {
+    return getConfig().getContact(name).getCharlotteNodeClient().sendBlock(block);
+  }
+
+  /**
+   * Send this block to the server with this Name (in the config file).
+   * Shorthand for getConfig().getContact( - ).getCharlotteNodeClient().sendBlock( - ).
+   * @param name identifies the server we want to send to 
+   * @param block the block we want to send
+   * @return true if we sent the block successfully, false otherwise
+   * @throws NullPointerException if no contact was found with this identity
+   */
+  public boolean sendBlock(String name, SendBlocksInput block) {
+    return getConfig().getContact(name).getCharlotteNodeClient().sendBlock(block);
+  }
+
+  /**
+   * Send this block to the server with this URL and port.
+   * Shorthand for getConfig().getContact( - ).getCharlotteNodeClient().sendBlock( - ).
+   * @param url identifies the server we want to send to 
+   * @param port identifies the port on that server
+   * @param block the block we want to send
+   * @return true if we sent the block successfully, false otherwise
+   * @throws NullPointerException if no contact was found with this identity
+   */
+  public boolean sendBlock(String url, int port, Block block) {
+    return getConfig().getContact(url, port).getCharlotteNodeClient().sendBlock(block);
+  }
+
+  /**
+   * Send this block to the server with this URL and port.
+   * Shorthand for getConfig().getContact( - ).getCharlotteNodeClient().sendBlock( - ).
+   * @param url identifies the server we want to send to 
+   * @param port identifies the port on that server
+   * @param block the block we want to send
+   * @return true if we sent the block successfully, false otherwise
+   * @throws NullPointerException if no contact was found with this identity
+   */
+  public boolean sendBlock(String url, int port, SendBlocksInput block) {
+    return getConfig().getContact(url, port).getCharlotteNodeClient().sendBlock(block);
+  }
+
+  /**
+   * Send this block to all known contacts.
+   * Since each contact's sendBlock function is nonblocking, this will be done in parallel.
+   * @param block the block to send
+   */
+  public void broadcastBlock(Block block) {
+    for (Contact contact : getConfig().getContacts().values()) {
+      contact.getCharlotteNodeClient().sendBlock(block);
+    }
+  }
+
+  /**
+   * Send this block to all known contacts.
+   * Since each contact's sendBlock function is nonblocking, this will be done in parallel.
+   * @param block the block to send
+   */
+  public void broadcastBlock(SendBlocksInput block) {
+    for (Contact contact : getConfig().getContacts().values()) {
+      contact.getCharlotteNodeClient().sendBlock(block);
+    }
+  }
+
+  /**
+   * Stores a block in the services blockMap, and returns whether it was already known to this service.
+   * @param block the block to be stored
+   * @return whether or not the block was already known to this CharlotteNodeService
+   */
+  public boolean storeNewBlock(Block block) {
+    return (getBlockMap().putIfAbsent(HashUtil.sha3Hash(block), block) == null);
+  }
+
+  /**
+   * Called after a new block has been received, and set to be broadcast to all other nodes.
+   * Override this to make this Node do useful things.
+   * @param block the newly received block
+   * @return any SendBlockResponses (including error messages) to be sent back over the wire to the block's sender.
+   */
+  public Iterable<SendBlocksResponse> afterBroadcastNewBlock(Block block) {
+    return (new LinkedList<SendBlocksResponse>());
+  }
+
+  /**
+   * Unless sendBlocks or onSendBlocksInput(SendBlocksInput -) have been overridden with a handler that does
+   *  otherwise, this will be called for every block which arrives via any stream.
+   * If the block is not yet seen, broadcasts the block to all contacts and calls afterBroadcastNewBlock().
+   * Otherwise, returns an empty list of response messages.
+   * Logs (INFO) whenever a block is received, whether it was new or repeat.
+   * <p>
+   * This can also be used to SEND a block. 
+   * This would represent broadcasting the block, and then receiving the block yourself, even before you've marshaled it.
+   * </p>
+   * @param block the newly arrived blcok
+   * @return any SendBlocksResponse s you want to send back over the wire
+   */
+  public Iterable<SendBlocksResponse> onSendBlocksInput(Block block) {
+    if (storeNewBlock(block)) {
+      logger.info("New Block received: " + block);
+      broadcastBlock(block);
+      return afterBroadcastNewBlock(block);
+    } 
+    logger.info("Repeat Block received: " + block);
+    return (new LinkedList<SendBlocksResponse>());
+  }
+
+  /**
    * Unless sendBlocks has been overridden with a handler that does
    *  otherwise, this will be called for every block which arrives
    *  via any stream.
-   * Right now, this dumps the input and returns an empty list.
-   * @param input the newly arrived address
+   * Logs a warning and sends back an error message if there is no block in the input.
+   * If the block is not yet seen, broadcasts the block to all contacts and calls afterBroadcastNewBlock().
+   * Otherwise, returns an empty list of response messages.
+   * Logs (INFO) whenever a block is received, whether it was new or repeat.
+   * @param input the newly arrived blcok
    * @return any SendBlocksResponse s you want to send back over the wire
    */
   public Iterable<SendBlocksResponse> onSendBlocksInput(SendBlocksInput input) {
-    return (new LinkedList<SendBlocksResponse>());
+    if (!input.hasBlock()) {
+      logger.log(Level.WARNING, "No Block in this SendBlocksInput");
+      return Collections.singleton(SendBlocksResponse.newBuilder().
+               setErrorMessage("No Block in this SendBlocksInput").build());
+    }
+    return onSendBlocksInput(input.getBlock());
   }
 
 

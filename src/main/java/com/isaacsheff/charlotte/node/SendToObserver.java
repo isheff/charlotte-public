@@ -3,7 +3,6 @@ package com.isaacsheff.charlotte.node;
 import java.util.concurrent.BlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
 import io.grpc.stub.StreamObserver;
 
 /**
@@ -52,6 +51,4 @@ public class SendToObserver<T> implements Runnable {
       }
     }
   }
-
-
 }
