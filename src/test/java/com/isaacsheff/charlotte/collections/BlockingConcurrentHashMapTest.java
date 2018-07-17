@@ -1,13 +1,11 @@
 package com.isaacsheff.charlotte.collections;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.concurrent.TimeUnit;
 
 import com.isaacsheff.charlotte.collections.BlockingConcurrentHashMap;
 import com.isaacsheff.charlotte.collections.BlockingMap;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -89,24 +87,19 @@ class BlockingConcurrentHashMapTest {
 
   /** Test blockingGet when it actually has to block */
   @Test
-  void asyncBlockingGet() {
-    Thread t = new Thread(() -> {
-      assertEquals("value", testMap.blockingGet("key"),
-                  "blockingGet should return the first value set after it was called");
-    });
+  void asyncBlockingGet() throws InterruptedException {
+    Thread t = new Thread(() -> {assertEquals("value", testMap.blockingGet("key"),
+                  "blockingGet should return the first value set after it was called");});
     t.start();
-    try {
-      TimeUnit.SECONDS.sleep(1);
-    } catch (InterruptedException e) {
-      assertTrue(false, "Exception thrown: " + e);
-    }
+    Thread t2 = new Thread(() -> {assertEquals("value 2", testMap.blockingGet("key 2"),
+                  "blockingGet should return the first value set after it was called");});
+    t2.start();
+    TimeUnit.SECONDS.sleep(1); // wait a second to ensure that the blockingGets are blocking
+    assertEquals(null, testMap.putIfAbsent("key 2", "value 2"), "put with fresh key should return null");
     normalPut(); // should put "newer value" in for key "key"
-    try {
-      t.join();
-    } catch (InterruptedException e) {
-      assertTrue(false, "Exception thrown: " + e);
-    }
-    
+    assertEquals("newer value", testMap.blockingGet("key"), "get should return most recently put value");
+    t.join();
+    t2.join();
   }
 
 } 
