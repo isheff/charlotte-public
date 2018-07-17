@@ -1,6 +1,7 @@
 package com.isaacsheff.charlotte.collections;
 
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Logger;
 
 /**
  * A map with a blockingGet function.
@@ -9,6 +10,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * @author Isaac Sheff
  */
 public class BlockingConcurrentHashMap<K,V> extends ConcurrentHashMap<K,V> implements BlockingMap<K,V> {
+  private static final Logger logger = Logger.getLogger(BlockingConcurrentHashMap.class.getName());
+
   /**
    * I just stuck the date and time in here...
    */
@@ -35,6 +38,7 @@ public class BlockingConcurrentHashMap<K,V> extends ConcurrentHashMap<K,V> imple
    * @param key the key for which you want an associated value
    * @return the associated value 
    */
+  @Override
   public V blockingGet(K key) {
     final V value = get(key);
     if (value != null) {
@@ -71,7 +75,7 @@ public class BlockingConcurrentHashMap<K,V> extends ConcurrentHashMap<K,V> imple
    *
    * @param key the associated key
    * @param value the value to be written to that key.
-   * @return the value written to that key.
+   * @return the previous value associated with that key, or null if there was none.
    */
   @Override
   public V put(K key, V value) {
@@ -158,7 +162,9 @@ public class BlockingConcurrentHashMap<K,V> extends ConcurrentHashMap<K,V> imple
      */
     public void put (T value) {
       this.value = value;
-      this.notifyAll();
+      synchronized(this) {
+        this.notifyAll();
+      }
     }
   }
 
