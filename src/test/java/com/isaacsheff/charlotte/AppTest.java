@@ -3,6 +3,7 @@ package com.isaacsheff.charlotte;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.isaacsheff.charlotte.App;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -13,14 +14,10 @@ import org.junit.jupiter.api.Test;
  */
 class AppTest {
 
-  /**
-   * An example of a static parameter, which can be set by a BeforeAll method.
-   */
+  /** An example of a static parameter, which can be set by a BeforeAll method. */
   static int staticTestParam;
 
-  /**
-   * An example of a test parameter which can be set by a BeforeEach method.
-   */
+  /** An example of a test parameter which can be set by a BeforeEach method. */
   int testParam;
 
   /**
@@ -44,11 +41,18 @@ class AppTest {
     assertEquals(2,2, "Optional message here");
   }
 
-  /**
-   * Test pretty much nothing of interest.
-   */
+  /** Test pretty much nothing of interest. */
   @Test
   void justAnExample() {
     assertEquals(testParam, staticTestParam, "Optional message here");
+  }
+
+  /**
+   * Run App's main method and see if anything bad happens.
+   * This will probably print out stuff, which is probably bad form, but here we are...
+   */
+  @Test
+  void runMain() {
+    App.main(new String[]{});
   }
 }
