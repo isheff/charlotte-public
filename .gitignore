@@ -2,6 +2,9 @@
 .classpath
 .project
 
+# any keys sitting in the test resources directory
+src/test/resources/*.pem
+
 # Not sure where this comes from
 workbench.xmi
 
