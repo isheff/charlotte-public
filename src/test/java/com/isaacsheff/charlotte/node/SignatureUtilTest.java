@@ -18,9 +18,12 @@ class SignatureUtilTest {
 
   /** Generate a keypair before each method call. */
   private KeyPair keyPair;
-  private Block challenge;
-  private Block challenge2;
 
+  /** Generate an example thing to sign. */
+  private Block challenge;
+
+  /** Generate a different example thing to sign. */
+  private Block challenge2;
 
   /**
    * Set stuff up before running each test in this class.
