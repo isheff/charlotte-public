@@ -4,7 +4,6 @@ import java.security.KeyPair;
 import java.security.Security;
 import java.util.Map;
 
-import com.isaacsheff.charlotte.node.ChallengeResponseCalculator;
 import com.isaacsheff.charlotte.node.CharlotteNodeClient;
 import com.isaacsheff.charlotte.node.CharlotteNodeService;
 import com.isaacsheff.charlotte.node.CharlotteNode;
@@ -35,11 +34,11 @@ public class App {
    */
   static {Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());}
   public static void main( String[] args ) {
-    GenerateX509.generateKeyFiles("src/test/server.pem",
-                                  "src/test/private-key.pem",
+    GenerateX509.generateKeyFiles("src/test/resources/server.pem",
+                                  "src/test/resources/private-key.pem",
                                   "isheff.cs.cornell.edu",
                                   "128.84.155.11");
-    KeyPair keyPair = (new Config("src/test/config.yaml")).getKeyPair();
+    KeyPair keyPair = (new Config("src/test/resources/config.yaml")).getKeyPair();
     Block challenge = Block.newBuilder().setStr("hello, world!").build();
     System.out.println(SignatureUtil.checkSignature(challenge, SignatureUtil.signBytes(keyPair, challenge)));
 
