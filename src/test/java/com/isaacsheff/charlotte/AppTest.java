@@ -15,10 +15,10 @@ import org.junit.jupiter.api.Test;
 class AppTest {
 
   /** An example of a static parameter, which can be set by a BeforeAll method. */
-  static int staticTestParam;
+  private static int staticTestParam;
 
   /** An example of a test parameter which can be set by a BeforeEach method. */
-  int testParam;
+  private int testParam;
 
   /**
    * Set stuff up before running any tests in this class.

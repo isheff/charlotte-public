@@ -16,7 +16,7 @@ import org.junit.jupiter.api.Test;
 class BlockingConcurrentHashMapTest {
 
   /** An example BlockingConcurrentHashMap used in each test. */
-  BlockingMap<String, String> testMap;
+  private BlockingMap<String, String> testMap;
 
 
   /**
