@@ -253,7 +253,7 @@ public class CharlotteNodeService extends CharlotteNodeGrpc.CharlotteNodeImplBas
    * If the block is not yet seen, broadcasts the block to all contacts and calls afterBroadcastNewBlock().
    * Otherwise, returns an empty list of response messages.
    * Logs (INFO) whenever a block is received, whether it was new or repeat.
-   * @param input the newly arrived blcok
+   * @param input the newly arrived block
    * @return any SendBlocksResponse s you want to send back over the wire
    */
   public Iterable<SendBlocksResponse> onSendBlocksInput(SendBlocksInput input) {

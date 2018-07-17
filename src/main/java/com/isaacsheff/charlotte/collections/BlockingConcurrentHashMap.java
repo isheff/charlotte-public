@@ -12,13 +12,21 @@ public class BlockingConcurrentHashMap<K,V> extends ConcurrentHashMap<K,V> imple
   /**
    * I just stuck the date and time in here...
    */
-  public static final long serialVersionUID = 201806251816L;
+  public static final long serialVersionUID = 201807161600L;
 
   /** 
    * All the pending requests are kept here.
    * When a new request comes in for something that's not already in the map, they wait on a monitor in here.
    */
-  private ConcurrentHashMap<K,ConcurrentHolder<V>> pendingHolders;
+  private final ConcurrentHashMap<K,ConcurrentHolder<V>> pendingHolders;
+
+  /**
+   * Create an empty BlockingConcurrentHashMap.
+   */
+  public BlockingConcurrentHashMap() {
+    super();
+    pendingHolders = new ConcurrentHashMap<K,ConcurrentHolder<V>>();
+  }
 
 
   /**
@@ -28,15 +36,15 @@ public class BlockingConcurrentHashMap<K,V> extends ConcurrentHashMap<K,V> imple
    * @return the associated value 
    */
   public V blockingGet(K key) {
-    V value = get(key);
+    final V value = get(key);
     if (value != null) {
       return value;
     }
     // It's cleaner to call new below, but maybe it would be faster if we did
     //  (possibly) 2 lookups, and didn't call new if the map was occupied to
     //  begin with.
-    ConcurrentHolder<V> newHolder = new ConcurrentHolder<V>(); 
-    ConcurrentHolder<V> oldHolder = pendingHolders.putIfAbsent(key, newHolder);
+    final ConcurrentHolder<V> newHolder = new ConcurrentHolder<V>(); 
+    final ConcurrentHolder<V> oldHolder = pendingHolders.putIfAbsent(key, newHolder);
     if (oldHolder == null)
     {
       return newHolder.get();
@@ -67,7 +75,7 @@ public class BlockingConcurrentHashMap<K,V> extends ConcurrentHashMap<K,V> imple
    */
   @Override
   public V put(K key, V value) {
-    V v = super.put(key, value);
+    final V v = super.put(key, value);
     fillHolder(key, value);
     return v;
   }
@@ -89,12 +97,16 @@ public class BlockingConcurrentHashMap<K,V> extends ConcurrentHashMap<K,V> imple
    * Basically, it's messy and inefficient to avoid this, and I don't need to.
    * @param key the associated key
    * @param value the value to be written ot that key
-   * @return  the value now associated with that key.
+   * @return  the value now associated with that key, or null, if the new value was inserted.
    */
   @Override 
   public V putIfAbsent(K key, V value) {
-    V v = super.putIfAbsent(key, value);
-    fillHolder(key, v);
+    final V v = super.putIfAbsent(key, value);
+    if (v == null) {
+      fillHolder(key, value);
+    } else {
+      fillHolder(key, v); // not sure if this line is necessary, but I'm confident it won't hurt.
+    }
     return v;
   }
 
@@ -103,7 +115,7 @@ public class BlockingConcurrentHashMap<K,V> extends ConcurrentHashMap<K,V> imple
    * Removes the holder from the set of pending holders, and passes the given value to all waiting threads.
    */
   private void fillHolder(K key, V value) {
-    ConcurrentHolder<V> holder = pendingHolders.remove(key);
+    final ConcurrentHolder<V> holder = pendingHolders.remove(key);
     if (holder != null) {
       holder.put(value);
     }

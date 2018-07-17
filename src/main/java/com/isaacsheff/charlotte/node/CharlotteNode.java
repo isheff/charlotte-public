@@ -10,6 +10,7 @@ import io.grpc.ServerBuilder;
 
 /**
  * When run, a CharlotteNode boots up a server featuring a CharlotteNodeService.
+ * @author Isaac Sheff
  */
 public class CharlotteNode implements Runnable {
   /**

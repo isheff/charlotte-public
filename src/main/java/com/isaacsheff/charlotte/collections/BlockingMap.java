@@ -4,6 +4,7 @@ import java.util.concurrent.ConcurrentMap;
 
 /**
  * A Map featuring a blockingGet method, which returns when the Map has a value assiciated with the given key.
+ * @author Isaac Sheff
  */
 public interface BlockingMap<K,V> extends ConcurrentMap<K,V> {
   /**
