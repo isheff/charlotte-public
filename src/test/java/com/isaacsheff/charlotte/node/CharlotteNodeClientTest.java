@@ -24,14 +24,15 @@ import java.util.logging.Logger;
 import java.util.logging.Level;
 
 /**
- * A fairly bland test suite for the fairly meaningless "App" class, mostly to remind myself of how JUnit works.
+ * Test the CharlotteNodeClient.
+ * This may use ports 8100 - 8199
  * @author Isaac Sheff
  */
 public class CharlotteNodeClientTest {
   /**
-   * Use this for logging events in the Contact class.
+   * Use this for logging events in the class.
    */
-  private static final Logger logger = Logger.getLogger(Contact.class.getName());
+  private static final Logger logger = Logger.getLogger(CharlotteNodeClientTest.class.getName());
 
 
   /** Keep track of the ports occuped by tests thus far. */
@@ -53,7 +54,9 @@ public class CharlotteNodeClientTest {
   }
 
 
-  /** launch a dummy server, send 3 blocks to it, and check to see the proper 3 blocks arrived. */
+  /** 
+   * launch a dummy server, send 3 blocks to it, and check to see the proper 3 blocks arrived.
+   * */
   @Test
   void sendSomeBlocks() throws InterruptedException {
     // calcualte what port to put this server on
@@ -107,10 +110,6 @@ public class CharlotteNodeClientTest {
     assertEquals(Block.newBuilder().setStr("block 2").build(), receivedBlocks.take(),
                  "block received should match block sent");
 
-    charlotteNode.stop();
-    thread.join(); // wait for the server to shut down. 
-    client.shutdown(); // shut down the client
-    
     // check to ensure no other blocks somehow got queued
     assertTrue(receivedBlocks.isEmpty(), "no further blocks should be expected");
   }
