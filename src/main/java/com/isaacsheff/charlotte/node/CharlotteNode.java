@@ -46,7 +46,8 @@ public class CharlotteNode implements Runnable {
   public CharlotteNode(CharlotteNodeService service, ServerBuilder<?> serverBuilder, int port) {
     this.port = port;
     this.service = service;
-    this.server = serverBuilder.addService(service).build();
+    this.server = serverBuilder.useTransportSecurity(service.getConfig().getX509Stream(), service.getConfig().getPrivateKeyStream()).
+                                addService(service).build();
   }
 
 

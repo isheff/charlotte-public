@@ -1,8 +1,9 @@
 package com.isaacsheff.charlotte.node;
 
+import static java.util.Collections.emptySet;
+import static java.util.Collections.singleton;
+
 import java.nio.file.Path;
-import java.util.Collections;
-import java.util.LinkedList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -219,7 +220,7 @@ public class CharlotteNodeService extends CharlotteNodeGrpc.CharlotteNodeImplBas
    * @return any SendBlockResponses (including error messages) to be sent back over the wire to the block's sender.
    */
   public Iterable<SendBlocksResponse> afterBroadcastNewBlock(Block block) {
-    return (new LinkedList<SendBlocksResponse>());
+    return emptySet();
   }
 
   /**
@@ -242,7 +243,7 @@ public class CharlotteNodeService extends CharlotteNodeGrpc.CharlotteNodeImplBas
       return afterBroadcastNewBlock(block);
     } 
     logger.info("Repeat Block received: " + block);
-    return (new LinkedList<SendBlocksResponse>());
+    return emptySet();
   }
 
   /**
@@ -259,7 +260,7 @@ public class CharlotteNodeService extends CharlotteNodeGrpc.CharlotteNodeImplBas
   public Iterable<SendBlocksResponse> onSendBlocksInput(SendBlocksInput input) {
     if (!input.hasBlock()) {
       logger.log(Level.WARNING, "No Block in this SendBlocksInput");
-      return Collections.singleton(SendBlocksResponse.newBuilder().
+      return singleton(SendBlocksResponse.newBuilder().
                setErrorMessage("No Block in this SendBlocksInput").build());
     }
     return onSendBlocksInput(input.getBlock());

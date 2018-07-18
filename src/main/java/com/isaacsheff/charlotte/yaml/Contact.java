@@ -90,8 +90,9 @@ public class Contact {
   /**
    * For use with actually communicating with the server this Contact represents.
    * This is the only part of Contact that's really specific to the Charlotte API.
+   * Remains null until first asked for.
    */
-  private final CharlotteNodeClient charlotteNodeClient;
+  private CharlotteNodeClient charlotteNodeClient;
 
   /**
    * Generate a Contact using a JsonContact.
@@ -113,7 +114,7 @@ public class Contact {
     publicKey = generatePublicKey();
     sslContext = getContext();
     cryptoId = SignatureUtil.createCryptoId(getPublicKey());
-    charlotteNodeClient = new CharlotteNodeClient(this);
+    charlotteNodeClient = null;
   }
 
   /**
@@ -194,7 +195,20 @@ public class Contact {
   /**
    * @return a client for use with actually communicating with the server this Contact represents.
    */
-  public CharlotteNodeClient getCharlotteNodeClient() {return charlotteNodeClient;}
+  public CharlotteNodeClient getCharlotteNodeClient() {
+    // I'm trying to make this as lightweight as possible after the first time it's called.
+    // If charlotteNodeClient has already been set, return it.
+    // Otherwise, grab a lock
+    if (charlotteNodeClient == null) {
+      synchronized(this) {
+        // If, after we've grabbed the lock, it still hasn't been set, set it
+        if (charlotteNodeClient == null) {
+          charlotteNodeClient = new CharlotteNodeClient(this);
+        }
+      }
+    }
+    return charlotteNodeClient;
+  }
 
   /**
    * Generate the X509 Certificate Holder object (BouncyCastle's Certificate Object, essentially) from the bytes we have.
