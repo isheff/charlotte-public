@@ -25,6 +25,7 @@ import io.grpc.stub.StreamObserver;
  * One Server can run multiple Serivices.
  * This is a Service implementing the wilbur gRPC API.
  * It can be extended for more interesting implementations.
+ * Run as a main class with an arg specifying a config file name to run a Wilbur server.
  * @author Isaac Sheff
  */
 public class WilburService extends WilburGrpc.WilburImplBase {
@@ -38,6 +39,11 @@ public class WilburService extends WilburGrpc.WilburImplBase {
    */
   private final CharlotteNodeService node;
 
+  /**
+   * Run as a main class with an arg specifying a config file name to run a Wilbur server.
+   * creates and runs a new CharlotteNode which runs a Wilbur Service and a CharlotteNodeService, in a new thread.
+   * @param args command line args. args[0] should be the name of the config file
+   */
   public static void main(String[] args) {
     if (args.length < 1) {
       System.out.println("Correct Usage: WilburService configFileName.yaml");
@@ -47,16 +53,28 @@ public class WilburService extends WilburGrpc.WilburImplBase {
     logger.info("Wilbur service started on new thread");
   }
 
+  /**
+   * @param node a CharlotteNodeService with which we'll build a WilburService
+   * @return a new CharlotteNode which runs a Wilbur Service and a CharlotteNodeService
+   */
   public static CharlotteNode getWilburNode(final CharlotteNodeService node) {
     return new CharlotteNode(node,
                              ServerBuilder.forPort(node.getConfig().getPort()).addService(new WilburService(node)),
                              node.getConfig().getPort());
   }
 
+  /**
+   * @param configFilename the name of the configuration file for this CharlotteNode
+   * @return a new CharlotteNode which runs a Wilbur Service and a CharlotteNodeService
+   */
   public static CharlotteNode getWilburNode(final Path configFilename) {
     return getWilburNode(new CharlotteNodeService(configFilename));
   }
 
+  /**
+   * @param configFilename the name of the configuration file for this CharlotteNode
+   * @return a new CharlotteNode which runs a Wilbur Service and a CharlotteNodeService
+   */
   public static CharlotteNode getWilburNode(final String configFilename) {
     return getWilburNode(new CharlotteNodeService(configFilename));
   }
