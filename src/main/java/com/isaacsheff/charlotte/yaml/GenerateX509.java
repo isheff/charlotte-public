@@ -42,7 +42,7 @@ import org.bouncycastle.util.io.pem.PemObject;
  * Static utility functions for generating X509 certificates and private keys.
  * Can be run as a utility program (has a main method):
  * GenerateX509 publicFileName privateFileName dnsName ipAddress
- * It will use Eliptic Curve keys with the P-256 curve.
+ * It will use Elliptic Curve keys with the P-256 curve.
  * Files will be PEM format.
  * The key files generated play nice with the rest of Charlotte.
  * Uses BouncyCastle.
@@ -62,7 +62,7 @@ public class GenerateX509 {
   /**
    * You can run GenerateX509 as a stand-alone to generate a pair of public/private keys for a dnsName with an IP address.
    * GenerateX509 publicFileName privateFileName dnsName ipAddress
-   * It will use Eliptic Curve keys with the P-256 curve.
+   * It will use Elliptic Curve keys with the P-256 curve.
    * Files will be PEM format.
    * The key files generated play nice with the rest of Charlotte.
    * Uses BouncyCastle.
@@ -78,7 +78,7 @@ public class GenerateX509 {
 
   /**
    * Writes to disk corresponding public and private key files.
-   * It will use Eliptic Curve keys with the P-256 curve.
+   * It will use Elliptic Curve keys with the P-256 curve.
    * Files will be PEM format.
    * The key files generated play nice with the rest of Charlotte.
    * Uses BouncyCastle.
@@ -93,7 +93,7 @@ public class GenerateX509 {
   
   /**
    * Writes to disk corresponding public and private key files.
-   * It will use Eliptic Curve keys with the P-256 curve.
+   * It will use Elliptic Curve keys with the P-256 curve.
    * Files will be PEM format.
    * The key files generated play nice with the rest of Charlotte.
    * Uses BouncyCastle.

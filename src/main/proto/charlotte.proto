@@ -20,11 +20,11 @@ message Hash {
 }
 
 message PublicKey {
-  message ElipticCurveP256 { // I suppose we may someday want to edit how we store P256s?
+  message EllipticCurveP256 { // I suppose we may someday want to edit how we store P256s?
     bytes byteString = 1;
   }
   oneof keyalgorithm_oneof {    
-    ElipticCurveP256 elipticCurveP256 = 1;
+    EllipticCurveP256 ellipticCurveP256 = 1;
   }
 }
 

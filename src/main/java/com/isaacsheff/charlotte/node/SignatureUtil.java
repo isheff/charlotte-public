@@ -70,8 +70,8 @@ public class SignatureUtil {
    * @return the corresponding CryptoId object
    */
   public static CryptoId createCryptoId(java.security.PublicKey publicKey) {
-    return CryptoId.newBuilder().setPublicKey(PublicKey.newBuilder().setElipticCurveP256(
-             PublicKey.ElipticCurveP256.newBuilder().setByteString(
+    return CryptoId.newBuilder().setPublicKey(PublicKey.newBuilder().setEllipticCurveP256(
+             PublicKey.EllipticCurveP256.newBuilder().setByteString(
                ByteString.copyFrom(publicKey.getEncoded())))).build();
   }
 
@@ -138,7 +138,7 @@ public class SignatureUtil {
     java.security.PublicKey publicKey = null;
     try {
       publicKey = KeyFactory.getInstance("EC", "BC").generatePublic(new X509EncodedKeySpec(
-          signature.getCryptoId().getPublicKey().getElipticCurveP256().getByteString().toByteArray()));
+          signature.getCryptoId().getPublicKey().getEllipticCurveP256().getByteString().toByteArray()));
     } catch(NoSuchAlgorithmException e) {
       logSevereAndServiceConfigurationError("Key Parsing generated NoSuchAlgorithm when shouldn't have, on EC: ", e);
     } catch(NoSuchProviderException e) {
