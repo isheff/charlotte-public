@@ -14,6 +14,7 @@ import com.isaacsheff.charlotte.proto.Block;
 import com.isaacsheff.charlotte.proto.CharlotteNodeGrpc;
 import com.isaacsheff.charlotte.proto.CryptoId;
 import com.isaacsheff.charlotte.proto.Hash;
+import com.isaacsheff.charlotte.proto.Reference;
 import com.isaacsheff.charlotte.proto.SendBlocksInput;
 import com.isaacsheff.charlotte.proto.SendBlocksResponse;
 import com.isaacsheff.charlotte.yaml.Config;
@@ -99,6 +100,13 @@ public class CharlotteNodeService extends CharlotteNodeGrpc.CharlotteNodeImplBas
     return getBlockMap().blockingGet(hash);
   }
 
+  /**
+   * @param reference a reference to the desired block
+   * @return the block corresponding to the hash in this reference. Warning: WILL WAIT until such a block arrives
+   */
+  public Block getBlock(Reference reference) {
+    return getBlock(reference.getHash());
+  }
 
   /**
    * @return The configuration of this service, parsed from a yaml config file, and some x509 key files.
