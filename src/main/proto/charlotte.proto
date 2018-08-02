@@ -88,6 +88,7 @@ message Block {
     AvailabilityAttestation availabilityAttestation = 1;
     IntegrityAttestation integrityAttestation = 2;
     string str = 3; // why not?
+    HetconsMessage hetconsMessage = 4;
     // This is probably the best place for an Any type, but for now, keep it minimum
   }
 }
@@ -151,3 +152,144 @@ service Fern { // anything running a Fern service should also run a CharlotteNod
   rpc RequestIntegrityAttestation(RequestIntegrityAttestationInput) returns (RequestIntegrityAttestationResponse) {}
 }
 
+
+
+
+
+
+
+
+// ################################################################
+
+// Hetcons
+
+// ################################################################
+
+// Hetcons version 1.
+// Because Protobuf does not support mutual depenency, I temporarily put hetcons code here.
+
+// Utils
+message HetconsTime {
+  int64 val = 1;
+}
+
+message HetconsValue {
+  oneof proposedContent_oneof {
+    charlotte.Block block = 1;
+    int64 num = 2;
+  }
+}
+
+enum HetconsProposalType {
+  BlockSlot = 0;
+}
+
+
+message HetconsParticipatedAccountsInfo {
+  charlotte.Hash chainHash = 1;
+  HetconsSlot slot = 2;
+}
+
+message HetconsSlot {
+  oneof slot_type_oneof {
+    int64 blockSlotNumber = 1;
+  }
+}
+
+// Proposal for the next slot provided by clients.
+message HetconsProposal {
+  HetconsTime time = 1;
+  int64 ballotNumber = 2;
+  HetconsValue value = 3;
+  HetconsProposalType proposalType = 4;
+  repeated HetconsParticipatedAccountsInfo accounts = 5;
+  charlotte.Hash hash_of_ballot_number_and_time = 6;
+}
+
+// references of a quorum of 1bs or 2bs.
+message HetconsQuorumRefs {
+  repeated charlotte.Hash blockHashes = 1;
+}
+
+message HetconsObserverQuorum {
+  charlotte.CryptoId owner = 1;
+  int64 size = 2;
+  repeated charlotte.CryptoId memebers = 3;
+  // TODO: fault type?
+}
+
+message HetconsObserver {
+  charlotte.CryptoId id = 1;
+  repeated HetconsObserverQuorum quorums = 2;
+}
+
+// the group of observers that the message to be sent.
+message HetconsObserverGroup {
+  repeated HetconsObserver observers = 1;
+}
+
+
+// Main Messages
+
+enum HetconsMessageType {
+  M1a = 0;
+  M1b = 1;
+  M2b = 2;
+  PROPOSAL = 3;
+}
+
+message HetconsMessage {
+  HetconsMessageType type = 4;
+  oneof hetconsMessageType_oneof {
+    HetconsMessage1a m1a = 1;
+    HetconsMessage1b m1b = 2;
+    HetconsMessage2ab m2b = 3;
+    HetconsProposal proposal = 5;
+  }
+  HetconsObserverGroup observerGroup = 6;
+  charlotte.Signature sig = 7;
+}
+
+// Leader Propose the new value with a new bollot number
+message HetconsMessage1a {
+  HetconsProposal proposal = 1;
+}
+
+// Acceptors reply to the leader with (Proposal for bollet b, and previous accepted proposal which is a 2a message
+message HetconsMessage1b {
+  HetconsMessage1a m1a = 1;
+  HetconsMessage2ab m2a = 2;
+}
+
+// 2a and 2b messages have the same format. The difference is that the sig in 2a should be the host server itself.
+message HetconsMessage2ab {
+  HetconsProposal proposal = 1;
+  HetconsQuorumRefs quorum_of_1bs = 2;
+}
+
+
+// Status
+
+enum HetconsConsensusStage {
+  Proposed = 0;
+  M1ASent = 1;
+  M1BSent = 2;
+  QuorumOfM1BReceived = 3;
+  M2BSent = 4;
+  QuorumOfM2BReceived = 5;
+  HetconsTimeout = 6;
+  InvalidProposal = 7;
+  ConsensusDecided = 8;
+  ConsensusAccepted = 9;
+  ConsensusFailed = 10;
+  ConsensusIdile = 11;
+  ConsensusRestart = 12;
+}
+
+message HetconsStageStatus {
+  message ResponseInfo {
+    string status_explaination = 1;
+  }
+  HetconsConsensusStage stage = 1;
+  ResponseInfo info = 2;
+}
