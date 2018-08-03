@@ -28,6 +28,11 @@ import com.isaacsheff.charlotte.yaml.Contact;
 import io.grpc.ManagedChannel;
 import io.grpc.stub.StreamObserver;
 
+/**
+ * A client designed to request, fetch, and check availability attestations from a Wilbur node.
+ * This client needs a local CharlotteNodeService to get blocks for it.
+ * @author Isaac Sheff
+ */
 public class WilburClient {
   /**
    * Use logger for logging events on this class.
@@ -44,14 +49,27 @@ public class WilburClient {
    */
   private final WilburStub asyncStub;
 
+  /**
+   * The stub which sends messages to the Wilbur service within the server (this is a gRPC thing).
+   * This version is blocking (waits for a response).
+   */
   private final WilburBlockingStub blockingStub;
 
+  /**
+   * Represents the Wilbur server.
+   * Stores the public key, url, etc.
+   */
   private final Contact contact;
 
+  /**
+   * The local CharlotteNodeService we expect to receive blocks.
+   */
   private final CharlotteNodeService localService;
 
 
   /**
+   * Make a new WilburClient for a specific Wilbur server.
+   * This will attempt to open a channel of communication.
    * @param localService a CharlotteNodeService which can be used to receive blocks
    * @param contact the Contact representing the server.
    */
@@ -63,14 +81,19 @@ public class WilburClient {
     blockingStub = WilburGrpc.newBlockingStub(getChannel());
   }
 
+  /** @return The channel through which we communicate to the server. **/
   public ManagedChannel getChannel() {return channel;}
 
+  /** @return The asynchronous stub which sends messages to the Wilbur service within the server (this is a gRPC thing). **/
   public WilburStub getAsyncStub() {return asyncStub;}
   
+  /** @return The synchrnous stub which sends messages to the Wilbur service within the server (this is a gRPC thing). **/
   public WilburBlockingStub getBlockingStub() {return blockingStub;}
   
+  /** @return Represents the Wilbur server. Stores the public key, url, etc. **/
   public Contact getContact() {return contact;}
 
+  /** @return The local CharlotteNodeService we expect to receive blocks. **/
   public CharlotteNodeService getLocalService() {return localService;}
 
   /**
@@ -82,6 +105,14 @@ public class WilburClient {
     channel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
   }
 
+  /**
+   * Wait to receive the block referenced in the
+   *  RequestAvailabilityAttestationResponse, then check whether it's
+   *  a valid availability attestation. 
+   * This will log a Warning with the problem if the block referenced is invalid.
+   * @param response the response from the Wilbur Server
+   * @return the block featuring the valid availability attestation, or null if it's invalid.
+   */
   public Block checkAvailabilityAttestation(final RequestAvailabilityAttestationResponse response) {
     if (!response.hasReference()) {
       logger.log(Level.WARNING, "got a RequestAvailabilityAttestationResponse with no reference in it: \n" +
@@ -138,6 +169,13 @@ public class WilburClient {
     return availabilityAttestationBlock; 
   }
 
+  /**
+   * Check whether the availabiltiy atteststion referenced attests to the references given.
+   * Logs a warning and returns null if it does not.
+   * @param references references to blocks you want the availability attestation to cover.
+   * @param response the response from the Wilbur Server
+   * @return the availability attestation block if it's valid and covers all the references, null otherwise.
+   */
   public Block checkAvailabilityAttestation(final Iterable<Reference> references,
                  final RequestAvailabilityAttestationResponse response) {
     final Block availabilityAttestationBlock = checkAvailabilityAttestation(response);
@@ -159,22 +197,49 @@ public class WilburClient {
     return availabilityAttestationBlock; 
   }
 
+  /**
+   * Check whether the availabiltiy atteststion referenced attests to the reference given.
+   * Logs a warning and returns null if it does not.
+   * @param reference reference to the block you want the availability attestation to cover.
+   * @param response the response from the Wilbur Server
+   * @return the availability attestation block if it's valid and covers the reference, null otherwise.
+   */
   public Block checkAvailabilityAttestation(final Reference reference,
                  final RequestAvailabilityAttestationResponse response) {
     return checkAvailabilityAttestation(singleton(reference), response);
   }
 
+  /**
+   * Check whether the availabiltiy atteststion referenced attests to the reference given.
+   * Logs a warning and returns null if it does not.
+   * @param hash reference to the block you want the availability attestation to cover.
+   * @param response the response from the Wilbur Server
+   * @return the availability attestation block if it's valid and covers the reference, null otherwise.
+   */
   public Block checkAvailabilityAttestation(final Hash hash,
                  final RequestAvailabilityAttestationResponse response) {
     return checkAvailabilityAttestation(Reference.newBuilder().setHash(hash).build(), response);
   }
 
+  /**
+   * Check whether the availabiltiy atteststion referenced attests to the block given.
+   * Logs a warning and returns null if it does not.
+   * @param block block you want the availability attestation to cover.
+   * @param response the response from the Wilbur Server
+   * @return the availability attestation block if it's valid and covers the block given, null otherwise.
+   */
   public Block checkAvailabilityAttestation(final Block block,
                  final RequestAvailabilityAttestationResponse response) {
     return checkAvailabilityAttestation(sha3Hash(block), response);
   }
 
 
+  /**
+   * Test whether a hash is in the list in an availability atteststation block.
+   * @param hash the hash you're searching for.
+   * @param availabilityAttestationBlock the block in which you're searching.
+   * @return whether a hash is in the list in the availability atteststation block
+   */
   public static boolean hashInAvailabilityAttestationBlock(final Hash hash, final Block availabilityAttestationBlock) {
     for (Reference reference : availabilityAttestationBlock.getAvailabilityAttestation().getSignedStoreForever().
                                getStoreForever().getBlockList()) {
@@ -187,22 +252,52 @@ public class WilburClient {
     return false;
   }
 
+  /**
+   * Fetch an availability attestation for the given references.
+   * Blocking.
+   * @param references references to the blocks you want attested.
+   * @return the block featuring the availability attestation.
+   */
   public Block getAvailabilityAttestation(final Iterable<Reference> references) {
     return checkAvailabilityAttestation(references, requestAvailabilityAttestation(references));
   }
 
+  /**
+   * Fetch an availability attestation for the given reference.
+   * Blocking.
+   * @param reference reference to the block you want attested.
+   * @return the block featuring the availability attestation.
+   */
   public Block getAvailabilityAttestation(final Reference reference) {
     return checkAvailabilityAttestation(reference, requestAvailabilityAttestation(reference));
   }
 
+  /**
+   * Fetch an availability attestation for the given reference.
+   * Blocking.
+   * @param hash reference to the block you want attested.
+   * @return the block featuring the availability attestation.
+   */
   public Block getAvailabilityAttestation(final Hash hash) {
     return checkAvailabilityAttestation(hash, requestAvailabilityAttestation(hash));
   }
 
+  /**
+   * Fetch an availability attestation for the given block.
+   * Blocking.
+   * @param block the block you want attested.
+   * @return the block featuring the availability attestation.
+   */
   public Block getAvailabilityAttestation(final Block block) {
     return checkAvailabilityAttestation(block, requestAvailabilityAttestation(block));
   }
 
+  /**
+   * Fetch an availability attestation for the given references.
+   * Blocking.
+   * @param hashes references to the blocks you want attested.
+   * @return the block featuring the availability attestation.
+   */
   public Block getAvailabilityAttestationHashes(final Iterable<Hash> hashes) {
     final HashSet<Reference> references = new HashSet<Reference>();
     for (Hash hash : hashes) {
@@ -211,6 +306,12 @@ public class WilburClient {
     return checkAvailabilityAttestation(references, requestAvailabilityAttestation(references));
   }
 
+  /**
+   * Fetch an availability attestation for the given blocks.
+   * Blocking.
+   * @param blocks blocks you want attested.
+   * @return the block featuring the availability attestation.
+   */
   public Block getAvailabilityAttestationBlocks(final Iterable<Block> blocks) {
     // we could do a set of hashes, but this is more efficient
     final HashSet<Reference> references = new HashSet<Reference>();
