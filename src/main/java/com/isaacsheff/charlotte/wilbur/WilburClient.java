@@ -52,6 +52,7 @@ public class WilburClient {
 
 
   /**
+   * @param localService a CharlotteNodeService which can be used to receive blocks
    * @param contact the Contact representing the server.
    */
   public WilburClient(final CharlotteNodeService localService, final Contact contact) {
@@ -120,11 +121,11 @@ public class WilburClient {
                                 response);
       return null;
     }
-    if ( availabilityAttestationBlock.getAvailabilityAttestation().getSignedStoreForever().getSignature().
-         getCryptoId() != getContact().getCryptoId()) {
+    if (!availabilityAttestationBlock.getAvailabilityAttestation().getSignedStoreForever().getSignature().
+         getCryptoId().equals(getContact().getCryptoId())) {
       logger.log(Level.WARNING, "got a RequestAvailabilityAttestationResponse has a different CryptoId: \n" +
                                 "THIS CLIENT's CRYPTOID: \n" + getContact().getCryptoId() +
-                                " \nRESPONSE: \n" + response);
+                                " \nATTESTATION: \n" + availabilityAttestationBlock);
       return null;
     }
     if (!checkSignature(
@@ -178,7 +179,7 @@ public class WilburClient {
     for (Reference reference : availabilityAttestationBlock.getAvailabilityAttestation().getSignedStoreForever().
                                getStoreForever().getBlockList()) {
       if (reference.hasHash()) {
-        if(reference.getHash() == hash) {
+        if(reference.getHash().equals(hash)) {
           return true; 
         }
       }
