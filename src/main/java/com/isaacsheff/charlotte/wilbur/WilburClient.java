@@ -102,7 +102,7 @@ public class WilburClient {
    * @throws InterruptedException  if the thread was interrupted while trying to shut down the channel to the server.
    */
   public void shutdown() throws InterruptedException {
-    channel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
+    getChannel().shutdown().awaitTermination(5, TimeUnit.SECONDS);
   }
 
   /**
