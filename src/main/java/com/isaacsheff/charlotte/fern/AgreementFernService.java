@@ -181,6 +181,7 @@ public class AgreementFernService extends FernImplBase {
 
   /**
    * If we've just got a new request, and have just created (and broadcast) an attestation which fulfills that request.
+   * This response will be remembered, so it must not be an error.
    * We need to make a RequestIntegrityAttestationResponse to tell the client about the attestation.
    * @param block the Integrity Attestation
    * @return RequestIntegrityAttestationResponse to tell the client about the attestation.
@@ -192,6 +193,7 @@ public class AgreementFernService extends FernImplBase {
 
   /**
    * Called when a new request warrants a response (so none of our old responses will do).
+   * This response will be remembered, so it must not be an error.
    * Creates a new attestation for the given policy.
    * This constructs the block, then receives (and broadcasts) it via the local CharlotteNodeService.
    * Will only be called with a policy that:
