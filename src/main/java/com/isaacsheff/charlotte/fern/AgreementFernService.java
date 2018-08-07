@@ -42,6 +42,15 @@ import java.util.logging.Logger;
  *  functionality (it calls validPolicy), so you could override that
  *  to completely change what the server does.
  * </p>
+ *
+ * <p>
+ * Furthermore, future extensions may wish to override newResponse and
+ *  newAttestation (called by requestIntegrityAttestation), which govern
+ *  how responses are made to new requests (which don't conflict with anything
+ *  seen so far). 
+ * By default, newResponse just calls newAttestation and makes a simple
+ *  reference to the attestation block.
+ * </p>
  * @author Isaac Sheff
  */
 public class AgreementFernService extends FernImplBase {
@@ -132,6 +141,76 @@ public class AgreementFernService extends FernImplBase {
   }
 
   /**
+   * Actually constructs the block featuring the IntegrityAttestation in response to a given policy.
+   * It's a simple block, just a copy of the fill-in-the-blank, with the signature filled in.
+   * There may be a more efficient way to build this.
+   * @param policy the Integrity Policy
+   * @return the block featuring the IntegrityAttestation in response to a given policy.
+   */
+  public Block makeNewAttestation(final IntegrityPolicy policy) {
+    return Block.newBuilder().setIntegrityAttestation(
+        IntegrityAttestation.newBuilder(policy.getFillInTheBlank()).
+          setSignedChainSlot(SignedChainSlot.newBuilder(policy.getFillInTheBlank().getSignedChainSlot()).
+                               setSignature(signBytes(
+                                   getNode().getConfig().getKeyPair(),
+                                   policy.getFillInTheBlank().getSignedChainSlot().getChainSlot())
+        ))).build();
+  }
+
+
+  /**
+   * Called when a new attestation is warranted in response to a given policy.
+   * Constructs the block, then receives (and broadcasts) it via the local CharlotteNodeService.
+   * Will only be called with a policy that:
+   * <ul>
+   * <li> has a FillInTheBlank SignedChainSlot type </li>
+   * <li> the ChainSlot has a root element          </li>
+   * <li> the ChainSlot has a slot number           </li>
+   * <li> the chainSlot has a block reference       </li>
+   * <li> passes validPolicy (returns null)         </li>
+   * <li> we haven't attested to any other block with this root/slot combo before. </li>
+   * </ul>
+   * @param policy the Integrity Policy
+   * @return the block featuring the IntegrityAttestation in response to a given policy.
+   */
+  public Block newAttestation(final IntegrityPolicy policy) {
+    final Block block = makeNewAttestation(policy);
+    getNode().onSendBlocksInput(block);
+    return block;
+  }
+
+  /**
+   * If we've just got a new request, and have just created (and broadcast) an attestation which fulfills that request.
+   * We need to make a RequestIntegrityAttestationResponse to tell the client about the attestation.
+   * @param block the Integrity Attestation
+   * @return RequestIntegrityAttestationResponse to tell the client about the attestation.
+   */
+  public RequestIntegrityAttestationResponse newResponse(final Block block) {
+    // simple reference, no availability attestations
+    return RequestIntegrityAttestationResponse.newBuilder().setReference(Reference.newBuilder().setHash(sha3Hash(block))).build();
+  }
+
+  /**
+   * Called when a new request warrants a response (so none of our old responses will do).
+   * Creates a new attestation for the given policy.
+   * This constructs the block, then receives (and broadcasts) it via the local CharlotteNodeService.
+   * Will only be called with a policy that:
+   * <ul>
+   * <li> has a FillInTheBlank SignedChainSlot type </li>
+   * <li> the ChainSlot has a root element          </li>
+   * <li> the ChainSlot has a slot number           </li>
+   * <li> the chainSlot has a block reference       </li>
+   * <li> passes validPolicy (returns null)         </li>
+   * <li> we haven't attested to any other block with this root/slot combo before. </li>
+   * </ul>
+   * @param policy the Integrity Policy
+   * @return the RequestIntegrityAttestationResponse to send to the client over the wire.
+   */
+  public RequestIntegrityAttestationResponse newResponse(final IntegrityPolicy policy) {
+    return newResponse(newAttestation(policy));
+  }
+
+  /**
    * Checks to see if all is well with this request, then checks if a conflicting request has already been answered,
    *  and if not, makes a new Integrity Attestation.
    * This only handles ChainedSlot type Integrity Policies.
@@ -192,24 +271,11 @@ public class AgreementFernService extends FernImplBase {
     // Making a new block may be slow and involve IO.
     // This simplistic implementation does not.
 
-    // simple block, just a copy of the fill-in-the-blank, with the signature filled in.
-    // there may be a more efficient way to build this.
-    final Block newBlock = Block.newBuilder().setIntegrityAttestation(
-        IntegrityAttestation.newBuilder(request.getPolicy().getFillInTheBlank()).
-          setSignedChainSlot(SignedChainSlot.newBuilder(request.getPolicy().getFillInTheBlank().getSignedChainSlot()).
-                               setSignature(signBytes(
-                                   getNode().getConfig().getKeyPair(),
-                                   request.getPolicy().getFillInTheBlank().getSignedChainSlot().getChainSlot())
-        ))).build();
+    // make, receive (and broadcast) our new block
+    final RequestIntegrityAttestationResponse response = newResponse(request.getPolicy());
 
-    // simple reference, no availability attestations
-    final RequestIntegrityAttestationResponse newResponse = RequestIntegrityAttestationResponse.newBuilder().
-      setReference(Reference.newBuilder().setHash(sha3Hash(newBlock))).build();
-
-    // receive (and broadcast) our new block
-    getNode().onSendBlocksInput(newBlock);
-    newHolder.put(newResponse);
-    return newResponse;
+    newHolder.put(response);
+    return response;
   }
 
   /**
