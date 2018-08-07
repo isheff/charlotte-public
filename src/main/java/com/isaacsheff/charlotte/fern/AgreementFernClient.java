@@ -188,7 +188,8 @@ public class AgreementFernClient {
      }
      if (!attestation.getIntegrityAttestation().getSignedChainSlot().getChainSlot().equals(
           request.getPolicy().getFillInTheBlank().getSignedChainSlot().getChainSlot())) {
-       logger.log(Level.WARNING, "Response from Fern Server referenced block different chain slot:" +
+       logger.log(Level.WARNING, "Response from Fern Server referenced block different chain slot. "+
+                                 "Perhaps the Fern server has already commited to a conflicting block?"+
                                  "\nATTESTATION:\n"+attestation+
                                  "\nREQUEST:\n"+request);
        return null;
