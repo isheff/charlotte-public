@@ -4,6 +4,7 @@ import static com.isaacsheff.charlotte.node.HashUtil.sha3Hash;
 import static com.isaacsheff.charlotte.node.SignatureUtil.signBytes;
 
 import com.isaacsheff.charlotte.collections.ConcurrentHolder;
+import com.isaacsheff.charlotte.node.CharlotteNode;
 import com.isaacsheff.charlotte.node.CharlotteNodeService;
 import com.isaacsheff.charlotte.proto.Block;
 import com.isaacsheff.charlotte.proto.FernGrpc.FernImplBase;
@@ -15,8 +16,10 @@ import com.isaacsheff.charlotte.proto.Reference;
 import com.isaacsheff.charlotte.proto.RequestIntegrityAttestationInput;
 import com.isaacsheff.charlotte.proto.RequestIntegrityAttestationResponse;
 
+import io.grpc.ServerBuilder;
 import io.grpc.stub.StreamObserver;
 
+import java.nio.file.Path;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.logging.Logger;
@@ -26,6 +29,10 @@ import java.util.logging.Logger;
  * That is to say: this Fern server will, when asked, commit to a block in a slot on a chain, and never contradict itself.
  * If you ask it for commitments to the same slot with different blocks, it will keep referring you to the same attestation,
  *  where it commits to one block.
+ *
+ * <p>
+ * Can be run as a main class with: AgreementFernService configFileName.yaml
+ * </p>
  *
  * <p>
  * Future extensions may wish to override validPolicy, as it designates
@@ -48,6 +55,45 @@ public class AgreementFernService extends FernImplBase {
   /** The local CharlotteNodeService used to send and receive blocks */
   private final CharlotteNodeService node;
 
+  /**
+   * Run as a main class with an arg specifying a config file name to run a Fern Agreement server.
+   * creates and runs a new CharlotteNode which runs a Wilbur Service and a CharlotteNodeService, in a new thread.
+   * @param args command line args. args[0] should be the name of the config file
+   */
+  public static void main(String[] args) {
+    if (args.length < 1) {
+      System.out.println("Correct Usage: AgreementFernService configFileName.yaml");
+      return;
+    }
+    (new Thread(getFernNode(args[0]))).start();
+    logger.info("Fern service started on new thread");
+  }
+
+  /**
+   * @param node a CharlotteNodeService with which we'll build a AgreementFernService
+   * @return a new CharlotteNode which runs a Fern Service and a CharlotteNodeService
+   */
+  public static CharlotteNode getFernNode(final CharlotteNodeService node) {
+    return new CharlotteNode(node,
+                             ServerBuilder.forPort(node.getConfig().getPort()).addService(new AgreementFernService(node)),
+                             node.getConfig().getPort());
+  }
+
+  /**
+   * @param configFilename the name of the configuration file for this CharlotteNode
+   * @return a new CharlotteNode which runs a Fern Service and a CharlotteNodeService
+   */
+  public static CharlotteNode getFernNode(final Path configFilename) {
+    return getFernNode(new CharlotteNodeService(configFilename));
+  }
+
+  /**
+   * @param configFilename the name of the configuration file for this CharlotteNode
+   * @return a new CharlotteNode which runs a Fern Service and a CharlotteNodeService
+   */
+  public static CharlotteNode getFernNode(final String configFilename) {
+    return getFernNode(new CharlotteNodeService(configFilename));
+  }
   /**
    * Make a new Fern with these attributes.
    * @param node the local CharlotteNodeService used to send and receive blocks 
@@ -166,7 +212,6 @@ public class AgreementFernService extends FernImplBase {
     return newResponse;
   }
 
-
   /**
    * Grpc calls this whenever a RequestIntegrityAttestation rpc comes in over the wire.
    * It calls requestIntegrityAttestation(final RequestIntegrityAttestationInput request), which returns a
@@ -180,5 +225,4 @@ public class AgreementFernService extends FernImplBase {
     responseObserver.onNext(requestIntegrityAttestation(request));
     responseObserver.onCompleted();
   }
-
 }
