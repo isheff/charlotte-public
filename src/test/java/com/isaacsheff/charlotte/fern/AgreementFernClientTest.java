@@ -94,7 +94,7 @@ public class AgreementFernClientTest {
                   setRoot(Reference.newBuilder().setHash(sha3Hash(block))).
                   setBlock(Reference.newBuilder().setHash(sha3Hash(block))).
                   setParent(Reference.newBuilder().setHash(sha3Hash(block)))).
-              setSignature(Signature.newBuilder().setCryptoId(clientService.getConfig().getContact("fern").getCryptoId()))
+              setSignature(Signature.newBuilder().setCryptoId(client.getContact().getCryptoId()))
       ))).build()));
   }
 
