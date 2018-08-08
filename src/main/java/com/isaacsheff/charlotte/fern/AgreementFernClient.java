@@ -1,33 +1,18 @@
 package com.isaacsheff.charlotte.fern;
 
-import static com.isaacsheff.charlotte.node.HashUtil.sha3Hash;
 import static com.isaacsheff.charlotte.node.SignatureUtil.checkSignature;
-import static java.util.Collections.singleton;
 
-import java.util.HashSet;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import com.isaacsheff.charlotte.node.CharlotteNodeService;
-import com.isaacsheff.charlotte.proto.AvailabilityAttestation;
-import com.isaacsheff.charlotte.proto.AvailabilityAttestation.SignedStoreForever;
-import com.isaacsheff.charlotte.proto.AvailabilityAttestation.StoreForever;
-import com.isaacsheff.charlotte.proto.AvailabilityPolicy;
 import com.isaacsheff.charlotte.proto.Block;
 import com.isaacsheff.charlotte.proto.FernGrpc;
 import com.isaacsheff.charlotte.proto.FernGrpc.FernBlockingStub;
 import com.isaacsheff.charlotte.proto.FernGrpc.FernStub;
-import com.isaacsheff.charlotte.proto.Hash;
-import com.isaacsheff.charlotte.proto.Reference;
-import com.isaacsheff.charlotte.proto.RequestAvailabilityAttestationInput;
-import com.isaacsheff.charlotte.proto.RequestAvailabilityAttestationResponse;
 import com.isaacsheff.charlotte.proto.RequestIntegrityAttestationInput;
 import com.isaacsheff.charlotte.proto.RequestIntegrityAttestationResponse;
-import com.isaacsheff.charlotte.proto.Signature;
-import com.isaacsheff.charlotte.proto.WilburGrpc;
-import com.isaacsheff.charlotte.proto.WilburGrpc.WilburBlockingStub;
-import com.isaacsheff.charlotte.proto.WilburGrpc.WilburStub;
 import com.isaacsheff.charlotte.yaml.Contact;
 
 import io.grpc.ManagedChannel;
@@ -115,7 +100,7 @@ public class AgreementFernClient {
    * @param attestation the block we're hoping contains the IntegrityAttestation
    * @return the Block input if it's valid, null otherwise.
    */
-  public Block checkIntegrityAttestation(final Block attestation) {
+  public static Block checkIntegrityAttestation(final Block attestation) {
     if (!attestation.hasIntegrityAttestation()) {
       logger.log(Level.WARNING, "Response from Fern Server referenced block which is not an Integrity Attestation:\n" +
                                 attestation);

@@ -69,13 +69,24 @@ public class AgreementFernService extends FernImplBase {
    * creates and runs a new CharlotteNode which runs a Wilbur Service and a CharlotteNodeService, in a new thread.
    * @param args command line args. args[0] should be the name of the config file
    */
-  public static void main(String[] args) {
+  public static void main(String[] args) throws InterruptedException{
     if (args.length < 1) {
-      System.out.println("Correct Usage: AgreementFernService configFileName.yaml");
+      System.out.println("Correct Usage: FernService configFileName.yaml");
       return;
     }
-    (new Thread(getFernNode(args[0]))).start();
+    final Thread thread = new Thread(getFernNode(args[0]));
+    thread.start();
     logger.info("Fern service started on new thread");
+    thread.join();
+  }
+
+  /**
+   * Get a new one of these Fern services using this local node.
+   * @param node the local CharlotteNodeService
+   * @return a new AgreementFernService
+   */
+  public static FernImplBase newFern(final CharlotteNodeService node) {
+    return new AgreementFernService(node);
   }
 
   /**
@@ -84,7 +95,7 @@ public class AgreementFernService extends FernImplBase {
    */
   public static CharlotteNode getFernNode(final CharlotteNodeService node) {
     return new CharlotteNode(node,
-                             ServerBuilder.forPort(node.getConfig().getPort()).addService(new AgreementFernService(node)),
+                             ServerBuilder.forPort(node.getConfig().getPort()).addService(newFern(node)),
                              node.getConfig().getPort());
   }
 
