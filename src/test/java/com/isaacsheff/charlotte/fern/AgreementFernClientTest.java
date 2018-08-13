@@ -2,6 +2,7 @@ package com.isaacsheff.charlotte.fern;
 
 import static com.isaacsheff.charlotte.fern.AgreementFernService.getFernNode;
 import static com.isaacsheff.charlotte.node.HashUtil.sha3Hash;
+import static com.isaacsheff.charlotte.node.PortUtil.getFreshPort;
 import static com.isaacsheff.charlotte.yaml.GenerateX509.generateKeyFiles;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -52,8 +53,8 @@ public class AgreementFernClientTest {
                      "localhost",
                      "127.0.0.1");
     participants = new HashMap<String, JsonContact>(2);
-    participants.put("fern", new JsonContact("src/test/resources/server.pem",  "localhost", 8401));
-    participants.put("client", new JsonContact("src/test/resources/server2.pem", "localhost", 8402));
+    participants.put("fern", new JsonContact("src/test/resources/server.pem",  "localhost", getFreshPort()));
+    participants.put("client", new JsonContact("src/test/resources/server2.pem", "localhost", getFreshPort()));
 
   }
 

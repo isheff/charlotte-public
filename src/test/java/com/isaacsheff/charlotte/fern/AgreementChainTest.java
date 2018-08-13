@@ -3,6 +3,7 @@ package com.isaacsheff.charlotte.fern;
 import static com.isaacsheff.charlotte.fern.AgreementChainFernService.getFernNode;
 import static com.isaacsheff.charlotte.fern.AgreementChainFernClient.stripRequest;
 import static com.isaacsheff.charlotte.node.HashUtil.sha3Hash;
+import static com.isaacsheff.charlotte.node.PortUtil.getFreshPort;
 import static com.isaacsheff.charlotte.yaml.GenerateX509.generateKeyFiles;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -55,8 +56,8 @@ public class AgreementChainTest {
                      "localhost",
                      "127.0.0.1");
     participants = new HashMap<String, JsonContact>(2);
-    participants.put("fern", new JsonContact("src/test/resources/server.pem",  "localhost", 8501));
-    participants.put("client", new JsonContact("src/test/resources/server2.pem", "localhost", 8502));
+    participants.put("fern", new JsonContact("src/test/resources/server.pem",  "localhost", getFreshPort()));
+    participants.put("client", new JsonContact("src/test/resources/server2.pem", "localhost", getFreshPort()));
 
   }
 
@@ -90,6 +91,8 @@ public class AgreementChainTest {
     // make a client using the local service, and the contact for the node
     AgreementChainFernClient client = new AgreementChainFernClient(clientService);
     // get an integrity attestation for the block, and check it.
+
+    // get agreement on a root block
     client.broadcastWhenReady(
       RequestIntegrityAttestationInput.newBuilder().setPolicy(
         IntegrityPolicy.newBuilder().setFillInTheBlank(
@@ -101,6 +104,8 @@ public class AgreementChainTest {
                   setRoot(Reference.newBuilder().setHash(sha3Hash(block0))).
                   setBlock(Reference.newBuilder().setHash(sha3Hash(block0))))
       ))).build());
+
+    // get agreement on block 1
     client.broadcastWhenReady(
       RequestIntegrityAttestationInput.newBuilder().setPolicy(
         IntegrityPolicy.newBuilder().setFillInTheBlank(
@@ -113,6 +118,8 @@ public class AgreementChainTest {
                   setBlock(Reference.newBuilder().setHash(sha3Hash(block1))).
                   setParent(Reference.newBuilder().setHash(sha3Hash(block0))))
       ))).build());
+
+    // get agreement on block 2
     RequestIntegrityAttestationInput input2 = 
       RequestIntegrityAttestationInput.newBuilder().setPolicy(
         IntegrityPolicy.newBuilder().setFillInTheBlank(
@@ -124,9 +131,12 @@ public class AgreementChainTest {
                   setRoot(Reference.newBuilder().setHash(sha3Hash(block0))).
                   setBlock(Reference.newBuilder().setHash(sha3Hash(block2))).
                   setParent(Reference.newBuilder().setHash(sha3Hash(block1)))).
+              // this cryptoid is only specified so we can also use this as an index to look up client's response.
               setSignature(Signature.newBuilder().setCryptoId(clientService.getConfig().getCryptoId()))
       ))).build();
     client.broadcastWhenReady(input2);
+
+    // look up client's response to see if we indeed have an appropriate integrity attestation
     client.getKnownResponses().putIfAbsent(stripRequest(input2), new ConcurrentHolder<Hash>());
     assertTrue(null != client.getKnownResponses().get(stripRequest(input2)).get());
   }

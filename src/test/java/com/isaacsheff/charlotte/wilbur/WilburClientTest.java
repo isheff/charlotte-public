@@ -1,5 +1,6 @@
 package com.isaacsheff.charlotte.wilbur;
 
+import static com.isaacsheff.charlotte.node.PortUtil.getFreshPort;
 import static com.isaacsheff.charlotte.wilbur.WilburService.getWilburNode;
 import static com.isaacsheff.charlotte.yaml.GenerateX509.generateKeyFiles;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -44,8 +45,8 @@ public class WilburClientTest {
                      "localhost",
                      "127.0.0.1");
     participants = new HashMap<String, JsonContact>(2);
-    participants.put("wilbur", new JsonContact("src/test/resources/server.pem",  "localhost", 8301));
-    participants.put("client", new JsonContact("src/test/resources/server2.pem", "localhost", 8302));
+    participants.put("wilbur", new JsonContact("src/test/resources/server.pem",  "localhost", getFreshPort()));
+    participants.put("client", new JsonContact("src/test/resources/server2.pem", "localhost", getFreshPort()));
 
   }
 
