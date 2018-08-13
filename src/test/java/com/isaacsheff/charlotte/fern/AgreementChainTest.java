@@ -17,6 +17,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import com.isaacsheff.charlotte.collections.ConcurrentHolder;
+import com.isaacsheff.charlotte.node.CharlotteNode;
 import com.isaacsheff.charlotte.node.CharlotteNodeService;
 import com.isaacsheff.charlotte.proto.Block;
 import com.isaacsheff.charlotte.proto.Hash;
@@ -33,7 +34,7 @@ import com.isaacsheff.charlotte.yaml.JsonContact;
 
 
 /**
- * Test AgreementFern clients (which, by necessity, also tests the service).
+ * Test AgreementFernChain service and client
  * @author Isaac Sheff
  */
 public class AgreementChainTest {
@@ -62,7 +63,7 @@ public class AgreementChainTest {
   }
 
   /**
-   * Launch a local service and a Fern node, mint a block, and then get and test an integrity attestation for it.
+   * Launch a local server and an additional Fern node, mint 3 blocks, and try to put them in a chain, gathering agreement attestations from both servers.
    */
   @Test
   void endToEnd() throws InterruptedException, FileNotFoundException {
@@ -132,7 +133,8 @@ public class AgreementChainTest {
                   setBlock(Reference.newBuilder().setHash(sha3Hash(block2))).
                   setParent(Reference.newBuilder().setHash(sha3Hash(block1)))).
               // this cryptoid is only specified so we can also use this as an index to look up client's response.
-              setSignature(Signature.newBuilder().setCryptoId(clientService.getConfig().getCryptoId()))
+              setSignature(Signature.newBuilder().setCryptoId(clientService.getConfig().getContacts().get("fern").
+                  getCryptoId()))
       ))).build();
     client.broadcastWhenReady(input2);
 
