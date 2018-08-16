@@ -90,6 +90,8 @@ public class HetconsClientTest extends HetconsTest {
          */
         HetconsObserverQuorum quorum = HetconsObserverQuorum.newBuilder()
                 .addMemebers(serverContact.getCryptoId())
+                .setOwner(serverContact.getCryptoId())
+                .setSize(1)
                 .build();
 
         HetconsObserver observer = HetconsObserver.newBuilder()
@@ -114,21 +116,23 @@ public class HetconsClientTest extends HetconsTest {
         HetconsValue value = HetconsValue.newBuilder()
                 .setNum(100).build();
 
+        HetconsBallot ballot = HetconsBallot.newBuilder().setBallotNumber(1).build();
+
 
         /*
          * start the test
          */
         assertEquals(0, map.size(), "before propose, there should no prosals avalaible");
-        client.propose(accountsInfos, value, 1, observerGroup );
+        client.propose(accountsInfos, value, ballot, observerGroup );
 
         try {
-            TimeUnit.SECONDS.sleep(5);
+            TimeUnit.SECONDS.sleep(100);
         } catch (InterruptedException ex) {
             logger.log(Level.SEVERE, "Interrupt got");
             return;
         }
         assertEquals(1, map.size(), "Propose successfully");
-        assertEquals(1, map.get("abc|1").getCurrentProposal().getBallotNumber(), "ballot number different");
+        assertEquals(1, map.get("abc|1").getCurrentProposal().getBallot().getBallotNumber(), "ballot number different");
         assertEquals(100, map.get("abc|1").getCurrentProposal().getValue().getNum(), "value different");
 
 

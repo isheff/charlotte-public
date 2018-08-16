@@ -2,6 +2,7 @@ package com.xinwenwang.hetcons;
 
 import com.google.protobuf.ByteString;
 import com.isaacsheff.charlotte.node.CharlotteNodeService;
+import com.isaacsheff.charlotte.node.HashUtil;
 import com.isaacsheff.charlotte.node.SignatureUtil;
 import com.isaacsheff.charlotte.proto.*;
 import com.isaacsheff.charlotte.yaml.Config;
@@ -60,13 +61,13 @@ public class HetconsParticipantService extends CharlotteNodeService {
                     break;
                 case M1b:
                     if (hetconsMessage.hasM1B())
-                        handle1b(hetconsMessage.getM1B(), group);
+                        handle1b(hetconsMessage.getM1B(), hetconsMessage.getIdentity());
                     else
                         throw new HetconsException(HetconsErrorCode.NO_1B_MESSAGES);
                     break;
                 case M2b:
                     if (hetconsMessage.hasM2B())
-                        handle2b(hetconsMessage.getM2B(), group);
+                        handle2b(hetconsMessage.getM2B(), hetconsMessage.getIdentity());
                     else
                         throw new HetconsException(HetconsErrorCode.NO_2B_MESSAGES);
                     break;
@@ -103,37 +104,105 @@ public class HetconsParticipantService extends CharlotteNodeService {
 
         HetconsStatus status = proposalStatusHashMap.get(buildAccountsInfoString(proposal.getAccountsList()));
         if (!status.hasMessage2a())
-            send1bs(message1a, HetconsMessage2ab.newBuilder().build());
+            send1bs(message1a, status);
         else
-            send1bs(message1a, status.getLatestMessage2a());
+            send1bs(message1a, status);
     }
 
-    private void handle1b(HetconsMessage1b message1b, HetconsObserverGroup observerGroup) {
-        System.out.println("Got M1B:\n" + message1b.toString());
+    private void handle1b(HetconsMessage1b message1b, CryptoId id) {
+
+        System.out.println("Got M1B:\n");
+
+        // validate 1bs
+        String statusKey = buildAccountsInfoString(message1b.getM1A().getProposal().getAccountsList());
+        HetconsStatus status = proposalStatusHashMap.get(statusKey);
+
+        if (!validateStatus(status, message1b.getM1A().getProposal(), false))
+            return;
+
+        // add this message to the 1b map
+        ArrayList<HetconsObserverQuorum> quora = status.receive1b(id, message1b);
+
+        if (quora.isEmpty())
+            return;
+
+        // prepare for 2a 2b
+        HashMap<CryptoId, HetconsMessage2ab> message2abs = new HashMap<>();
+
+        quora.forEach(quorum -> {
+            message2abs.putIfAbsent(
+                    quorum.getOwner(),
+                    HetconsMessage2ab.newBuilder()
+                            .setProposal(message1b.getM1A().getProposal())
+                            .setValue(message1b.getValue())
+                            .setQuorumOf1Bs(status.get1bQuorumRef(quorum))
+                            .build());
+        });
+
+        // save a 2a
+        // send out 2bs to observes and broadcast to all participants
+        message2abs.forEach((cryptoId, message2ab) -> {
+            status.addM2A(cryptoId, message2ab);
+            Block block =  Block.newBuilder()
+                    .setHetconsMessage(HetconsMessage.newBuilder()
+                            .setIdentity(this.getConfig().getCryptoId())
+                            .setSig(SignatureUtil.signBytes(this.getConfig().getKeyPair(), message2ab.toByteString()))
+                            .setType(HetconsMessageType.M2b)
+                            .setM2B(message2ab)
+                            .build())
+                    .build();
+
+//            sendBlock(cryptoId,block);
+            broadcastHetconsMessageBlocks(status, block);
+        });
+
+        status.setStage(HetconsConsensusStage.M2BSent);
+        System.out.println("Sent M2B:\n");
+    }
+
+    private void handle2b(HetconsMessage2ab message2b, CryptoId id) {
+        System.out.println("Got M2B:\n" );
+        String statusKey = buildAccountsInfoString(message2b.getProposal().getAccountsList());
+        HetconsStatus status = proposalStatusHashMap.get(statusKey);
+
+        if (!validateStatus(status, message2b.getProposal(), false))
+            return;
+
+        ArrayList<HetconsObserverQuorum> quora = status.receive2b(id, message2b);
+
+        if (quora.isEmpty())
+            return;
+
+        //TODO: Is handle 2b run in linear manner or parallel?
+
+
+        System.out.printf("Consensus decided on\nvalue: %d\n", message2b.getValue().getNum());
+        System.out.printf("Ballot Number: %d\n", message2b.getProposal().getBallot().getBallotNumber());
+
 
     }
 
-    private void handle2b(HetconsMessage2ab message2ab, HetconsObserverGroup observerGroup) {
-        System.out.println("Got M2B:\n" + message2ab.toString());
+    private void send1bs(HetconsMessage1a message1a, HetconsStatus status) {
+        HetconsProposal proposal;
 
-    }
-
-    private void send1bs(HetconsMessage1a message1a, HetconsMessage2ab message2a) {
-        HetconsProposal proposal = message1a.getProposal();
-        HetconsStatus status = proposalStatusHashMap.get(buildAccountsInfoString(proposal.getAccountsList()));
-
-        HetconsMessage1b message1b = HetconsMessage1b.newBuilder().setM1A(message1a)
-                .setM2A(message2a)
-                .build();
-        Block block = Block.newBuilder().setHetconsMessage(
-                HetconsMessage.newBuilder()
-                        .setType(HetconsMessageType.M1b)
-                        .setM1B(message1b)
-                        .setObserverGroup(observerGroupHashMap.get(buildAccountsInfoString(proposal.getAccountsList(), false)))
-                        .setSig(SignatureUtil.signBytes(this.getConfig().getKeyPair(), message1b.toByteString()))
-                .build()
-        ).build();
-        sendHetconsMessageBlocks(block.getHetconsMessage().getObserverGroup(), block);
+        for (HetconsObserver observer : status.getObserverGroup().getObserversList()) {
+            HetconsMessage2ab message2a = status.getMessage2A(observer.getId());
+            HetconsMessage1b message1b = HetconsMessage1b.newBuilder().setM1A(message1a)
+                    .setM2A(message2a)
+                    .setValue(message2a.hasProposal() ? message2a.getValue() : message1a.getProposal().getValue())
+                    .build();
+            Block block = Block.newBuilder().setHetconsMessage(
+                    HetconsMessage.newBuilder()
+                            .setType(HetconsMessageType.M1b)
+                            .setM1B(message1b)
+                            .setIdentity(this.getConfig().getCryptoId())
+                            .setObserverGroup(status.getObserverGroup())
+                            .setSig(SignatureUtil.signBytes(this.getConfig().getKeyPair(), message1b.toByteString()))
+                            .build()
+            ).build();
+            broadcastHetconsMessageBlocks(status, block);
+            //TODO: send 1bs
+        }
         status.setStage(HetconsConsensusStage.M1BSent);
     }
 
@@ -144,6 +213,7 @@ public class HetconsParticipantService extends CharlotteNodeService {
         HetconsStatus status = proposalStatusHashMap.get(proposalStatusID);
         if (status == null) {
             status = new HetconsStatus(HetconsConsensusStage.ConsensusIdile);
+            status.setObserverGroup(observerGroup);
             proposalStatusHashMap.put(proposalStatusID, status);
 //            if (!hetconsConfig.loadChain(chainID)) {
 //                // TODO: init new chain config file if this is init message(ROOT BLOCK)
@@ -151,22 +221,20 @@ public class HetconsParticipantService extends CharlotteNodeService {
 //            }
         }
 
+        // TODO: LOCK?
         if (!validateStatus(status, proposal)) {
             //TODO: return error
             return false;
         }
 
         // setup & update status data
-        if (observerGroupHashMap.get(chainID) == null)
-            observerGroupHashMap.put(chainID, observerGroup);
-
         HetconsMessage1a message1a = HetconsMessage1a.newBuilder()
                 .setProposal(proposal).build();
 
         HetconsMessage message = HetconsMessage.newBuilder()
                 .setM1A(message1a).setType(HetconsMessageType.M1a)
-                .setObserverGroup(observerGroupHashMap
-                        .get(buildAccountsInfoString(proposal.getAccountsList(), false)))
+                .setIdentity(this.getConfig().getCryptoId())
+                .setObserverGroup(status.getObserverGroup())
                 .setSig(SignatureUtil.signBytes(this.getConfig().getKeyPair(), message1a.toByteString()))
                 .build();
         Block block = Block.newBuilder().setHetconsMessage(message).build();
@@ -177,13 +245,11 @@ public class HetconsParticipantService extends CharlotteNodeService {
         // TODO: Look up quorums for this slots from the config data.
 
         // echo 1As to all participants
-//        broadcastBlock(block);
-        sendHetconsMessageBlocks(message.getObserverGroup(), block);
+        broadcastHetconsMessageBlocks(status, block);
 
         status.setStage(HetconsConsensusStage.M1ASent);
         return true;
     }
-
 
     private String buildAccountsInfoString(List<HetconsParticipatedAccountsInfo> accountsInfos, boolean withSlot) {
         StringBuilder builder = new StringBuilder();
@@ -199,6 +265,9 @@ public class HetconsParticipantService extends CharlotteNodeService {
         return buildAccountsInfoString(accountsInfos, true);
     }
 
+    private boolean validateStatus(HetconsStatus status, HetconsProposal proposal) {
+        return validateStatus(status, proposal, true);
+    }
 
     /**
      * Compare current proposal and new proposal  for the slot.
@@ -209,14 +278,18 @@ public class HetconsParticipantService extends CharlotteNodeService {
      * @param proposal
      * @return true if the proposal is valid and false otherwise.
      */
-    private boolean validateStatus(HetconsStatus status, HetconsProposal proposal) {
+    private boolean validateStatus(HetconsStatus status, HetconsProposal proposal, boolean isM1A) {
+
+        if (status == null)
+            return false;
+
         HetconsProposal currentProposal = status.getCurrentProposal();
 
         //Consensus is not completed
         if (status.getStage() == HetconsConsensusStage.ConsensusDecided)
             return false;
 
-        if (currentProposal != null && (currentProposal.getBallotNumber() >= proposal.getBallotNumber()))
+        if (currentProposal != null && isM1A && (currentProposal.getBallot().getBallotNumber() >= proposal.getBallot().getBallotNumber()))
             return false;
 
         //TODO: validate block (Application specific)
@@ -234,6 +307,12 @@ public class HetconsParticipantService extends CharlotteNodeService {
                     sendBlock(m, block);
                 });
             });
+        });
+    }
+
+    private void broadcastHetconsMessageBlocks(HetconsStatus status, Block block) {
+        status.getParticipants().forEach((k, v) -> {
+            sendBlock(k, block);
         });
     }
 

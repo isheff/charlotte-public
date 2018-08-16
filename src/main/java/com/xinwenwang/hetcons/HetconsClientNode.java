@@ -38,8 +38,9 @@ public class HetconsClientNode extends CharlotteNodeClient {
     }
 
     public void propose(List<HetconsParticipatedAccountsInfo> accountsInfos,
-                        HetconsValue value, int ballot,
+                        HetconsValue value, HetconsBallot ballot,
                         HetconsObserverGroup observerGroup) {
+
         HetconsProposal proposal = HetconsUtil.buildProposal(accountsInfos, value, ballot);
         send1a(proposal, observerGroup);
     }

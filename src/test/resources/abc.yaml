@@ -1,0 +1,10 @@
+# hetcons test
+---
+id: "abc"
+observers:
+  - - self: "abc"
+      quorums:
+        - abc:
+            x509: server1.pem
+            url: alice.com
+            port: 10800

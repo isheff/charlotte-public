@@ -8,16 +8,15 @@ import java.util.List;
 
 public class HetconsUtil {
 
-    public static HetconsProposal buildProposal(List<HetconsParticipatedAccountsInfo> accountsInfos, HetconsValue value, int ballotNum) {
+    public static HetconsProposal buildProposal(List<HetconsParticipatedAccountsInfo> accountsInfos, HetconsValue value, HetconsBallot ballot) {
         long currentTime = new Date().getTime();
-        int ballot = ballotNum;
         HetconsProposal.Builder builder =
                 HetconsProposal.newBuilder()
-                        .setBallotNumber(ballot)
+                        .setBallot(ballot)
                         .setTime(HetconsTime.newBuilder().setVal(currentTime).build())
                         .setProposalType(HetconsProposalType.BlockSlot)
                         .setHashOfBallotNumberAndTime(Hash.newBuilder()
-                                .setSha3(ByteString.copyFromUtf8(Long.toString(currentTime) + Integer.toString(ballot)))
+                                .setSha3(ByteString.copyFromUtf8(Long.toString(currentTime) + Long.toString(ballot.getBallotNumber())))
                                 .build()
                         )
                         .setValue(value);
@@ -26,5 +25,9 @@ public class HetconsUtil {
             builder.addAccounts(accountsInfo);
         }
         return builder.build();
+    }
+
+    public static boolean isSameProposal(HetconsProposal proposal1, HetconsProposal proposal2) {
+        return proposal1.getAccountsList().equals(proposal2.getAccountsList()) && proposal1.getValue().equals(proposal2.getValue());
     }
 }

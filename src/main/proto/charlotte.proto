@@ -196,10 +196,17 @@ message HetconsSlot {
   }
 }
 
+message HetconsBallot {
+    oneof ballot_onfo {
+        int64 ballotNumber = 1;
+        string ballotSequence = 2;
+    }
+}
+
 // Proposal for the next slot provided by clients.
 message HetconsProposal {
   HetconsTime time = 1;
-  int64 ballotNumber = 2;
+  HetconsBallot ballot = 2;
   HetconsValue value = 3;
   HetconsProposalType proposalType = 4;
   repeated HetconsParticipatedAccountsInfo accounts = 5;
@@ -248,6 +255,7 @@ message HetconsMessage {
   }
   HetconsObserverGroup observerGroup = 6;
   charlotte.Signature sig = 7;
+  charlotte.CryptoId identity = 8;
 }
 
 // Leader Propose the new value with a new bollot number
@@ -259,12 +267,15 @@ message HetconsMessage1a {
 message HetconsMessage1b {
   HetconsMessage1a m1a = 1;
   HetconsMessage2ab m2a = 2;
+  HetconsValue value = 3;
+
 }
 
 // 2a and 2b messages have the same format. The difference is that the sig in 2a should be the host server itself.
 message HetconsMessage2ab {
   HetconsProposal proposal = 1;
   HetconsQuorumRefs quorum_of_1bs = 2;
+  HetconsValue value = 3;
 }
 
 
