@@ -23,13 +23,24 @@ public class HetconsTest {
 
     @BeforeAll
     protected static void setup() {
-        GenerateX509.generateKeyFiles( testDirectory + "server1.pem",
-                testDirectory + "private-key1.pem",
+        GenerateX509.generateKeyFiles( testDirectory + "server.pem",
+                testDirectory + "private-key.pem",
                 "isheff.cs.cornell.edu",
                 "128.84.155.11");
-        GenerateX509.generateKeyFiles( testDirectory + "server2.pem",
-                testDirectory + "private-key2.pem",
-                "isheff.cs.cornell.edu",
-                "128.84.155.11");
+
+        for (int i = 1; i <= 10; i ++) {
+            GenerateX509.generateKeyFiles( testDirectory + "server"+i+".pem",
+                    testDirectory + "private-key"+i+".pem",
+                    "isheff.cs.cornell.edu",
+                    "128.84.155.11");
+        }
+//        GenerateX509.generateKeyFiles( testDirectory + "server1.pemgenerateKeyFiles",
+//                testDirectory + "private-key1.pem"generateKeyFiles,
+//                "isheff.cs.cornell.edu"generateKeyFiles,
+//                "128.84.155.11")generateKeyFiles;
+//        GenerateX509.generateKeyFiles( testDirectory + "server2.pemgenerateKeyFiles",
+//                testDirectory + "private-key2.pem"generateKeyFiles,
+//                "isheff.cs.cornell.edu"generateKeyFiles,
+//                "128.84.155.11"generateKeyFiles);
     }
 }

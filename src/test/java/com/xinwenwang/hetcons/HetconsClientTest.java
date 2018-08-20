@@ -126,7 +126,7 @@ public class HetconsClientTest extends HetconsTest {
         client.propose(accountsInfos, value, ballot, observerGroup );
 
         try {
-            TimeUnit.SECONDS.sleep(100);
+            TimeUnit.SECONDS.sleep(10);
         } catch (InterruptedException ex) {
             logger.log(Level.SEVERE, "Interrupt got");
             return;
@@ -134,10 +134,5 @@ public class HetconsClientTest extends HetconsTest {
         assertEquals(1, map.size(), "Propose successfully");
         assertEquals(1, map.get("abc|1").getCurrentProposal().getBallot().getBallotNumber(), "ballot number different");
         assertEquals(100, map.get("abc|1").getCurrentProposal().getValue().getNum(), "value different");
-
-
-//        HetconsValue value1 = HetconsValue.newBuilder()
-//                .setNum(200).build();
-
     }
 }
