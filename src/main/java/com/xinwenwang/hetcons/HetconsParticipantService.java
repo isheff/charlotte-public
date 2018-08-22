@@ -8,12 +8,13 @@ import com.isaacsheff.charlotte.proto.*;
 import com.isaacsheff.charlotte.yaml.Config;
 import com.xinwenwang.hetcons.config.HetconsConfig;
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class HetconsParticipantService extends CharlotteNodeService {
+
+    private static final Logger logger = Logger.getLogger(HetconsParticipantService.class.getName());
 
 
     private HashMap<String, HetconsStatus> proposalStatusHashMap;
@@ -111,7 +112,7 @@ public class HetconsParticipantService extends CharlotteNodeService {
 
     private void handle1b(HetconsMessage1b message1b, CryptoId id) {
 
-        System.out.println("Got M1B:\n");
+        logger.info("Got M1B:\n");
 
         // validate 1bs
         String statusKey = buildAccountsInfoString(message1b.getM1A().getProposal().getAccountsList());
@@ -157,11 +158,11 @@ public class HetconsParticipantService extends CharlotteNodeService {
         });
 
         status.setStage(HetconsConsensusStage.M2BSent);
-        System.out.println("Sent M2B:\n");
+        logger.info("Sent M2B:\n");
     }
 
     private void handle2b(HetconsMessage2ab message2b, CryptoId id) {
-        System.out.println("Got M2B:\n" );
+        logger.info(String.format("Server %s Got M2B\n", this.getConfig().getMe()));
         String statusKey = buildAccountsInfoString(message2b.getProposal().getAccountsList());
         HetconsStatus status = proposalStatusHashMap.get(statusKey);
 
@@ -175,11 +176,20 @@ public class HetconsParticipantService extends CharlotteNodeService {
 
         //TODO: Is handle 2b run in linear manner or parallel?
 
+        logger.info(String.format("Server %s finished consensus\n", this.getConfig().getMe()));
+        logger.info(String.format("Consensus decided on\nvalue: %d\n", message2b.getValue().getNum()));
+        logger.info(String.format("Ballot Number: %d\n", message2b.getProposal().getBallot().getBallotNumber()));
+        printConsensus(quora);
+    }
 
-        System.out.printf("Consensus decided on\nvalue: %d\n", message2b.getValue().getNum());
-        System.out.printf("Ballot Number: %d\n", message2b.getProposal().getBallot().getBallotNumber());
-
-
+    private void printConsensus(ArrayList<HetconsObserverQuorum> quorum) {
+        for (int i = 0; i < quorum.size(); i++) {
+            HetconsObserverQuorum q = quorum.get(i);
+            System.out.printf("Quorum %d has receive message from %d members\n", i, q.getMemebersCount());
+            q.getMemebersList().forEach(m -> {
+                System.out.printf("\t%s\n", HetconsStatus.cryptoIdToString(m));
+            });
+        };
     }
 
     private void send1bs(HetconsMessage1a message1a, HetconsStatus status) {
@@ -312,7 +322,7 @@ public class HetconsParticipantService extends CharlotteNodeService {
 
     private void broadcastHetconsMessageBlocks(HetconsStatus status, Block block) {
         status.getParticipants().forEach((k, v) -> {
-            sendBlock(k, block);
+            sendBlock(status.getParticipantIds().get(k), block);
         });
     }
 

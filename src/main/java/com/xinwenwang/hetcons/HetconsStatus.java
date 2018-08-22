@@ -1,6 +1,7 @@
 package com.xinwenwang.hetcons;
 
 
+import com.google.protobuf.ByteString;
 import com.isaacsheff.charlotte.node.HashUtil;
 import com.isaacsheff.charlotte.proto.*;
 
@@ -11,16 +12,17 @@ public class HetconsStatus {
 
     private HetconsConsensusStage stage;
     private LinkedList<HetconsProposal> proposals;
-    private HashMap<CryptoId, HetconsMessage2ab> latestMessage2a;
+    private HashMap<String, HetconsMessage2ab> latestMessage2a;
     private HetconsMessage2ab highestBallotM2A;
     private HetconsObserverGroup observerGroup;
     private HashMap<HetconsObserverQuorum, ArrayList<Hash>> quorumOf1bs;
     private HashMap<HetconsObserverQuorum, ArrayList<Hash>> quorumOf2bs;
     private HashMap<HetconsObserverQuorum, ArrayList<HetconsValue>> quorumOf1bsValues;
     private HashMap<HetconsObserverQuorum, ArrayList<HetconsValue>> quorumOf2bsValues;
-    private HashMap<CryptoId, ArrayList<HetconsObserverQuorum>> participants;
-    private HashMap<CryptoId, Boolean> participantResponsed;
-    private HashMap<CryptoId, Boolean> participantM2BResponsed;
+    private HashMap<String, ArrayList<HetconsObserverQuorum>> participants;
+    private HashMap<String, CryptoId> participantIds;
+    private HashMap<String, Boolean> participantResponsed;
+    private HashMap<String, Boolean> participantM2BResponsed;
 
     public HetconsStatus(HetconsConsensusStage stage, HetconsProposal proposal) {
         this.stage = stage;
@@ -77,10 +79,10 @@ public class HetconsStatus {
      * @param message2ab the 2A messasge to be added into the map
      */
     public void addM2A(CryptoId observer, HetconsMessage2ab message2ab) {
-        HetconsMessage2ab oldMessage = latestMessage2a.putIfAbsent(observer, message2ab);
+        HetconsMessage2ab oldMessage = latestMessage2a.putIfAbsent(cryptoIdToString(observer), message2ab);
         if (oldMessage != null) {
             if (oldMessage.getProposal().getBallot().getBallotNumber() < message2ab.getProposal().getBallot().getBallotNumber()) {
-                latestMessage2a.put(observer, message2ab);
+                latestMessage2a.put(cryptoIdToString(observer), message2ab);
             }
             message2ab = oldMessage;
         }
@@ -93,7 +95,7 @@ public class HetconsStatus {
     }
 
     public HetconsMessage2ab getMessage2A(CryptoId observer) {
-        HetconsMessage2ab message2ab = latestMessage2a.get(observer);
+        HetconsMessage2ab message2ab = latestMessage2a.get(cryptoIdToString(observer));
         return message2ab == null ? highestBallotM2A : message2ab;
     }
 
@@ -107,10 +109,11 @@ public class HetconsStatus {
                 quorumOf1bsValues.putIfAbsent(quorum, new ArrayList<>());
                 quorumOf2bsValues.putIfAbsent(quorum, new ArrayList<>());
                 for (CryptoId id : quorum.getMemebersList()) {
-                    participants.putIfAbsent(id, new ArrayList<HetconsObserverQuorum>());
-                    participants.get(id).add(quorum);
-                    participantResponsed.put(id, Boolean.FALSE);
-                    participantM2BResponsed.put(id, Boolean.FALSE);
+                    participants.putIfAbsent(cryptoIdToString(id), new ArrayList<HetconsObserverQuorum>());
+                    participants.get(cryptoIdToString(id)).add(quorum);
+                    participantResponsed.put(cryptoIdToString(id), Boolean.FALSE);
+                    participantM2BResponsed.put(cryptoIdToString(id), Boolean.FALSE);
+                    participantIds.putIfAbsent(cryptoIdToString(id), id);
                 }
             }
         }
@@ -120,8 +123,12 @@ public class HetconsStatus {
         return observerGroup;
     }
 
-    public HashMap<CryptoId, ArrayList<HetconsObserverQuorum>> getParticipants() {
+    public HashMap<String, ArrayList<HetconsObserverQuorum>> getParticipants() {
         return participants;
+    }
+
+    public HashMap<String, CryptoId> getParticipantIds() {
+        return participantIds;
     }
 
     public void reset() {
@@ -131,20 +138,21 @@ public class HetconsStatus {
         quorumOf2bsValues = new HashMap<>();
         participantResponsed = new HashMap<>();
         participantM2BResponsed = new HashMap<>();
+        participantIds = new HashMap<>();
     }
 
     /**
      *
      * @param id
-     * @param blockHash
+     * @param
      * @return
      */
     public ArrayList<HetconsObserverQuorum> receive1b(CryptoId id, HetconsMessage1b message1b) {
 
         ArrayList<HetconsObserverQuorum> validQuorums = new ArrayList<>();
-        if (!participantResponsed.get(id)) {
-            participantResponsed.put(id, Boolean.TRUE);
-            participants.get(id).forEach(quorum -> {
+        if (participantResponsed.containsKey(cryptoIdToString(id)) && !participantResponsed.get(cryptoIdToString(id))) {
+            participantResponsed.put(cryptoIdToString(id), Boolean.TRUE);
+            participants.get(cryptoIdToString(id)).forEach(quorum -> {
                 quorumOf1bsValues.get(quorum).add(message1b.getValue());
                 quorumOf1bs.get(quorum).add(HashUtil.sha3Hash(message1b));
                 if (quorumOf1bs.get(quorum).size() == quorum.getSize()) {
@@ -165,9 +173,9 @@ public class HetconsStatus {
     public ArrayList<HetconsObserverQuorum> receive2b(CryptoId id, HetconsMessage2ab message2b) {
 
         ArrayList<HetconsObserverQuorum> validQuorums = new ArrayList<>();
-        if (!participantM2BResponsed.get(id)) {
-            participantM2BResponsed.put(id, Boolean.TRUE);
-            participants.get(id).forEach(quorum -> {
+        if (participantM2BResponsed.containsKey(cryptoIdToString(id)) && !participantM2BResponsed.get(cryptoIdToString(id))) {
+            participantM2BResponsed.put(cryptoIdToString(id), Boolean.TRUE);
+            participants.get(cryptoIdToString(id)).forEach(quorum -> {
                 quorumOf2bsValues.get(quorum).add(message2b.getValue());
                 quorumOf2bs.get(quorum).add(HashUtil.sha3Hash(message2b));
                 if (quorumOf2bs.get(quorum).size() == quorum.getSize()) {
@@ -194,5 +202,23 @@ public class HetconsStatus {
         return HetconsQuorumRefs.newBuilder()
                 .addAllBlockHashes(quorumOf1bs.get(quorum))
                 .build();
+    }
+
+    public static String cryptoIdToString(CryptoId id) {
+        String ret = id.toString();
+        if (id.hasHash()) {
+            ret = id.getHash().getSha3().toStringUtf8();
+        } else if (id.hasPublicKey()) {
+            ret = id.getPublicKey().getEllipticCurveP256().getByteString().toStringUtf8();
+        }
+        return bytes2Hex(ret.getBytes());
+    }
+
+    public static String bytes2Hex(byte[] bytes) {
+        StringBuilder sb = new StringBuilder();
+        for (byte b : bytes) {
+            sb.append(String.format("%x", b));
+        }
+        return sb.toString();
     }
 }

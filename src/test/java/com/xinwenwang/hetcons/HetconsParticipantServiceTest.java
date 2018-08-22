@@ -141,10 +141,10 @@ public class HetconsParticipantServiceTest extends HetconsTest {
          * start the test
          */
 //        assertEquals(0, map.size(), "sizebefore propose, there should no prosals avalaible");
-        client.propose(accountsInfos, value, ballot, observerGroup );
+        client.propose(accountsInfos, value, ballot, observerGroup);
 
         try {
-            TimeUnit.SECONDS.sleep(10);
+            TimeUnit.SECONDS.sleep(1000);
         } catch (InterruptedException ex) {
             logger.log(Level.SEVERE, "Interrupt got");
             return;
