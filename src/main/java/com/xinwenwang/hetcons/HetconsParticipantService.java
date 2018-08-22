@@ -83,8 +83,9 @@ public class HetconsParticipantService extends CharlotteNodeService {
             }
         } catch (HetconsException ex) {
             ex.printStackTrace();
+            return new ArrayList<>();
         }
-
+        storeNewBlock(block);
         return new ArrayList<>();
     }
 
@@ -103,7 +104,7 @@ public class HetconsParticipantService extends CharlotteNodeService {
         if (!handleProposal(proposal, observerGroup))
             return;
 
-        HetconsStatus status = proposalStatusHashMap.get(buildAccountsInfoString(proposal.getAccountsList()));
+        HetconsStatus status = proposalStatusHashMap.get(buildAccountsInfoString(proposal.getSlotsList()));
         if (!status.hasMessage2a())
             send1bs(message1a, status);
         else
@@ -115,7 +116,7 @@ public class HetconsParticipantService extends CharlotteNodeService {
         logger.info("Got M1B:\n");
 
         // validate 1bs
-        String statusKey = buildAccountsInfoString(message1b.getM1A().getProposal().getAccountsList());
+        String statusKey = buildAccountsInfoString(message1b.getM1A().getProposal().getSlotsList());
         HetconsStatus status = proposalStatusHashMap.get(statusKey);
 
         if (!validateStatus(status, message1b.getM1A().getProposal(), false))
@@ -163,7 +164,7 @@ public class HetconsParticipantService extends CharlotteNodeService {
 
     private void handle2b(HetconsMessage2ab message2b, CryptoId id) {
         logger.info(String.format("Server %s Got M2B\n", this.getConfig().getMe()));
-        String statusKey = buildAccountsInfoString(message2b.getProposal().getAccountsList());
+        String statusKey = buildAccountsInfoString(message2b.getProposal().getSlotsList());
         HetconsStatus status = proposalStatusHashMap.get(statusKey);
 
         if (!validateStatus(status, message2b.getProposal(), false))
@@ -218,8 +219,8 @@ public class HetconsParticipantService extends CharlotteNodeService {
 
     private boolean handleProposal(HetconsProposal proposal, HetconsObserverGroup observerGroup) {
         // validate proposal
-        String proposalStatusID = buildAccountsInfoString(proposal.getAccountsList());
-        String chainID = buildAccountsInfoString(proposal.getAccountsList(), false);
+        String proposalStatusID = buildAccountsInfoString(proposal.getSlotsList());
+        String chainID = buildAccountsInfoString(proposal.getSlotsList(), false);
         HetconsStatus status = proposalStatusHashMap.get(proposalStatusID);
         if (status == null) {
             status = new HetconsStatus(HetconsConsensusStage.ConsensusIdile);
@@ -261,18 +262,18 @@ public class HetconsParticipantService extends CharlotteNodeService {
         return true;
     }
 
-    private String buildAccountsInfoString(List<HetconsParticipatedAccountsInfo> accountsInfos, boolean withSlot) {
+    private String buildAccountsInfoString(List<IntegrityAttestation.ChainSlot> slots, boolean withSlot) {
         StringBuilder builder = new StringBuilder();
-        for (HetconsParticipatedAccountsInfo info: accountsInfos) {
-            builder.append(info.getChainHash().getSha3().toStringUtf8());
+        for (IntegrityAttestation.ChainSlot slot: slots) {
+            builder.append(slot.getRoot().getHash().getSha3().toStringUtf8());
             if (withSlot)
-                builder.append("|" +Long.toString(info.getSlot().getBlockSlotNumber()));
+                builder.append("|" +Long.toString(slot.getSlot()));
         }
         return builder.toString();
     }
 
-    private String buildAccountsInfoString(List<HetconsParticipatedAccountsInfo> accountsInfos) {
-        return buildAccountsInfoString(accountsInfos, true);
+    private String buildAccountsInfoString(List<IntegrityAttestation.ChainSlot> slots) {
+        return buildAccountsInfoString(slots, true);
     }
 
     private boolean validateStatus(HetconsStatus status, HetconsProposal proposal) {

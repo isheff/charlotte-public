@@ -23,6 +23,7 @@ public class HetconsStatus {
     private HashMap<String, CryptoId> participantIds;
     private HashMap<String, Boolean> participantResponsed;
     private HashMap<String, Boolean> participantM2BResponsed;
+    private HetconsParticipantService service;
 
     public HetconsStatus(HetconsConsensusStage stage, HetconsProposal proposal) {
         this.stage = stage;
@@ -204,6 +205,30 @@ public class HetconsStatus {
                 .build();
     }
 
+    private HetconsValue getM1BValue(HetconsMessage1b message1b) {
+        HetconsMessage2ab message2a = message1b.getM2A();
+         return (message2a.hasProposal() ? message2a.getValue() : message1b.getM1A().getProposal().getValue());
+    }
+
+    private HetconsValue getM2BValue(HetconsMessage2ab message2b) {
+        List<Hash> hashes = message2b.getQuorumOf1Bs().getBlockHashesList();
+        HetconsValue value = null;
+        HetconsValue blockValue = null;
+        for (Hash i : hashes) {
+            Block block = service.getBlock(i);
+            if (block.hasHetconsMessage() && block.getHetconsMessage().hasM1B() && block.getHetconsMessage().getM1B().hasValue()) {
+                blockValue = block.getHetconsMessage().getM1B().getValue();
+                if (value == null)
+                    value = blockValue;
+                else if (!value.equals(blockValue)) {
+                    return null;
+                }
+            }
+        }
+        return value;
+    }
+
+    // TODO: move following methods to HetconsUtil class
     public static String cryptoIdToString(CryptoId id) {
         String ret = id.toString();
         if (id.hasHash()) {

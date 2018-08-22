@@ -37,11 +37,11 @@ public class HetconsClientNode extends CharlotteNodeClient {
         );
     }
 
-    public void propose(List<HetconsParticipatedAccountsInfo> accountsInfos,
+    public void propose(List<IntegrityAttestation.ChainSlot> slots,
                         HetconsValue value, HetconsBallot ballot,
                         HetconsObserverGroup observerGroup) {
 
-        HetconsProposal proposal = HetconsUtil.buildProposal(accountsInfos, value, ballot);
+        HetconsProposal proposal = HetconsUtil.buildProposal(slots, value, ballot);
         send1a(proposal, observerGroup);
     }
 

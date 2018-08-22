@@ -8,7 +8,7 @@ import java.util.List;
 
 public class HetconsUtil {
 
-    public static HetconsProposal buildProposal(List<HetconsParticipatedAccountsInfo> accountsInfos, HetconsValue value, HetconsBallot ballot) {
+    public static HetconsProposal buildProposal(List<IntegrityAttestation.ChainSlot> slots, HetconsValue value, HetconsBallot ballot) {
         long currentTime = new Date().getTime();
         HetconsProposal.Builder builder =
                 HetconsProposal.newBuilder()
@@ -21,13 +21,13 @@ public class HetconsUtil {
                         )
                         .setValue(value);
 
-        for (HetconsParticipatedAccountsInfo accountsInfo : accountsInfos) {
-            builder.addAccounts(accountsInfo);
+        for (IntegrityAttestation.ChainSlot slot : slots) {
+            builder.addSlots(slot);
         }
         return builder.build();
     }
 
     public static boolean isSameProposal(HetconsProposal proposal1, HetconsProposal proposal2) {
-        return proposal1.getAccountsList().equals(proposal2.getAccountsList()) && proposal1.getValue().equals(proposal2.getValue());
+        return proposal1.getSlotsList().equals(proposal2.getSlotsList()) && proposal1.getValue().equals(proposal2.getValue());
     }
 }

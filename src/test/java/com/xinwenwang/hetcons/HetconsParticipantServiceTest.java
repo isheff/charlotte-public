@@ -125,12 +125,15 @@ public class HetconsParticipantServiceTest extends HetconsTest {
         /*
          * set up proposal
          */
-        HetconsParticipatedAccountsInfo accountsInfo = HetconsParticipatedAccountsInfo.newBuilder()
-                .setChainHash(Hash.newBuilder().setSha3(ByteString.copyFromUtf8("abc")).build()).setSlot(HetconsSlot.newBuilder().setBlockSlotNumber(1).build())
+        IntegrityAttestation.ChainSlot slot = IntegrityAttestation.ChainSlot.newBuilder()
+                .setRoot(Reference.newBuilder()
+                        .setHash(Hash.newBuilder().setSha3(ByteString.copyFromUtf8("abc")).build())
+                        .build())
+                .setSlot(1)
                 .build();
 
-        ArrayList<HetconsParticipatedAccountsInfo> accountsInfos = new ArrayList<>();
-        accountsInfos.add(accountsInfo);
+        ArrayList<IntegrityAttestation.ChainSlot> slots= new ArrayList<>();
+        slots.add(slot);
         HetconsValue value = HetconsValue.newBuilder()
                 .setNum(100).build();
 
@@ -141,7 +144,7 @@ public class HetconsParticipantServiceTest extends HetconsTest {
          * start the test
          */
 //        assertEquals(0, map.size(), "sizebefore propose, there should no prosals avalaible");
-        client.propose(accountsInfos, value, ballot, observerGroup);
+        client.propose(slots, value, ballot, observerGroup);
 
         try {
             TimeUnit.SECONDS.sleep(1000);
