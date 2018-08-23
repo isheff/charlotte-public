@@ -39,9 +39,10 @@ public class HetconsClientNode extends CharlotteNodeClient {
 
     public void propose(List<IntegrityAttestation.ChainSlot> slots,
                         HetconsValue value, HetconsBallot ballot,
-                        HetconsObserverGroup observerGroup) {
+                        HetconsObserverGroup observerGroup,
+                        long timeout) {
 
-        HetconsProposal proposal = HetconsUtil.buildProposal(slots, value, ballot);
+        HetconsProposal proposal = HetconsUtil.buildProposal(slots, value, ballot, timeout);
         send1a(proposal, observerGroup);
     }
 

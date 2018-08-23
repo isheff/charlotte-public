@@ -1,12 +1,13 @@
 package com.xinwenwang.hetcons;
 
 
-import com.google.protobuf.ByteString;
 import com.isaacsheff.charlotte.node.HashUtil;
 import com.isaacsheff.charlotte.proto.*;
 
-import java.lang.reflect.Array;
 import java.util.*;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.logging.Logger;
 
 public class HetconsStatus {
 
@@ -21,9 +22,16 @@ public class HetconsStatus {
     private HashMap<HetconsObserverQuorum, ArrayList<HetconsValue>> quorumOf2bsValues;
     private HashMap<String, ArrayList<HetconsObserverQuorum>> participants;
     private HashMap<String, CryptoId> participantIds;
-    private HashMap<String, Boolean> participantResponsed;
+    private HashMap<String, Boolean> participantM1BResponsed;
     private HashMap<String, Boolean> participantM2BResponsed;
+    private Timer m1bTimer;
+    private Timer m2bTimer;
     private HetconsParticipantService service;
+    private long consensuTimeout;
+
+    private ReadWriteLock lock;
+
+    private static final int maxTimeOut = 10 * 1000;
 
     public HetconsStatus(HetconsConsensusStage stage, HetconsProposal proposal) {
         this.stage = stage;
@@ -31,6 +39,7 @@ public class HetconsStatus {
         if (proposal != null)
             proposals.add(proposal);
         participants = new HashMap<>();
+        lock = new ReentrantReadWriteLock();
         reset();
         latestMessage2a = new HashMap<>();
         highestBallotM2A = HetconsMessage2ab.newBuilder().build();
@@ -56,9 +65,15 @@ public class HetconsStatus {
     }
 
     public void updateProposal(HetconsProposal proposal) {
+        System.out.printf("Old Proposal:\n" +
+                getCurrentProposal() + "\n");
         this.proposals.add(proposal);
-        if (proposals.size() > 1)
+        if (proposals.size() > 1) {
             reset();
+        }
+        System.out.printf("Updated Proposal:\n" +
+                proposal + "\n");
+
     }
 
     public HetconsStatus(HetconsProposal proposal) {
@@ -80,10 +95,10 @@ public class HetconsStatus {
      * @param message2ab the 2A messasge to be added into the map
      */
     public void addM2A(CryptoId observer, HetconsMessage2ab message2ab) {
-        HetconsMessage2ab oldMessage = latestMessage2a.putIfAbsent(cryptoIdToString(observer), message2ab);
+        HetconsMessage2ab oldMessage = latestMessage2a.putIfAbsent(HetconsUtil.cryptoIdToString(observer), message2ab);
         if (oldMessage != null) {
             if (oldMessage.getProposal().getBallot().getBallotNumber() < message2ab.getProposal().getBallot().getBallotNumber()) {
-                latestMessage2a.put(cryptoIdToString(observer), message2ab);
+                latestMessage2a.put(HetconsUtil.cryptoIdToString(observer), message2ab);
             }
             message2ab = oldMessage;
         }
@@ -96,7 +111,7 @@ public class HetconsStatus {
     }
 
     public HetconsMessage2ab getMessage2A(CryptoId observer) {
-        HetconsMessage2ab message2ab = latestMessage2a.get(cryptoIdToString(observer));
+        HetconsMessage2ab message2ab = latestMessage2a.get(HetconsUtil.cryptoIdToString(observer));
         return message2ab == null ? highestBallotM2A : message2ab;
     }
 
@@ -110,11 +125,11 @@ public class HetconsStatus {
                 quorumOf1bsValues.putIfAbsent(quorum, new ArrayList<>());
                 quorumOf2bsValues.putIfAbsent(quorum, new ArrayList<>());
                 for (CryptoId id : quorum.getMemebersList()) {
-                    participants.putIfAbsent(cryptoIdToString(id), new ArrayList<HetconsObserverQuorum>());
-                    participants.get(cryptoIdToString(id)).add(quorum);
-                    participantResponsed.put(cryptoIdToString(id), Boolean.FALSE);
-                    participantM2BResponsed.put(cryptoIdToString(id), Boolean.FALSE);
-                    participantIds.putIfAbsent(cryptoIdToString(id), id);
+                    participants.putIfAbsent(HetconsUtil.cryptoIdToString(id), new ArrayList<HetconsObserverQuorum>());
+                    participants.get(HetconsUtil.cryptoIdToString(id)).add(quorum);
+                    participantM1BResponsed.put(HetconsUtil.cryptoIdToString(id), Boolean.FALSE);
+                    participantM2BResponsed.put(HetconsUtil.cryptoIdToString(id), Boolean.FALSE);
+                    participantIds.putIfAbsent(HetconsUtil.cryptoIdToString(id), id);
                 }
             }
         }
@@ -133,13 +148,23 @@ public class HetconsStatus {
     }
 
     public void reset() {
-        quorumOf1bs = new HashMap<>();
-        quorumOf2bs = new HashMap<>();
-        quorumOf1bsValues = new HashMap<>();
-        quorumOf2bsValues = new HashMap<>();
-        participantResponsed = new HashMap<>();
-        participantM2BResponsed = new HashMap<>();
-        participantIds = new HashMap<>();
+            quorumOf1bs = new HashMap<>();
+            quorumOf2bs = new HashMap<>();
+            quorumOf1bsValues = new HashMap<>();
+            quorumOf2bsValues = new HashMap<>();
+            participantM1BResponsed = new HashMap<>();
+            participantM2BResponsed = new HashMap<>();
+            participantIds = new HashMap<>();
+    }
+
+    public void updateStatus(HetconsProposal proposal, HetconsObserverGroup group) {
+        lock.writeLock().lock();
+        try {
+            updateProposal(proposal);
+            setObserverGroup(group);
+        } finally {
+            lock.writeLock().unlock();
+        }
     }
 
     /**
@@ -149,50 +174,53 @@ public class HetconsStatus {
      * @return
      */
     public ArrayList<HetconsObserverQuorum> receive1b(CryptoId id, HetconsMessage1b message1b) {
-
-        ArrayList<HetconsObserverQuorum> validQuorums = new ArrayList<>();
-        if (participantResponsed.containsKey(cryptoIdToString(id)) && !participantResponsed.get(cryptoIdToString(id))) {
-            participantResponsed.put(cryptoIdToString(id), Boolean.TRUE);
-            participants.get(cryptoIdToString(id)).forEach(quorum -> {
-                quorumOf1bsValues.get(quorum).add(message1b.getValue());
-                quorumOf1bs.get(quorum).add(HashUtil.sha3Hash(message1b));
-                if (quorumOf1bs.get(quorum).size() == quorum.getSize()) {
-                    validQuorums.add(quorum);
-                    quorumOf1bsValues.get(quorum).forEach(value -> {
-                        if (!value.equals(message1b.getValue())) {
-                            validQuorums.remove(quorum);
-                            quorumOf1bs.get(quorum).clear();
-                            quorumOf1bsValues.get(quorum).clear();
-                        }
-                    });
-                }
-            });
-        }
-        return validQuorums;
+        return receiveX(id, participantM1BResponsed, quorumOf1bsValues,
+                message1b.getValue(), quorumOf1bs,
+                HashUtil.sha3Hash(message1b));
     }
 
     public ArrayList<HetconsObserverQuorum> receive2b(CryptoId id, HetconsMessage2ab message2b) {
+        return receiveX(id, participantM2BResponsed,
+                quorumOf2bsValues, message2b.getValue(),
+                quorumOf2bs, HashUtil.sha3Hash(message2b));
+    }
 
+    private ArrayList<HetconsObserverQuorum> receiveX(CryptoId id,
+                          HashMap<String, Boolean> participantMXBResponsed,
+                          HashMap<HetconsObserverQuorum, ArrayList<HetconsValue>> quorumOfXbsValues,
+                          HetconsValue valueX,
+                          HashMap<HetconsObserverQuorum, ArrayList<Hash>> quorumOfXbs,
+                          Hash hash) {
         ArrayList<HetconsObserverQuorum> validQuorums = new ArrayList<>();
-        if (participantM2BResponsed.containsKey(cryptoIdToString(id)) && !participantM2BResponsed.get(cryptoIdToString(id))) {
-            participantM2BResponsed.put(cryptoIdToString(id), Boolean.TRUE);
-            participants.get(cryptoIdToString(id)).forEach(quorum -> {
-                quorumOf2bsValues.get(quorum).add(message2b.getValue());
-                quorumOf2bs.get(quorum).add(HashUtil.sha3Hash(message2b));
-                if (quorumOf2bs.get(quorum).size() == quorum.getSize()) {
-                    validQuorums.add(quorum);
-                    quorumOf2bsValues.get(quorum).forEach(value -> {
-                        if (!value.equals(message2b.getValue())) {
-                            validQuorums.remove(quorum);
-                            quorumOf2bs.get(quorum).clear();
-                            quorumOf2bsValues.get(quorum).clear();
-                        }
-                    });
-                }
-            });
+        if (participantMXBResponsed.containsKey(HetconsUtil.cryptoIdToString(id)) && !participantMXBResponsed.get(HetconsUtil.cryptoIdToString(id))) {
+            participantMXBResponsed.put(HetconsUtil.cryptoIdToString(id), Boolean.TRUE);
+            HetconsProposal proposal = getCurrentProposal();
+            this.lock.readLock().lock();
+            try {
+                HetconsProposal updatedProposal = getCurrentProposal();
+                if (proposal.getBallot().getBallotSequence().compareTo(updatedProposal.getBallot().getBallotSequence()) < 0)
+                    return validQuorums;
+                participants.get(HetconsUtil.cryptoIdToString(id)).forEach(quorum -> {
+                    quorumOfXbsValues.get(quorum).add(valueX);
+                    quorumOfXbs.get(quorum).add(hash);
+                    if (quorumOfXbs.get(quorum).size() == quorum.getMemebersCount()) {
+                        validQuorums.add(quorum);
+                        quorumOfXbsValues.get(quorum).forEach(value -> {
+                            if (!value.equals(valueX)) {
+                                validQuorums.remove(quorum);
+//                                quorumOfXbs.get(quorum).clear();
+//                                quorumOfXbsValues.get(quorum).clear();
+                            }
+                        });
+                    }
+                });
+            } finally {
+                this.lock.readLock().unlock();
+            }
         }
         return validQuorums;
     }
+
 
     /**
      * Put all received hashes of 1b blocks for a given quorum into a quorumRef object.
@@ -203,6 +231,46 @@ public class HetconsStatus {
         return HetconsQuorumRefs.newBuilder()
                 .addAllBlockHashes(quorumOf1bs.get(quorum))
                 .build();
+    }
+
+    public void setConsensuTimeout(long consensuTimeout) {
+        if (consensuTimeout > maxTimeOut) {
+            Logger.getGlobal().warning("consensus specified timeout value is greater than the max value. Therefore, we use the max value instead.");
+            consensuTimeout = maxTimeOut;
+        }
+        this.consensuTimeout = consensuTimeout;
+    }
+
+    public long getConsensuTimeout() {
+        return consensuTimeout;
+    }
+
+    public Timer getM1bTimer() {
+        return m1bTimer;
+    }
+
+    public Timer getM2bTimer() {
+        return m2bTimer;
+    }
+
+    public void setM1bTimer(Timer m1bTimer) {
+        this.m1bTimer = m1bTimer;
+    }
+
+    public void setM2bTimer(Timer m2bTimer) {
+        this.m2bTimer = m2bTimer;
+    }
+
+    public HetconsMessage2ab getHighestBallotM2A() {
+        return highestBallotM2A;
+    }
+
+    public void setService(HetconsParticipantService service) {
+        this.service = service;
+    }
+
+    public HetconsParticipantService getService() {
+        return service;
     }
 
     private HetconsValue getM1BValue(HetconsMessage1b message1b) {
@@ -228,22 +296,7 @@ public class HetconsStatus {
         return value;
     }
 
-    // TODO: move following methods to HetconsUtil class
-    public static String cryptoIdToString(CryptoId id) {
-        String ret = id.toString();
-        if (id.hasHash()) {
-            ret = id.getHash().getSha3().toStringUtf8();
-        } else if (id.hasPublicKey()) {
-            ret = id.getPublicKey().getEllipticCurveP256().getByteString().toStringUtf8();
-        }
-        return bytes2Hex(ret.getBytes());
-    }
-
-    public static String bytes2Hex(byte[] bytes) {
-        StringBuilder sb = new StringBuilder();
-        for (byte b : bytes) {
-            sb.append(String.format("%x", b));
-        }
-        return sb.toString();
+    public ReadWriteLock getLock() {
+        return lock;
     }
 }

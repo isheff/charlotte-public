@@ -103,7 +103,7 @@ public class HetconsParticipantServiceTest extends HetconsTest {
         HetconsObserverQuorum quorum = HetconsObserverQuorum.newBuilder()
                 .addAllMemebers(quorumMembers)
                 .setOwner(serverContact.getCryptoId())
-                .setSize(quorumMembers.size())
+//                .setSize(quorumMembers.size())
                 .build();
 
         HetconsObserver observer1 = HetconsObserver.newBuilder()
@@ -137,14 +137,18 @@ public class HetconsParticipantServiceTest extends HetconsTest {
         HetconsValue value = HetconsValue.newBuilder()
                 .setNum(100).build();
 
-        HetconsBallot ballot = HetconsBallot.newBuilder().setBallotNumber(1).build();
+        HetconsBallot ballot = HetconsUtil.buildBallot(value);
+
+        HetconsValue value1 = HetconsValue.newBuilder().setNum(200).build();
+        HetconsBallot ballot1 = HetconsUtil.buildBallot(value1);
 
 
         /*
          * start the test
          */
 //        assertEquals(0, map.size(), "sizebefore propose, there should no prosals avalaible");
-        client.propose(slots, value, ballot, observerGroup);
+        client.propose(slots, value, ballot, observerGroup, 1000);
+        client.propose(slots, value1, ballot1, observerGroup, 1000);
 
         try {
             TimeUnit.SECONDS.sleep(1000);

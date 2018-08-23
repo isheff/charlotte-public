@@ -26,7 +26,7 @@ public class QuorumConfig {
     public HetconsObserverQuorum toHetconsObserverQuorum(CryptoId owner) {
         return HetconsObserverQuorum.newBuilder()
                 .setOwner(owner)
-                .setSize(participants.size())
+//                .setSize(participants.size())
                 .addAllMemebers(participants.stream().map(jsonContact -> {
                     return new Contact(jsonContact, HetconsConfig.configFileDirectory.toPath()).getCryptoId();
                 }).collect(Collectors.toList()))

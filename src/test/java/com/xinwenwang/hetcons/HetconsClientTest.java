@@ -91,7 +91,7 @@ public class HetconsClientTest extends HetconsTest {
         HetconsObserverQuorum quorum = HetconsObserverQuorum.newBuilder()
                 .addMemebers(serverContact.getCryptoId())
                 .setOwner(serverContact.getCryptoId())
-                .setSize(1)
+//                .setSize(1)
                 .build();
 
         HetconsObserver observer = HetconsObserver.newBuilder()
@@ -126,7 +126,7 @@ public class HetconsClientTest extends HetconsTest {
          * start the test
          */
         assertEquals(0, map.size(), "before propose, there should no prosals avalaible");
-        client.propose(slots, value, ballot, observerGroup );
+        client.propose(slots, value, ballot, observerGroup, 100);
 
         try {
             TimeUnit.SECONDS.sleep(10);

@@ -198,7 +198,7 @@ message HetconsSlot {
 }
 
 message HetconsBallot {
-    oneof ballot_onfo {
+    oneof ballot_onefo {
         int64 ballotNumber = 1;
         string ballotSequence = 2;
     }
@@ -212,6 +212,7 @@ message HetconsProposal {
   HetconsProposalType proposalType = 4;
   repeated IntegrityAttestation.ChainSlot slots = 5;
   charlotte.Hash hash_of_ballot_number_and_time = 6;
+  int64 timeout = 7;
 }
 
 // references of a quorum of 1bs or 2bs.
@@ -221,7 +222,6 @@ message HetconsQuorumRefs {
 
 message HetconsObserverQuorum {
   charlotte.CryptoId owner = 1;
-  int64 size = 2;
   repeated charlotte.CryptoId memebers = 3;
   // TODO: fault type?
 }
