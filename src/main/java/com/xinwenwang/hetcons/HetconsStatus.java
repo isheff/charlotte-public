@@ -29,6 +29,11 @@ public class HetconsStatus {
     private HetconsParticipantService service;
     private long consensuTimeout;
 
+    private String ConsensusID;
+
+    private HetconsStatus parent;
+    private HashMap<String, HetconsStatus> children;
+
     private ReadWriteLock lock;
 
     private static final int maxTimeOut = 10 * 1000;
@@ -43,6 +48,8 @@ public class HetconsStatus {
         reset();
         latestMessage2a = new HashMap<>();
         highestBallotM2A = HetconsMessage2ab.newBuilder().build();
+        parent = null;
+        children = new HashMap<>();
     }
 
     public HetconsStatus(HetconsConsensusStage stage) {
@@ -299,4 +306,32 @@ public class HetconsStatus {
     public ReadWriteLock getLock() {
         return lock;
     }
+
+    public HashMap<String, HetconsStatus> getChildren() {
+        return children;
+    }
+
+    public void setConsensusID(String consensusID) {
+        ConsensusID = consensusID;
+    }
+
+    public String getConsensusID() {
+        return ConsensusID;
+    }
+
+    public void setParent(HetconsStatus parent) {
+        this.parent = parent;
+    }
+
+    public HetconsStatus getParent() {
+        return parent;
+    }
+
+    public void onDecided(String proposalID) {}
+
+    public HetconsStatus getStatus() {
+        return this;
+    }
+    public void onReceiveNewProposal(HetconsProposal proposal) {}
+
 }
