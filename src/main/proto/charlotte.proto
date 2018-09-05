@@ -129,6 +129,24 @@ service Wilbur { // anything running a Wilbur service should also run a Charlott
   rpc RequestAvailabilityAttestation(RequestAvailabilityAttestationInput) returns (RequestAvailabilityAttestationResponse) {}
 }
 
+// WILBUR QUERY
+
+message WilburQueryInput {
+  oneof wilburquery_oneof {
+    Reference reference = 1;
+    Block fillInTheBlank = 2;
+  }
+}
+
+message WilburQueryResponse {
+  string errorMessage = 1;
+  Block block = 2;
+}
+
+service WilburQuery { // anything running a WilburQuery service should also run a Wilbur and CharlotteNode service
+  rpc WilburQuery(WilburQueryInput) returns (WilburQueryResponse) {}
+}
+
 
 
 // FERN
