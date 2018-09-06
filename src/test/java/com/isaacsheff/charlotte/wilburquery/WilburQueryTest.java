@@ -1,9 +1,10 @@
-package com.isaacsheff.charlotte.wilbur;
+package com.isaacsheff.charlotte.wilburquery;
+
 
 import static com.isaacsheff.charlotte.node.PortUtil.getFreshPort;
-import static com.isaacsheff.charlotte.wilbur.WilburService.getWilburNode;
+import static com.isaacsheff.charlotte.wilburquery.WilburQueryService.getWilburQueryNode;
 import static com.isaacsheff.charlotte.yaml.GenerateX509.generateKeyFiles;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.FileNotFoundException;
 import java.nio.file.Paths;
@@ -14,9 +15,9 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import com.isaacsheff.charlotte.node.CharlotteNode;
 import com.isaacsheff.charlotte.node.CharlotteNodeService;
 import com.isaacsheff.charlotte.proto.Block;
+import com.isaacsheff.charlotte.proto.WilburQueryInput;
 import com.isaacsheff.charlotte.yaml.Config;
 import com.isaacsheff.charlotte.yaml.JsonConfig;
 import com.isaacsheff.charlotte.yaml.JsonContact;
@@ -25,7 +26,7 @@ import com.isaacsheff.charlotte.yaml.JsonContact;
  * Test Wilbur clients (which, by necessity, also tests wilbur service).
  * @author Isaac Sheff
  */
-public class WilburClientTest {
+public class WilburQueryTest {
 
   /** the participants map to be used in config files. will be set in setup() **/
   private static Map<String, JsonContact> participants;
@@ -40,13 +41,9 @@ public class WilburClientTest {
                      "src/test/resources/private-key.pem",
                      "localhost",
                      "127.0.0.1");
-    generateKeyFiles("src/test/resources/server2.pem",
-                     "src/test/resources/private-key2.pem",
-                     "localhost",
-                     "127.0.0.1");
-    participants = new HashMap<String, JsonContact>(2);
-    participants.put("wilbur", new JsonContact("src/test/resources/server.pem",  "localhost", getFreshPort()));
-    participants.put("client", new JsonContact("src/test/resources/server2.pem", "localhost", getFreshPort()));
+    participants = new HashMap<String, JsonContact>(1);
+    participants.put("wilbur",
+      new JsonContact("src/test/resources/server.pem",  "localhost", getFreshPort()));
 
   }
 
@@ -56,27 +53,29 @@ public class WilburClientTest {
   @Test
   void endToEnd() throws InterruptedException, FileNotFoundException {
     // start the wilbur server
-    (new Thread(getWilburNode(new CharlotteNodeService(
-        new Config(new JsonConfig("src/test/resources/private-key.pem",  "wilbur", participants),
+    final CharlotteNodeService service = new CharlotteNodeService(
+        new Config(new JsonConfig("src/test/resources/private-key.pem", 
+                   "wilbur",
+                   participants),
               Paths.get(".")
-            )
-        )))).start();
-    // start the client's CharlotteNode
-    CharlotteNodeService clientService = new CharlotteNodeService(
-        new Config(new JsonConfig("src/test/resources/private-key2.pem", "client", participants),
-        Paths.get(".")));
-    (new Thread(new CharlotteNode(clientService))).start();
+            ));
+    (new Thread(getWilburQueryNode(service))).start();
 
     TimeUnit.SECONDS.sleep(1); // wait a second for the server to start up
 
     // mint a block, and send it out to the HetconsNodes
-    Block block = Block.newBuilder().setStr("block contents").build();
-    clientService.onSendBlocksInput(block);
+    final Block block = Block.newBuilder().setStr("block contents").build();
+    service.onSendBlocksInput(block);
 
     // make a client using the local service, and the contact for the wilbur node
-    WilburClient client = new WilburClient(clientService, clientService.getConfig().getContact("wilbur"));
+    final WilburQueryClient client =
+      new WilburQueryClient(service.getConfig().getContact("wilbur"));
     // get an availability attestation for the block, and check it.
-    assertTrue(null != client.checkAvailabilityAttestation(block, client.requestAvailabilityAttestation(block)));
+    assertEquals(1,
+        client.wilburQuery(
+          WilburQueryInput.newBuilder().setFillInTheBlank(block).build()
+        ).getBlockList().size()
+      );
     client.shutdown();
   }
 

@@ -141,6 +141,7 @@ public class AgreementChainTest {
     // look up client's response to see if we indeed have an appropriate integrity attestation
     client.getKnownResponses().putIfAbsent(stripRequest(input2), new ConcurrentHolder<Hash>());
     assertTrue(null != client.getKnownResponses().get(stripRequest(input2)).get());
+    client.shutdown();
   }
 
 }
