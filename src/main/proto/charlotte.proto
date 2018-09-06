@@ -140,7 +140,7 @@ message WilburQueryInput {
 
 message WilburQueryResponse {
   string errorMessage = 1;
-  Block block = 2;
+  repeated Block block = 2;
 }
 
 service WilburQuery { // anything running a WilburQuery service should also run a Wilbur and CharlotteNode service
