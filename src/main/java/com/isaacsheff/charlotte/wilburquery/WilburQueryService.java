@@ -174,8 +174,10 @@ public class WilburQueryService extends WilburQueryGrpc.WilburQueryImplBase {
    */
   public static boolean fillInTheBlankMatch(MessageOrBuilder query, MessageOrBuilder potential) {
     for (Map.Entry<FieldDescriptor, Object> entry : query.getAllFields().entrySet()) {
-      if (! potential.hasField(entry.getKey())) {
-        return false;
+      if (! entry.getKey().isRepeated()) {
+        if (! potential.hasField(entry.getKey())) {
+          return false;
+        }
       }
       if (! fillInTheBlankMatchField(entry.getKey(), entry.getValue(), potential.getField(entry.getKey()))) {
         return false;
