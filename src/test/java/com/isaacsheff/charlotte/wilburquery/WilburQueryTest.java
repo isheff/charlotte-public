@@ -29,7 +29,7 @@ import com.isaacsheff.charlotte.yaml.JsonConfig;
 import com.isaacsheff.charlotte.yaml.JsonContact;
 
 /**
- * Test Wilbur clients (which, by necessity, also tests wilbur service).
+ * Test WilburQuery
  * @author Isaac Sheff
  */
 public class WilburQueryTest {
@@ -37,17 +37,27 @@ public class WilburQueryTest {
   /** the participants map to be used in config files. will be set in setup() **/
   private static Map<String, JsonContact> participants;
 
+  /** The CharlotteNodeService on the same server as the Wilbur Query Server **/
   private static CharlotteNodeService service;
 
+  /** The Client that queries the server **/
   private static WilburQueryClient client;
 
+  /** A block which will be stored on the server **/
   private static Block block0;
+
+  /** A block which will be stored on the server **/
   private static Block block1;
+
+  /** A block which will be stored on the server **/
   private static Block block2;
 
   /**
    * Set stuff up before running any tests in this class.
    * In this case, generate some crypto key files, and participants map for a config.
+   * We spin up the server, and the client.
+   * We also make the 3 blocks, and put them on the server.
+   * @throws InterruptedException
    */
   @BeforeAll
   static void setup() throws InterruptedException{
@@ -122,6 +132,8 @@ public class WilburQueryTest {
   }
 
   /**
+   * Run after all the tests.
+   * Shuts down the client.
    */
   @AfterAll
   static void shutdown() throws InterruptedException {
@@ -130,6 +142,7 @@ public class WilburQueryTest {
 
   /**
    * Test a basic request for a single block.
+   * This block is simple, and the "fillintheblank" request is exactly the block.
    */
   @Test
   void singleBlockEquality() {
@@ -145,6 +158,7 @@ public class WilburQueryTest {
 
   /**
    * Test a more complex request for a single block.
+   * Here we list one (but not all) the references in an availability attestation.
    */
   @Test
   void singleBlockPartial() {
@@ -172,6 +186,8 @@ public class WilburQueryTest {
 
   /**
    * Test a more complex request for two blocks.
+   * We ask for all the availability attestations signed by a specific server.
+   * There should be 2.
    */
   @Test
   void doubleBlockPartial() {

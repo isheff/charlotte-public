@@ -26,9 +26,9 @@ import io.grpc.stub.StreamObserver;
  * A gRPC service for the WilburQuery API.
  * gRPC separates "service" from "server."
  * One Server can run multiple Serivices.
- * This is a Service implementing the wilbur gRPC API.
+ * This is a Service implementing the WilburQuery gRPC API.
  * It can be extended for more interesting implementations.
- * Run as a main class with an arg specifying a config file name to run a Wilbur server.
+ * Run as a main class with an arg specifying a config file name to run a WilburQuery server.
  * @author Isaac Sheff
  */
 public class WilburQueryService extends WilburQueryGrpc.WilburQueryImplBase {
@@ -43,8 +43,8 @@ public class WilburQueryService extends WilburQueryGrpc.WilburQueryImplBase {
   private final CharlotteNodeService node;
 
   /**
-   * Run as a main class with an arg specifying a config file name to run a Wilbur server.
-   * creates and runs a new CharlotteNode which runs a Wilbur Service and a CharlotteNodeService, in a new thread.
+   * Run as a main class with an arg specifying a config file name to run a WilburQuery server.
+   * creates and runs a new CharlotteNode which runs a WilburQuery Service and a CharlotteNodeService, in a new thread.
    * @param args command line args. args[0] should be the name of the config file
    */
   public static void main(String[] args) {
@@ -57,8 +57,8 @@ public class WilburQueryService extends WilburQueryGrpc.WilburQueryImplBase {
   }
 
   /**
-   * @param node a CharlotteNodeService with which we'll build a WilburService
-   * @return a new CharlotteNode which runs a WilburQueryService, a Wilbur Service, and a CharlotteNodeService
+   * @param node a CharlotteNodeService with which we'll build a WilburQueryService
+   * @return a new CharlotteNode which runs a WilburQueryService, a WilburQuery Service, and a CharlotteNodeService
    */
   public static CharlotteNode getWilburQueryNode(final CharlotteNodeService node) {
     return new CharlotteNode(node,
@@ -70,7 +70,7 @@ public class WilburQueryService extends WilburQueryGrpc.WilburQueryImplBase {
 
   /**
    * @param configFilename the name of the configuration file for this CharlotteNode
-   * @return a new CharlotteNode which runs a Wilbur Service and a CharlotteNodeService
+   * @return a new CharlotteNode which runs a WilburQuery Service and a CharlotteNodeService
    */
   public static CharlotteNode getWilburQueryNode(final Path configFilename) {
     return getWilburQueryNode(new CharlotteNodeService(configFilename));
@@ -78,7 +78,7 @@ public class WilburQueryService extends WilburQueryGrpc.WilburQueryImplBase {
 
   /**
    * @param configFilename the name of the configuration file for this CharlotteNode
-   * @return a new CharlotteNode which runs a Wilbur Service and a CharlotteNodeService
+   * @return a new CharlotteNode which runs a WilburQuery Service and a CharlotteNodeService
    */
   public static CharlotteNode getWilburQueryNode(final String configFilename) {
     return getWilburQueryNode(new CharlotteNodeService(configFilename));
@@ -93,10 +93,20 @@ public class WilburQueryService extends WilburQueryGrpc.WilburQueryImplBase {
   }
 
   /**
-   * @return The CharlotteNodeService running on the same server as this Wilbur service (there must be one).
+   * @return The CharlotteNodeService running on the same server as this WilburQuery service (there must be one).
    */
   public CharlotteNodeService getNode() { return node; }
 
+  /**
+   * Given that they each represent non-repeated elements of a
+   *  protobuf field described by fieldDescriptor, does potential
+   *  represent a valid fill-in-the-blank response to query?.
+   * Valid responses are equal to the query on all sub-fields where that query is filled in.
+   * @param fieldDescriptor the protobuf descriptor of this field (type)
+   * @param query the fill-in-the-blank query
+   * @param potential the possible match
+   * @return does the query match the potential
+   */
   private static boolean fillInTheBlankMatchFieldNonRepeated(final FieldDescriptor fieldDescriptor,
                                                             final Object query,
                                                             final Object potential) {
@@ -123,6 +133,17 @@ public class WilburQueryService extends WilburQueryGrpc.WilburQueryImplBase {
   }
   
 
+  /**
+   * Given that they each represent repeated elements of a
+   *  protobuf field described by fieldDescriptor, does potential
+   *  represent a valid fill-in-the-blank response to query?.
+   * Valid responses are equal to the query on all sub-fields where that query is filled in.
+   * Lists must be in the same order, but query may have 0 or more of the elements of potential.
+   * @param fieldDescriptor the protobuf descriptor of this field (type)
+   * @param query the fill-in-the-blank query
+   * @param potential the possible match
+   * @return does the query match the potential
+   */
   private static boolean fillInTheBlankMatchFieldRepeated(final FieldDescriptor fieldDescriptor,
                                                           final Iterator<Object> query,
                                                           final Iterator<Object> potential) {
@@ -141,6 +162,17 @@ public class WilburQueryService extends WilburQueryGrpc.WilburQueryImplBase {
     return true;
   }
   
+  /**
+   * Given that they each represent elements of a
+   *  protobuf field described by fieldDescriptor, does potential
+   *  represent a valid fill-in-the-blank response to query?.
+   * Valid responses are equal to the query on all sub-fields where that query is filled in.
+   * Lists must be in the same order, but query may have 0 or more of the elements of potential.
+   * @param fieldDescriptor the protobuf descriptor of this field (type)
+   * @param query the fill-in-the-blank query
+   * @param potential the possible match
+   * @return does the query match the potential
+   */
   @SuppressWarnings("unchecked") // Repeated fields should be java.util.Lists, so we have to cast them.
   private static boolean fillInTheBlankMatchField(final FieldDescriptor fieldDescriptor,
                                                   final Object query,
@@ -170,7 +202,11 @@ public class WilburQueryService extends WilburQueryGrpc.WilburQueryImplBase {
 
 
   /**
-   * Must match order of repeated items (but can have other items in between)
+   * Is the potential equal to the query on all sub-fields where that query is filled in?.
+   * Lists must be in the same order, but query may have 0 or more of the elements of potential.
+   * @param query the fill-in-the-blank query
+   * @param potential the possible match
+   * @return does the query match the potential
    */
   public static boolean fillInTheBlankMatch(MessageOrBuilder query, MessageOrBuilder potential) {
     for (Map.Entry<FieldDescriptor, Object> entry : query.getAllFields().entrySet()) {
