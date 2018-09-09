@@ -7,6 +7,7 @@ option objc_class_prefix = "CHARLOTTE";
 
 package charlotte;
 
+import "google/protobuf/timestamp.proto";
 // To use Any: import "google/protobuf/any.proto";
 // To use Empty: import "google/protobuf/empty.proto";
 
@@ -65,8 +66,17 @@ message IntegrityAttestation {
     ChainSlot chainSlot = 1;
     Signature signature = 2;
   }
+  message TimestampedReferences {
+    google.protobuf.Timestamp timestamp = 1;
+    repeated Reference block = 2;
+  }
+  message SignedTimestampedReferences {
+    TimestampedReferences timestampedReferences = 1;
+    Signature signature = 2;
+  }
   oneof integrityattestationtype_oneof {
     SignedChainSlot signedChainSlot = 1;
+    SignedTimestampedReferences signedTimestampedReferences = 2;
   }
 }
 
