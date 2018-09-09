@@ -29,26 +29,23 @@ import java.util.logging.Logger;
  * A Fern server that runs timestamping.
  *
  * <p>
- * Can be run as a main class with: AgreementFernService configFileName.yaml
+ * Can be run as a main class with: TimestampFern configFileName.yaml BlocksPerTimestamp
  * </p>
  *
  * <p>
- * Future extensions may wish to override validPolicy, as it designates
- *  (in a vacuum, so to speak), what policies this Fern server
- *   considers acceptable.
- * Alternatively, requestIntegrityAttestation contains almost all the
- *  functionality (it calls validPolicy), so you could override that
- *  to completely change what the server does.
+ * BlocksPerTimestamp is an integer.
+ * Everyn BlocksPerTimestamp blocks the node receives, it
+ *  automatically requests a timestamp for those blocks from this Fern
+ *  server.
  * </p>
  *
  * <p>
- * Furthermore, future extensions may wish to override newResponse and
- *  newAttestation (called by requestIntegrityAttestation), which govern
- *  how responses are made to new requests (which don't conflict with anything
- *  seen so far). 
- * By default, newResponse just calls newAttestation and makes a simple
- *  reference to the attestation block.
+ * Beyond that, anyone can request timestamps for any collection of
+ *  blocks.
+ * The node will wait until it has all the blocks in the collection,
+ *  and then issue a signed timestamp.
  * </p>
+ *
  * @author Isaac Sheff
  */
 public class TimestampFern extends FernImplBase {
@@ -60,9 +57,10 @@ public class TimestampFern extends FernImplBase {
   private final CharlotteNodeService node;
 
   /**
-   * Run as a main class with an arg specifying a config file name to run a Fern Agreement server.
-   * creates and runs a new CharlotteNode which runs a Wilbur Service and a CharlotteNodeService, in a new thread.
-   * @param args command line args. args[0] should be the name of the config file
+   * Run as a main class with an arg specifying a config file name to run a Fern Timestamp server.
+   * creates and runs a new CharlotteNode which runs a Fern Service
+   *  and a TimestampNode service (which is a CharlotteNode Service), in a new thread.
+   * @param args command line args. args[0] should be the name of the config file, args[1] is BlocksPerTimestamp
    */
   public static void main(String[] args) throws InterruptedException{
     if (args.length < 1) {
@@ -77,7 +75,7 @@ public class TimestampFern extends FernImplBase {
 
 
   /**
-   * @param node a CharlotteNodeService with which we'll build a AgreementFernService
+   * @param node a TimestampFern with which we'll build a TimestampFern Service
    * @return a new CharlotteNode which runs a Fern Service and a CharlotteNodeService
    */
   public static CharlotteNode getFernNode(final TimestampFern fern) {
@@ -88,24 +86,47 @@ public class TimestampFern extends FernImplBase {
 
   /**
    * @param configFilename the name of the configuration file for this CharlotteNode
+   * @param referencesPerTimestamp the number of references the node acquires to automatically request a timestamp
    * @return a new CharlotteNode which runs a Fern Service and a CharlotteNodeService
    */
   public static CharlotteNode getFernNode(final String configFilename, final int referencesPerTimestamp) {
     return getFernNode(new TimestampFern(configFilename, referencesPerTimestamp));
   }
 
+  /**
+   * @param config the name of the configuration file for this CharlotteNode
+   * @param referencesPerTimestamp the number of references the node acquires to automatically request a timestamp
+   * @return a new CharlotteNode which runs a Fern Service and a CharlotteNodeService
+   */
   public static CharlotteNode getFernNode(final Config config, final int referencesPerTimestamp) {
     return getFernNode(new TimestampFern(config, referencesPerTimestamp));
   }
 
+  /**
+   * Generate a new Timestamp Fern service.
+   * This will generate an underlying CharlotteNodeService, specifically a TimestampNode.
+   * @param config the name of the configuration file for this CharlotteNode
+   * @param referencesPerTimestamp the number of references the node acquires to automatically request a timestamp
+   */
   public TimestampFern(final Config config, final int referencesPerTimestamp) {
     node = new TimestampNode(referencesPerTimestamp, this, config);
   }
 
+  /**
+   * Generate a new Timestamp Fern service.
+   * This will generate an underlying CharlotteNodeService, specifically a TimestampNode.
+   * @param configFilename the name of the configuration file for this CharlotteNode
+   * @param referencesPerTimestamp the number of references the node acquires to automatically request a timestamp
+   */
   public TimestampFern(final String configFileName, final int referencesPerTimestamp) {
     node = new TimestampNode(referencesPerTimestamp, this, configFileName);
   }
 
+  /**
+   * Generate a new Timestamp Fern service.
+   * This will use the given underlying CharlotteNodeService
+   * @param node the CharlotteNodeService on this server
+   */
   public TimestampFern(final CharlotteNodeService node) {
     this.node = node;
   }
@@ -114,6 +135,15 @@ public class TimestampFern extends FernImplBase {
   public CharlotteNodeService getNode() {return node;}
 
 
+  /**
+   * Called whenever a requestIntegrityAttestation comes in over the wire.
+   * This checks whether the incoming request is for a timestamp, waits
+   *  for all referenced blocks to arrtive, and then creates a
+   *  timestamp for those blocks, and returns a reference to that
+   *  attestation.
+   * @param request the request that came in over the wire
+   * @return the RequestIntegrityAttestationResponse to be sent back over the wire.
+   */
   public RequestIntegrityAttestationResponse requestIntegrityAttestation(final RequestIntegrityAttestationInput request) {
     final RequestIntegrityAttestationResponse.Builder builder = RequestIntegrityAttestationResponse.newBuilder(); 
     if (!request.hasPolicy()) {

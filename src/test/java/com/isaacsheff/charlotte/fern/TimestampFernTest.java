@@ -32,7 +32,7 @@ import com.isaacsheff.charlotte.yaml.JsonConfig;
 import com.isaacsheff.charlotte.yaml.JsonContact;
 
 /**
- * Test AgreementFern clients (which, by necessity, also tests the service).
+ * Test Timestamp service
  * @author Isaac Sheff
  */
 public class TimestampFernTest {
@@ -42,7 +42,7 @@ public class TimestampFernTest {
 
   /**
    * Set stuff up before running any tests in this class.
-   * In this case, generate some crypto key files, and participants map for a config.
+   * In this case, generate some crypto key files
    */
   @BeforeAll
   static void setup() {
@@ -107,7 +107,9 @@ public class TimestampFernTest {
 
 
   /**
-   * Launch a local service and a Fern node, mint a block, and then get and test an integrity attestation for it.
+   * Launch a local service and a Fern node, mint 10 blocks, and
+   *  then there should be exactly 1 integrity attestation, which
+   *  attests to those 10 blocks, already in existence.
    */
   @Test
   void timestampBatch() throws InterruptedException, FileNotFoundException {
@@ -173,7 +175,9 @@ public class TimestampFernTest {
 
 
   /**
-   * Launch a local service and a Fern node, mint a block, and then get and test an integrity attestation for it.
+   * Launch a local service and a Fern node, mint 25 blocks, and then
+   *  there should be 2 integrity attestations, attesating to some of
+   *  those blocks, in existence.
    */
   @Test
   void timestampBatches() throws InterruptedException, FileNotFoundException {
