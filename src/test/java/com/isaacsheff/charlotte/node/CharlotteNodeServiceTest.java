@@ -146,5 +146,7 @@ public class CharlotteNodeServiceTest {
     // check to ensure no other blocks somehow got queued
     assertTrue(receivedBlocks1.isEmpty(), "no further blocks should be expected");
     client.shutdown();
+    node0.stop();
+    node1.stop();
   }
 }

@@ -56,16 +56,19 @@ public class WilburClientTest {
   @Test
   void endToEnd() throws InterruptedException, FileNotFoundException {
     // start the wilbur server
-    (new Thread(getWilburNode(new CharlotteNodeService(
+    final CharlotteNode wilburNode = 
+               (getWilburNode(new CharlotteNodeService(
         new Config(new JsonConfig("src/test/resources/private-key.pem",  "wilbur", participants),
               Paths.get(".")
             )
-        )))).start();
+        )));
+    (new Thread(wilburNode)).start();
     // start the client's CharlotteNode
     CharlotteNodeService clientService = new CharlotteNodeService(
         new Config(new JsonConfig("src/test/resources/private-key2.pem", "client", participants),
         Paths.get(".")));
-    (new Thread(new CharlotteNode(clientService))).start();
+    final CharlotteNode clientNode = (new CharlotteNode(clientService));
+    (new Thread(clientNode)).start();
 
     TimeUnit.SECONDS.sleep(1); // wait a second for the server to start up
 
@@ -78,6 +81,8 @@ public class WilburClientTest {
     // get an availability attestation for the block, and check it.
     assertTrue(null != client.checkAvailabilityAttestation(block, client.requestAvailabilityAttestation(block)));
     client.shutdown();
+    wilburNode.stop();
+    clientNode.stop();
   }
 
 }

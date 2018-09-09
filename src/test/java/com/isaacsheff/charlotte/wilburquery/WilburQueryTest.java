@@ -16,6 +16,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import com.isaacsheff.charlotte.node.CharlotteNode;
 import com.isaacsheff.charlotte.node.CharlotteNodeService;
 import com.isaacsheff.charlotte.proto.AvailabilityAttestation;
 import com.isaacsheff.charlotte.proto.AvailabilityAttestation.SignedStoreForever;
@@ -39,6 +40,9 @@ public class WilburQueryTest {
 
   /** The CharlotteNodeService on the same server as the Wilbur Query Server **/
   private static CharlotteNodeService service;
+
+  /** the server node on which the CharlotteNodeService runs **/
+  private static CharlotteNode node;
 
   /** The Client that queries the server **/
   private static WilburQueryClient client;
@@ -76,7 +80,8 @@ public class WilburQueryTest {
                    participants),
               Paths.get(".")
             ));
-    (new Thread(getWilburQueryNode(service))).start();
+    node = getWilburQueryNode(service);
+    (new Thread(node)).start();
 
     TimeUnit.SECONDS.sleep(1); // wait a second for the server to start up
 
@@ -138,6 +143,7 @@ public class WilburQueryTest {
   @AfterAll
   static void shutdown() throws InterruptedException {
     client.shutdown();
+    node.stop();
   }
 
   /**
