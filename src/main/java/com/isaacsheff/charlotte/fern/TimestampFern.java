@@ -18,6 +18,7 @@ import com.isaacsheff.charlotte.proto.Reference;
 import com.isaacsheff.charlotte.proto.RequestIntegrityAttestationInput;
 import com.isaacsheff.charlotte.proto.RequestIntegrityAttestationResponse;
 import com.isaacsheff.charlotte.proto.SendBlocksResponse;
+import com.isaacsheff.charlotte.yaml.Config;
 
 import io.grpc.ServerBuilder;
 import io.grpc.stub.StreamObserver;
@@ -91,6 +92,14 @@ public class TimestampFern extends FernImplBase {
    */
   public static CharlotteNode getFernNode(final String configFilename, final int referencesPerTimestamp) {
     return getFernNode(new TimestampFern(configFilename, referencesPerTimestamp));
+  }
+
+  public static CharlotteNode getFernNode(final Config config, final int referencesPerTimestamp) {
+    return getFernNode(new TimestampFern(config, referencesPerTimestamp));
+  }
+
+  public TimestampFern(final Config config, final int referencesPerTimestamp) {
+    node = new TimestampNode(referencesPerTimestamp, this, config);
   }
 
   public TimestampFern(final String configFileName, final int referencesPerTimestamp) {
