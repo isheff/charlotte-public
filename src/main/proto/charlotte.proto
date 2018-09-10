@@ -128,7 +128,7 @@ message Block {
     AvailabilityAttestation availabilityAttestation = 1;
     IntegrityAttestation integrityAttestation = 2;
     string str = 3; // why not?
-    SignedGitSimCommit = 4;
+    SignedGitSimCommit signedGitSimCommit= 4;
     // This is probably the best place for an Any type, but for now, keep it minimum
   }
 }
