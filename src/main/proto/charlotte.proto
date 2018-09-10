@@ -74,9 +74,19 @@ message IntegrityAttestation {
     TimestampedReferences timestampedReferences = 1;
     Signature signature = 2;
   }
+  message GitSimBranch {
+    google.protobuf.Timestamp timestamp = 1;
+    string branchName = 2;
+    Reference commit = 3;
+  }
+  message SignedGitSimBranch {
+    GitSimBranch gitSimBranch = 1;
+    Signature signature = 2;
+  }
   oneof integrityattestationtype_oneof {
     SignedChainSlot signedChainSlot = 1;
     SignedTimestampedReferences signedTimestampedReferences = 2;
+    SignedGitSimBranch signedGitSimBranch = 3;
   }
 }
 
@@ -93,11 +103,32 @@ message AvailabilityAttestation {
   }
 }
 
+message SignedGitSimCommit {
+  message GitSimCommit {
+    message GitSimParents {
+      message GitSimParent {
+        Reference parentCommit = 1;
+        bytes diff = 2;
+      }
+      repeated GitSimParent parent = 1;
+    }
+    string comment = 1;
+    Hash hash = 2;
+    oneof commit_oneof {
+      bytes initialCommit = 3;
+      GitSimParents parents = 4;
+    }
+  }
+  GitSimCommit commit = 1;
+  Signature signature = 2;
+}
+
 message Block {
   oneof blocktype_oneof {
     AvailabilityAttestation availabilityAttestation = 1;
     IntegrityAttestation integrityAttestation = 2;
     string str = 3; // why not?
+    SignedGitSimCommit = 4;
     // This is probably the best place for an Any type, but for now, keep it minimum
   }
 }
