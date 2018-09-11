@@ -29,7 +29,7 @@ import com.isaacsheff.charlotte.yaml.Config;
 /**
  * A gRPC service for the Charlotte API.
  * gRPC separates "service" from "server."
- * One Server can run multiple Serivices.
+ * One Server can run multiple Services.
  * This is a Service implementing the charlotte gRPC API.
  * It can be extended for more interesting implementations.
  *
