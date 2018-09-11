@@ -32,7 +32,7 @@ public class BlockingConcurrentHashMap<K,V> extends ConcurrentHashMap<K,V> imple
 
 
   /**
-   * get a value associated with the key, even if we have to wait for one to arrive.
+   * Get a value associated with the key, even if we have to wait for one to arrive.
    * BLOCKING.
    * @param key the key for which you want an associated value
    * @return the associated value 
@@ -58,7 +58,7 @@ public class BlockingConcurrentHashMap<K,V> extends ConcurrentHashMap<K,V> imple
   /**
    * Put a value in the map.
    * Overwrites previous values.
-   * Note: In rare circumstances, a the following chain of events can occur:
+   * Note: In rare circumstances, the following chain of events can occur:
    * <ul>
    * <li>    put(k, v1) starts                                        </li>
    * <li>      get(k) returns v1                                      </li>
@@ -85,7 +85,7 @@ public class BlockingConcurrentHashMap<K,V> extends ConcurrentHashMap<K,V> imple
 
   /**
    * Put a value in the map, iff there isn't one already associated with this key.
-   * Note: In rare circumstances, a the following chain of events can occur:
+   * Note: In rare circumstances, the following chain of events can occur:
    * <ul>
    * <li>    put(k, v1) starts                                        </li>
    * <li>      get(k) returns v1                                      </li>
@@ -93,7 +93,7 @@ public class BlockingConcurrentHashMap<K,V> extends ConcurrentHashMap<K,V> imple
    * <li>      get(k, v2) returns v2                                  </li>
    * <li>      remove(k) returns v2                                   </li>
    * <li>      get(k) returns null                                    </li>
-   * <li>      pendingGet(k) returns v1   THIS IS THE ERRONIOUS PART  </li>
+   * <li>      pendingGet(k) returns v1   THIS IS THE ERRONEOUS PART  </li>
    * <li>    put(k,v1) finishes                                       </li>
    * </ul>
    * This could be removed, for instance, by synchronizing this method.
