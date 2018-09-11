@@ -22,7 +22,7 @@ public class TimestampClient extends AgreementFernClient {
   private static final Logger logger = Logger.getLogger(TimestampClient.class.getName());
 
   /**
-   * Make a new AgreementFernClient for a specific AgreementFern server.
+   * Make a new TimestampFernClient for a specific TimestampFern server.
    * This will attempt to open a channel of communication.
    * @param localService a CharlotteNodeService which can be used to receive blocks
    * @param contact the Contact representing the server.

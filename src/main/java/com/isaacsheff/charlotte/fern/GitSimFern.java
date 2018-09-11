@@ -1,6 +1,6 @@
 package com.isaacsheff.charlotte.fern;
 
-import static com.google.protobuf.util.Timestamps.toMillis;
+import static com.google.protobuf.util.Timestamps.fromMillis;
 import static com.isaacsheff.charlotte.node.HashUtil.sha3Hash;
 import static com.isaacsheff.charlotte.node.SignatureUtil.checkSignature;
 import static com.isaacsheff.charlotte.node.SignatureUtil.signBytes;
@@ -13,6 +13,7 @@ import com.isaacsheff.charlotte.proto.Block;
 import com.isaacsheff.charlotte.proto.FernGrpc.FernImplBase; import com.isaacsheff.charlotte.proto.Hash;
 import com.isaacsheff.charlotte.proto.IntegrityAttestation;
 import com.isaacsheff.charlotte.proto.IntegrityAttestation.ChainSlot;
+import com.isaacsheff.charlotte.proto.IntegrityAttestation.GitSimBranch;
 import com.isaacsheff.charlotte.proto.IntegrityAttestation.SignedGitSimBranch;
 import com.isaacsheff.charlotte.proto.IntegrityPolicy;
 import com.isaacsheff.charlotte.proto.Reference;
@@ -61,7 +62,7 @@ import java.util.logging.Logger;
 public class GitSimFern extends AgreementFernService {
 
   /** Use logger for logging events in this class. */
-  private static final Logger logger = Logger.getLogger(AgreementFernService.class.getName());
+  private static final Logger logger = Logger.getLogger(GitSimFern.class.getName());
 
   private final ConcurrentMap<String, Hash> latestCommits;
 
@@ -158,17 +159,8 @@ public class GitSimFern extends AgreementFernService {
     if (!policy.getFillInTheBlank().getSignedGitSimBranch().getGitSimBranch().getCommit().hasHash()) {
       return "The SignedGitSimBranch has a Commit with no actualy block Hash in it.";
     }
-    if (!policy.getFillInTheBlank().getSignedGitSimBranch().getGitSimBranch().hasTimestamp()) {
-      return "The SignedGitSimBranch has no actual Timestamp";
-    }
-    if (!policy.getFillInTheBlank().getSignedGitSimBranch().getGitSimBranch().getBranchName().equals("")) {
+    if (policy.getFillInTheBlank().getSignedGitSimBranch().getGitSimBranch().getBranchName().equals("")) {
       return "The SignedGitSimBranch has no actual Branch name";
-    }
-    if (toMillis(policy.getFillInTheBlank().getSignedGitSimBranch().getGitSimBranch().getTimestamp()) > currentTimeMillis()) {
-      return "The SignedGitSimBranch Timestamp is in the future.";
-    }
-    if (!policy.getFillInTheBlank().getSignedGitSimBranch().hasSignature()) {
-      return "The SignedGitSimBranch has no Signature.";
     }
 
     // wait for the referenced commit to arrive
@@ -183,8 +175,8 @@ public class GitSimFern extends AgreementFernService {
     if (!commit.getSignedGitSimCommit().hasSignature()) {
       return "Referenced block has no Signature:\nPOLICY:\n"+policy+"\nREFERENCED BLOCK:\n"+commit;
     }
-    if (!checkSignature(policy.getFillInTheBlank().getSignedGitSimBranch().getGitSimBranch(),
-                        policy.getFillInTheBlank().getSignedGitSimBranch().getSignature())) {
+    if (!checkSignature(commit.getSignedGitSimCommit().getCommit(),
+                        commit.getSignedGitSimCommit().getSignature())) {
       return "The SignedGitSimCommit signature does not verify correctly.";
     }
 
@@ -198,12 +190,14 @@ public class GitSimFern extends AgreementFernService {
    * @return a RequestIntegrityAttestationResponse referencing the newly minted attestation.
    */
   public RequestIntegrityAttestationResponse createIntegrityAttestation(final RequestIntegrityAttestationInput request) {
+    final GitSimBranch gitSimBranch =
+      GitSimBranch.newBuilder(request.getPolicy().getFillInTheBlank().getSignedGitSimBranch().getGitSimBranch()).
+                   setTimestamp(fromMillis(currentTimeMillis())).build();
     final Block block = Block.newBuilder().setIntegrityAttestation(
             IntegrityAttestation.newBuilder().setSignedGitSimBranch(
               SignedGitSimBranch.newBuilder().
-                setGitSimBranch(request.getPolicy().getFillInTheBlank().getSignedGitSimBranch().getGitSimBranch()).
-                setSignature(signBytes(getNode().getConfig().getKeyPair(),
-                                       request.getPolicy().getFillInTheBlank().getSignedGitSimBranch().getGitSimBranch()))
+                setGitSimBranch(gitSimBranch).
+                setSignature(signBytes(getNode().getConfig().getKeyPair(), gitSimBranch))
             )
           ).build();
     getNode().onSendBlocksInput(block); // distribute the block
@@ -241,9 +235,16 @@ public class GitSimFern extends AgreementFernService {
 
     boolean successfulReplacement = false;
     while(!successfulReplacement) {
-      final Hash priorCommit = getLatestCommit(request.getPolicy().getFillInTheBlank().
-                            getSignedGitSimBranch().getGitSimBranch().getBranchName());
+      // If there is no known priorCommit, insert this one.
+      // Otherwise, fetch the known priorCommit
+      final Hash priorCommit = getLatestCommits().putIfAbsent(
+        request.getPolicy().getFillInTheBlank().getSignedGitSimBranch().getGitSimBranch().getBranchName(),
+        request.getPolicy().getFillInTheBlank().getSignedGitSimBranch().getGitSimBranch().getCommit().getHash());
       if (priorCommit == null) {
+        return createIntegrityAttestation(request);
+      }
+      // If the prior commit is exactly this commit, we can feel free to commit again to the same thing.
+      if (priorCommit.equals(request.getPolicy().getFillInTheBlank().getSignedGitSimBranch().getGitSimBranch().getCommit().getHash())) {
         return createIntegrityAttestation(request);
       }
       if (!commit.getSignedGitSimCommit().getCommit().hasParents()) {
@@ -280,7 +281,7 @@ public class GitSimFern extends AgreementFernService {
       }
       if (!pathFound) {
         return RequestIntegrityAttestationResponse.newBuilder().setErrorMessage(
-               "I was unable to find a lineage from my previous commitment to this new commitment").build();
+               "I was unable to find a lineage from my previous commit on this branch to this new commit.").build();
       }
       // atomic compare and swap, returns boolean success
       successfulReplacement = getLatestCommits().replace(

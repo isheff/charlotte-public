@@ -37,9 +37,6 @@ import com.isaacsheff.charlotte.yaml.JsonContact;
  */
 public class TimestampFernTest {
 
-  /** the participants map to be used in config files. will be set in setup() **/
-  private static Map<String, JsonContact> participants;
-
   /**
    * Set stuff up before running any tests in this class.
    * In this case, generate some crypto key files
@@ -62,7 +59,7 @@ public class TimestampFernTest {
    */
   @Test
   void timestampSingleBlock() throws InterruptedException, FileNotFoundException {
-    participants = new HashMap<String, JsonContact>(2);
+    Map<String, JsonContact> participants = new HashMap<String, JsonContact>(2);
     participants.put("fern", new JsonContact("src/test/resources/server.pem",  "localhost", getFreshPort()));
     participants.put("client", new JsonContact("src/test/resources/server2.pem", "localhost", getFreshPort()));
     // start the fern server
@@ -81,14 +78,14 @@ public class TimestampFernTest {
     final CharlotteNode clientNode = new CharlotteNode(clientService);
     (new Thread(clientNode)).start();
 
-    TimeUnit.SECONDS.sleep(1); // wait a second for the server to start up
+    TimeUnit.SECONDS.sleep(60); // wait a second for the server to start up
 
     // mint a block, and send it out to the HetconsNodes
     Block block = Block.newBuilder().setStr("block contents").build();
     clientService.onSendBlocksInput(block);
 
     // make a client using the local service, and the contact for the node
-    AgreementFernClient client = new TimestampClient(clientService, clientService.getConfig().getContact("fern"));
+    final TimestampClient client = new TimestampClient(clientService, clientService.getConfig().getContact("fern"));
     // get an integrity attestation for the block, and check it.
     assertTrue(null != client.getIntegrityAttestation(
       RequestIntegrityAttestationInput.newBuilder().setPolicy(
@@ -113,7 +110,7 @@ public class TimestampFernTest {
    */
   @Test
   void timestampBatch() throws InterruptedException, FileNotFoundException {
-    participants = new HashMap<String, JsonContact>(2);
+    Map<String, JsonContact> participants = new HashMap<String, JsonContact>(2);
     participants.put("fern", new JsonContact("src/test/resources/server.pem",  "localhost", getFreshPort()));
     participants.put("client", new JsonContact("src/test/resources/server2.pem", "localhost", getFreshPort()));
     // start the fern server
@@ -145,7 +142,7 @@ public class TimestampFernTest {
     TimeUnit.SECONDS.sleep(1); // wait a second for everything to catch up
 
     // make a client using the local service, and the contact for the node
-    final AgreementFernClient client =
+    final TimestampClient client =
       new TimestampClient(clientService, clientService.getConfig().getContact("fern"));
 
     // search the known blocks for an integrity attestation (should exist by now)
@@ -181,7 +178,7 @@ public class TimestampFernTest {
    */
   @Test
   void timestampBatches() throws InterruptedException, FileNotFoundException {
-    participants = new HashMap<String, JsonContact>(2);
+    Map<String, JsonContact> participants = new HashMap<String, JsonContact>(2);
     participants.put("fern", new JsonContact("src/test/resources/server.pem",  "localhost", getFreshPort()));
     participants.put("client", new JsonContact("src/test/resources/server2.pem", "localhost", getFreshPort()));
     // start the fern server
