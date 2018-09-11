@@ -1,5 +1,6 @@
 package com.isaacsheff.charlotte.node;
 
+import static com.isaacsheff.charlotte.node.PortUtil.getFreshPort;
 import static java.util.Collections.emptySet;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -34,12 +35,9 @@ public class CharlotteNodeServiceTest {
    */
   private static final Logger logger = Logger.getLogger(CharlotteNodeServiceTest.class.getName());
 
-
-  /** Keep track of the ports occuped by tests thus far. */
-  private static int usedPort;
-
   /** The port used on the dummy server for an individual test. */
-  private int port;
+  private int port0;
+  private int port1;
 
   /**
    * Set stuff up before running any tests in this class.
@@ -61,15 +59,12 @@ public class CharlotteNodeServiceTest {
   /** Launch 2 dummy servers, send 3 blocks to 1 of them, and check that BOTH receive all 3 blocks. */
   @Test
   void sendSomeBlocks() throws InterruptedException {
-    // calcualte what port to put this server on
-    if (usedPort < 8200) {
-      usedPort = 8200;
-    }
-    port = usedPort++;
+    port0 = getFreshPort();
+    port1 = getFreshPort();
 
     final HashMap<String, JsonContact> contacts = new HashMap<String, JsonContact>(2);
-    contacts.put("node0", new JsonContact("src/test/resources/server.pem", "localhost", port));
-    contacts.put("node1", new JsonContact("src/test/resources/server2.pem", "localhost", port+1));
+    contacts.put("node0", new JsonContact("src/test/resources/server.pem", "localhost", port0));
+    contacts.put("node1", new JsonContact("src/test/resources/server2.pem", "localhost", port1));
 
 
     // populate the stack of blocks we expect to receive
@@ -124,7 +119,7 @@ public class CharlotteNodeServiceTest {
 
     // create a client, and send the expected sequence of blocks
     final CharlotteNodeClient client = (new Contact(
-        new JsonContact("src/test/resources/server.pem", "localhost", port), Paths.get("."))).
+        new JsonContact("src/test/resources/server.pem", "localhost", port0), Paths.get("."))).
       getCharlotteNodeClient();
     client.sendBlock(Block.newBuilder().setStr("block 0").build());
     client.sendBlock(Block.newBuilder().setStr("block 1").build());
@@ -150,5 +145,8 @@ public class CharlotteNodeServiceTest {
     assertTrue(receivedBlocks0.isEmpty(), "no further blocks should be expected");
     // check to ensure no other blocks somehow got queued
     assertTrue(receivedBlocks1.isEmpty(), "no further blocks should be expected");
+    client.shutdown();
+    node0.stop();
+    node1.stop();
   }
 }

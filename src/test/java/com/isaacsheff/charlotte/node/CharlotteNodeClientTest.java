@@ -1,5 +1,6 @@
 package com.isaacsheff.charlotte.node;
 
+import static com.isaacsheff.charlotte.node.PortUtil.getFreshPort;
 import static java.util.Collections.emptySet;
 import static java.util.Collections.singletonMap;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -35,9 +36,6 @@ public class CharlotteNodeClientTest {
   private static final Logger logger = Logger.getLogger(CharlotteNodeClientTest.class.getName());
 
 
-  /** Keep track of the ports occuped by tests thus far. */
-  private static int usedPort;
-
   /** The port used on the dummy server for an individual test. */
   private int port;
 
@@ -60,10 +58,7 @@ public class CharlotteNodeClientTest {
   @Test
   void sendSomeBlocks() throws InterruptedException {
     // calcualte what port to put this server on
-    if (usedPort < 8100) {
-      usedPort = 8100;
-    }
-    port = usedPort++;
+    port = getFreshPort();
 
     // populate the stack of blocks we expect to receive
     final BlockingQueue<Block> receivedBlocks = new ArrayBlockingQueue<Block>(3);
@@ -112,5 +107,7 @@ public class CharlotteNodeClientTest {
 
     // check to ensure no other blocks somehow got queued
     assertTrue(receivedBlocks.isEmpty(), "no further blocks should be expected");
+    client.shutdown();
+    charlotteNode.stop();
   }
 }
