@@ -30,7 +30,32 @@ import com.isaacsheff.charlotte.proto.SignedGitSimCommit.GitSimCommit.GitSimPare
 import com.isaacsheff.charlotte.yaml.Contact;
 
 /**
- * This client needs a local CharlotteNodeService to get blocks for it.
+ * A Client for a Fern server that runs a kind of simulation of the
+ *  Git version control system.
+ * In this simulation, each Commit is a block featuring a hash of the
+ *  repository contents, and diffs from (with references to) prior
+ *  commits.
+ * A commit with multiple prior commit references is a "merge," with
+ *  none is "initial," and with one is a "regular" commit.
+ *
+ * <p>
+ * Furthermore, any Fern server can maintain one or more "branches,"
+ *  identified by branch name (a String).
+ * Different servers may disagree on which commits belong in which
+ *  branches.
+ * Integrity Attestations here are signed statements that a given
+ *  commit belongs in a given branch at a given (real) time.
+ * Furthermore, a Fern server will not attest to any other commits
+ *  being in the same branch, unless this commit is an ancestor of the
+ *  new commit.
+ * Any backtracking must be handled explicitly in the diffs.
+ * </p>
+ *
+ * <p>
+ * This client needs a local CharlotteNode to get blocks from, and
+ *  communicates with a Fern server described by a Contact.
+ * </p>
+ *
  * @author Isaac Sheff
  */
 public class GitSimClient extends AgreementFernClient {
@@ -51,7 +76,13 @@ public class GitSimClient extends AgreementFernClient {
 
 
   /**
-   * parentDiffs must be at least as long as parentRefs
+   * Create a new Commit (not yet attached to a branch).
+   * This will be signed with the localService's key.
+   * @param comment a comment by the committer
+   * @param repositoryContents the binary contents of the git Repository at this commit.
+   * @param parentRefs references to all parent commits
+   * @param parentDiffs diff operations (as binary) from each of the parent commits (in order). parentDiffs must be at least as long as parentRefs
+   * @return a reference to the commit object, or null if something went wrong.
    */
   public Reference commit(final String comment, 
                           final ByteString repositoryContents,
@@ -89,6 +120,13 @@ public class GitSimClient extends AgreementFernClient {
     return Reference.newBuilder().setHash(sha3Hash(block)).build();
   }
 
+  /**
+   * Generate an input for a request to a GitSim Fern server, given a commit reference and branch name.
+   * This just formats the input object with those things.
+   * @param commit a reference to the commit block we're trying to put on this Fern server's branch.
+   * @param branch the branch on the fern server
+   * @return the input object to be sent to the Fern server.
+   */
   public RequestIntegrityAttestationInput generateCommitToBranchRequest(final Reference commit, final String branch) {
     return (
       RequestIntegrityAttestationInput.newBuilder().setPolicy(
@@ -109,20 +147,38 @@ public class GitSimClient extends AgreementFernClient {
     );
   }
 
+  /**
+   * Gets the integrity attestation (server put the commit on a branch) for a given commit on a given branch.
+   * @param commit a reference to the commit block
+   * @param branch the branch onto which we're committing
+   * @return the integrity attestaion block if successfull (also it logs INFO), null otherwise.
+   */
   public Block commitToBranch(final Reference commit, final String branch) {
     final Block block = getIntegrityAttestation(generateCommitToBranchRequest(commit, branch));
-    // We're just going to Info log the fact that we successfully committed.
-    logger.info("Successfully committed to branch: " +
-      block.getIntegrityAttestation().getSignedGitSimBranch().getGitSimBranch().getBranchName() +
-      "\nCOMMIT comment: " +
-      // get the commit block that was referenced
-      getLocalService().getBlock(block.getIntegrityAttestation().getSignedGitSimBranch().getGitSimBranch().getCommit()).
-      // then get the comment from it
-        getSignedGitSimCommit().getCommit().getComment()
-    );
+    if (block != null) {
+      // We're just going to Info log the fact that we successfully committed.
+      logger.info("Successfully committed to branch: " +
+        block.getIntegrityAttestation().getSignedGitSimBranch().getGitSimBranch().getBranchName() +
+        "\nCOMMIT comment: " +
+        // get the commit block that was referenced
+        getLocalService().getBlock(block.getIntegrityAttestation().getSignedGitSimBranch().getGitSimBranch().getCommit()).
+        // then get the comment from it
+          getSignedGitSimCommit().getCommit().getComment()
+      );
+    }
     return block;
   }
 
+  /**
+   * Create a new Commit, and attach it to a branch on the server.
+   * This will be signed with the localService's key.
+   * @param branch the name of the desired branch
+   * @param comment a comment by the committer
+   * @param repositoryContents the binary contents of the git Repository at this commit.
+   * @param parentRefs references to all parent commits
+   * @param parentDiffs diff operations (as binary) from each of the parent commits (in order). parentDiffs must be at least as long as parentRefs
+   * @return a reference to the commit object, featuring an Integrity Attestation that puts it on the branch (if available), or null, if something went wrong.
+   */
   public Reference commit(final String branch,
                           final String comment, 
                           final ByteString repositoryContents,
@@ -134,7 +190,7 @@ public class GitSimClient extends AgreementFernClient {
     }
     final Block attestation = commitToBranch(commitReference, branch);
     if (attestation == null) {
-      return null;
+      return null; // or should we return commitReference here?
     }
     return Reference.newBuilder(commitReference).addIntegrityAttestations(
              Reference.newBuilder().setHash(sha3Hash(attestation))).build();
@@ -208,7 +264,7 @@ public class GitSimClient extends AgreementFernClient {
 
   /**
    * Check whether this Block contains a valid IntegrityAttestation.
-   * Checks for a valid signature in a properly formatted SignedChainSlot.
+   * Checks for a valid signature in a properly formatted SignedGitSimBranch.
    * @param attestation the block we're hoping contains the IntegrityAttestation
    * @return the Block input if it's valid, null otherwise.
    */
@@ -253,9 +309,7 @@ public class GitSimClient extends AgreementFernClient {
   /**
    * Check whether this Response references a valid IntegrityAttestation matching the request.
    * Fetches the block from our local node.
-   * This may wait until the block referenced is received.
-   * Checks for a valid signature in a properly formatted SignedChainSlot.
-   * Checks that the Attestation is for the same ChainSlot, and the same CryptoId, as the request.
+   * This may wait until the commit block referenced is received.
    * @param request the request we sent to the Fern server
    * @param response references the block we're hoping contains the IntegrityAttestation
    * @return the Integrity Attestation Block input if it's valid, null otherwise.

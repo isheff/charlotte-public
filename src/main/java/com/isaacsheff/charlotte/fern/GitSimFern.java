@@ -31,31 +31,39 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.logging.Logger;
 
 /**
- * A Fern server that runs agreement.
- * That is to say: this Fern server will, when asked, commit to a block in a slot on a chain, and never contradict itself.
- * If you ask it for commitments to the same slot with different blocks, it will keep referring you to the same attestation,
- *  where it commits to one block.
+ * A Fern server that runs a kind of simulation of the Git version
+ *  control system.
+ * In this simulation, each Commit is a block featuring a hash of the
+ *  repository contents, and diffs from (with references to) prior
+ *  commits.
+ * A commit with multiple prior commit references is a "merge," with
+ *  none is "initial," and with one is a "regular" commit.
  *
  * <p>
- * Can be run as a main class with: AgreementFernService configFileName.yaml
+ * Furthermore, any Fern server can maintain one or more "branches,"
+ *  identified by branch name (a String).
+ * Different servers may disagree on which commits belong in which
+ *  branches.
+ * Integrity Attestations here are signed statements that a given
+ *  commit belongs in a given branch at a given (real) time.
+ * Furthermore, a Fern server will not attest to any other commits
+ *  being in the same branch, unless this commit is an ancestor of the
+ *  new commit.
+ * Any backtracking must be handled explicitly in the diffs.
  * </p>
  *
  * <p>
- * Future extensions may wish to override validPolicy, as it designates
- *  (in a vacuum, so to speak), what policies this Fern server
- *   considers acceptable.
- * Alternatively, requestIntegrityAttestation contains almost all the
- *  functionality (it calls validPolicy), so you could override that
- *  to completely change what the server does.
+ * By default, this server will accept any commit in any branch, so
+ *  long as it is initial, or a descendant of the commits it has so
+ *  far in that branch.
+ * However, you can override "validPolicy" (you'll probably want to
+ *  call super.validPolicy), to make this server more selective.
+ * For example, since commits are signed, you can allow only certain
+ *  committers to commit to certain branches.
  * </p>
  *
  * <p>
- * Furthermore, future extensions may wish to override newResponse and
- *  newAttestation (called by requestIntegrityAttestation), which govern
- *  how responses are made to new requests (which don't conflict with anything
- *  seen so far). 
- * By default, newResponse just calls newAttestation and makes a simple
- *  reference to the attestation block.
+ * Can be run as a main class with: GitSimFern configFileName.yaml
  * </p>
  * @author Isaac Sheff
  */
@@ -67,8 +75,8 @@ public class GitSimFern extends AgreementFernService {
   private final ConcurrentMap<String, Hash> latestCommits;
 
   /**
-   * Run as a main class with an arg specifying a config file name to run a Fern Agreement server.
-   * creates and runs a new CharlotteNode which runs a Wilbur Service and a CharlotteNodeService, in a new thread.
+   * Run as a main class with an arg specifying a config file name to run a Fern server.
+   * creates and runs a new CharlotteNode which runs a Fern Service and a CharlotteNodeService, in a new thread.
    * @param args command line args. args[0] should be the name of the config file
    */
   public static void main(String[] args) throws InterruptedException{
@@ -92,7 +100,7 @@ public class GitSimFern extends AgreementFernService {
   }
 
   /**
-   * @param node a CharlotteNodeService with which we'll build a AgreementFernService
+   * @param node a CharlotteNodeService with which we'll build a GitSimFern service
    * @return a new CharlotteNode which runs a Fern Service and a CharlotteNodeService
    */
   public static CharlotteNode getFernNode(final CharlotteNodeService node) {
@@ -146,6 +154,11 @@ public class GitSimFern extends AgreementFernService {
 
   /**
    * Is this policy, alone, one which this server could ever accept?.
+   * This checks:
+   * <ul>
+   * <li> The reference references a real block (and waits for that block).</li>
+   * <li> The referenced block is properly signed.                         </li>
+   * </ul>
    * @return an error string if it's unacceptable, null if it's acceptable
    */
   @Override
@@ -208,6 +221,13 @@ public class GitSimFern extends AgreementFernService {
 
 
   /**
+   * Called whenever a request comes in over the wire.
+   * If there is really a GitSim request in here, we pass it on to
+   *  validPolicy, and if everything checks out, we assemble a new
+   *  attestation with createIntegrityAttestation.
+   * Along the way, we update our Map of most recent commits for each
+   *  branch.
+   * We have to take care to do this atomically.
    * @param request details what we want attested to
    * @return RequestIntegrityAttestationResponse featues an error message or a reference to an attestation.
    */
