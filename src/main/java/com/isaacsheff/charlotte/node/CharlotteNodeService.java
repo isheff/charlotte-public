@@ -25,8 +25,8 @@ import io.grpc.stub.StreamObserver;
 /**
  * A gRPC service for the Charlotte API.
  * gRPC separates "service" from "server."
- * One Server can run multiple Services.
- * This is a Service implementing the Charlotte gRPC API.
+ * One Server can run multiple Serivices.
+ * This is a Service implementing the charlotte gRPC API.
  * It can be extended for more interesting implementations.
  * @author Isaac Sheff
  */
