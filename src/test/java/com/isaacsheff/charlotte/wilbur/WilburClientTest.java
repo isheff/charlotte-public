@@ -64,7 +64,7 @@ public class WilburClientTest {
         )));
     (new Thread(wilburNode)).start();
     // start the client's CharlotteNode
-    CharlotteNodeService clientService = new CharlotteNodeService(
+    final CharlotteNodeService clientService = new CharlotteNodeService(
         new Config(new JsonConfig("src/test/resources/private-key2.pem", "client", participants),
         Paths.get(".")));
     final CharlotteNode clientNode = (new CharlotteNode(clientService));
@@ -72,12 +72,14 @@ public class WilburClientTest {
 
     TimeUnit.SECONDS.sleep(1); // wait a second for the server to start up
 
+
+
     // mint a block, and send it out to the HetconsNodes
-    Block block = Block.newBuilder().setStr("block contents").build();
+    final Block block = Block.newBuilder().setStr("block contents").build();
     clientService.onSendBlocksInput(block);
 
     // make a client using the local service, and the contact for the wilbur node
-    WilburClient client = new WilburClient(clientService, clientService.getConfig().getContact("wilbur"));
+    final WilburClient client = new WilburClient(clientService, clientService.getConfig().getContact("wilbur"));
     // get an availability attestation for the block, and check it.
     assertTrue(null != client.checkAvailabilityAttestation(block, client.requestAvailabilityAttestation(block)));
     client.shutdown();
