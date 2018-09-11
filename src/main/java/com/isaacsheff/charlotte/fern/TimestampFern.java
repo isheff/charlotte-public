@@ -21,6 +21,7 @@ import com.isaacsheff.charlotte.proto.SendBlocksResponse;
 import com.isaacsheff.charlotte.yaml.Config;
 
 import io.grpc.ServerBuilder;
+import io.grpc.stub.StreamObserver;
 
 import java.util.logging.Logger;
 
@@ -185,5 +186,19 @@ public class TimestampFern extends FernImplBase {
       }
     }
     return builder.setReference(Reference.newBuilder().setHash(sha3Hash(attestation))).build();
+  }
+
+  /**
+   * Grpc calls this whenever a RequestIntegrityAttestation rpc comes in over the wire.
+   * It calls requestIntegrityAttestation(final RequestIntegrityAttestationInput request), which returns a
+   *  RequestIntegrityAttestationResponse, which it gives to responseObserver.
+   * @param request the request from the client sent over the wire
+   * @param responseObserver used for sending a RequestIntegrityAttestationResponse back to the client over the wire
+   */
+  @Override
+  public void requestIntegrityAttestation(final RequestIntegrityAttestationInput request,
+                                          final StreamObserver<RequestIntegrityAttestationResponse> responseObserver) {
+    responseObserver.onNext(requestIntegrityAttestation(request));
+    responseObserver.onCompleted();
   }
 }

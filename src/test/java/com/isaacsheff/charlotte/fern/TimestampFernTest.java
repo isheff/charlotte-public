@@ -78,7 +78,7 @@ public class TimestampFernTest {
     final CharlotteNode clientNode = new CharlotteNode(clientService);
     (new Thread(clientNode)).start();
 
-    TimeUnit.SECONDS.sleep(60); // wait a second for the server to start up
+    TimeUnit.SECONDS.sleep(1); // wait a second for the server to start up
 
     // mint a block, and send it out to the HetconsNodes
     Block block = Block.newBuilder().setStr("block contents").build();
