@@ -254,6 +254,8 @@ public class HetconsParticipantService extends CharlotteNodeService {
         logInfo += (String.format("Ballot Number: %s\n", message2b.getProposal().getBallot().getBallotSequence()));
         logInfo += formatConsensus(quora);
         logger.info(logInfo);
+
+        onDecision(quora, status, message2b, id);
     }
 
     private String formatConsensus(ArrayList<HetconsObserverQuorum> quorum) {
@@ -267,6 +269,21 @@ public class HetconsParticipantService extends CharlotteNodeService {
         };
         return stringBuilder.toString();
     }
+
+    /**
+     * Invoked whenever an observer reaches a decision.
+     * Extending classes may find it useful to Override this.
+     * Note that this may be called multiple times for the same consensus, as more 2bs arrive.
+     * This implementation does nothing.
+     * @param quora The quora satisfied by the 2b messages known.
+     * @param statis the HetconsStatus for this decision.
+     * @param message2b the actual message that triggered this decision.
+     * @param id the CryptoId of the sender of the most recent 2b.
+     */
+    protected void onDecision(final Collection<HetconsObserverQuorum> quora,
+                              final HetconsStatus status,
+                              final HetconsMessage2ab message2b,
+                              final CryptoId id) {}
 
     private void send1bs(HetconsMessage1a message1a, HetconsStatus status) {
         HetconsProposal proposal;
