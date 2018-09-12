@@ -2,6 +2,7 @@ package com.xinwenwang.hetcons;
 
 import com.google.protobuf.ByteString;
 import com.isaacsheff.charlotte.node.CharlotteNodeClient;
+import com.isaacsheff.charlotte.node.HashUtil;
 import com.isaacsheff.charlotte.node.SignatureUtil;
 import com.isaacsheff.charlotte.proto.*;
 import com.isaacsheff.charlotte.yaml.Config;
@@ -21,14 +22,14 @@ public class HetconsClientNode extends CharlotteNodeClient {
     }
 
 
-    public void send1a(HetconsProposal proposal, HetconsObserverGroup observerGroup) {
+    public void send1a(HetconsProposal proposal, Hash blockhash) {
         HetconsMessage1a message1a = HetconsMessage1a.newBuilder()
                 .setProposal(proposal).build();
 
         HetconsMessage message = HetconsMessage.newBuilder()
                 .setM1A(message1a).setType(HetconsMessageType.M1a)
-                .setObserverGroup(observerGroup)
                 .setSig(SignatureUtil.signBytes(this.config.getKeyPair(), message1a.toByteString()))
+                .setObserverGroupReferecne(Reference.newBuilder().setHash(blockhash).build())
                 .build();
 
         sendBlock(SendBlocksInput.newBuilder().setBlock(Block.newBuilder()
@@ -37,14 +38,24 @@ public class HetconsClientNode extends CharlotteNodeClient {
         );
     }
 
+    public Hash broadcastOberverGroup(HetconsObserverGroup observerGroup) {
+        HetconsMessage message = HetconsMessage.newBuilder()
+                .setObserverGroup(observerGroup)
+                .setType(HetconsMessageType.OBSERVERGROUP)
+                .setSig(SignatureUtil.signBytes(this.config.getKeyPair(), observerGroup.toByteString()))
+                .build();
+        Block block = Block.newBuilder().setHetconsMessage(message).build();
+        sendBlock(block);
+        return HashUtil.sha3Hash(block);
+    }
+
     public void propose(List<IntegrityAttestation.ChainSlot> slots,
                         HetconsValue value, HetconsBallot ballot,
                         HetconsObserverGroup observerGroup,
                         long timeout) {
 
         HetconsProposal proposal = HetconsUtil.buildProposal(slots, value, ballot, timeout);
-        send1a(proposal, observerGroup);
+        Hash blockhash = broadcastOberverGroup(observerGroup);
+        send1a(proposal, blockhash);
     }
-
-
 }

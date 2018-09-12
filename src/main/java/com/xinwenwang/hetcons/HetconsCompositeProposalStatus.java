@@ -8,15 +8,15 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
 
-public class HetconsCompositeStatus extends HetconsStatus {
+public class HetconsCompositeProposalStatus extends HetconsProposalStatus {
 
-    private HetconsStatus currentStatus;
+    private HetconsProposalStatus currentStatus;
     private HetconsProposal proposal;
-    private HashMap<String, HetconsStatus> statusMap;
+    private HashMap<String, HetconsProposalStatus> statusMap;
     private HashMap<String, ArrayList<String>> slotConflictMap;
     private HashMap<String, Set<String>> proposalConflictMap;
 
-    public HetconsCompositeStatus(Iterable<HetconsStatus> status) {
+    public HetconsCompositeProposalStatus(Iterable<HetconsProposalStatus> status) {
         super(HetconsConsensusStage.UNRECOGNIZED, null);
         statusMap = new HashMap<>();
         proposalConflictMap = new HashMap<>();
@@ -45,7 +45,7 @@ public class HetconsCompositeStatus extends HetconsStatus {
     public void onDecided(String proposalID) {
         super.onDecided(proposalID);
     }
-    
+
     private void resolveConflicts() {
 
     }
@@ -56,7 +56,7 @@ public class HetconsCompositeStatus extends HetconsStatus {
     }
 
     @Override
-    public HetconsStatus getStatus() {
+    public HetconsProposalStatus getStatus() {
         return currentStatus;
     }
 }

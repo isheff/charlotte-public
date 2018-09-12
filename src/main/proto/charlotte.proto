@@ -234,16 +234,17 @@ message HetconsObserver {
 // the group of observers that the message to be sent.
 message HetconsObserverGroup {
   repeated HetconsObserver observers = 1;
+  repeated Reference chains = 2;
 }
 
 
 // Main Messages
-
 enum HetconsMessageType {
   M1a = 0;
   M1b = 1;
   M2b = 2;
   PROPOSAL = 3;
+  OBSERVERGROUP = 4;
 }
 
 message HetconsMessage {
@@ -253,8 +254,9 @@ message HetconsMessage {
     HetconsMessage1b m1b = 2;
     HetconsMessage2ab m2b = 3;
     HetconsProposal proposal = 5;
+    HetconsObserverGroup observerGroup = 9;
   }
-  HetconsObserverGroup observerGroup = 6;
+  Reference observerGroupReferecne = 10;
   charlotte.Signature sig = 7;
   charlotte.CryptoId identity = 8;
 }
@@ -262,6 +264,9 @@ message HetconsMessage {
 // Leader Propose the new value with a new bollot number
 message HetconsMessage1a {
   HetconsProposal proposal = 1;
+  oneof observerGroupFormat_oneof {
+    HetconsObserverGroup observerGroup = 2;
+  }
 }
 
 // Acceptors reply to the leader with (Proposal for bollet b, and previous accepted proposal which is a 2a message

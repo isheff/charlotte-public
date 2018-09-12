@@ -2,21 +2,17 @@ package com.xinwenwang.hetcons;
 
 import com.google.protobuf.ByteString;
 import com.isaacsheff.charlotte.node.CharlotteNode;
-import com.isaacsheff.charlotte.node.CharlotteNodeServiceTest;
 import com.isaacsheff.charlotte.proto.*;
 import com.isaacsheff.charlotte.yaml.*;
 import com.xinwenwang.hetcons.config.HetconsConfig;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Logger;
 import java.util.logging.Level;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -162,13 +158,13 @@ public class HetconsParticipantServiceTest extends HetconsTest {
     }
 
 
-    private HashMap<String, HetconsStatus> startNewService(JsonConfig config, List<Thread> threads) {
+    private HashMap<String, HetconsProposalStatus> startNewService(JsonConfig config, List<Thread> threads) {
 
         Config serverConfig = new Config(config, Paths.get(testDirectory));
         HetconsConfig hetconsConfig = new HetconsConfig();
         HetconsParticipantService service = new HetconsParticipantService(serverConfig, hetconsConfig);
         CharlotteNode node = new CharlotteNode(service);
-        HashMap<String, HetconsStatus> map = service.getProposalStatusHashMap();
+        HashMap<String, HetconsProposalStatus> map = service.getProposalStatusHashMap();
         final Thread thread = new Thread(node);
         threads.add(thread);
         thread.start();

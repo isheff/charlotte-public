@@ -10,11 +10,8 @@ import com.isaacsheff.charlotte.yaml.JsonContact;
 import com.xinwenwang.hetcons.config.HetconsConfig;
 import org.junit.jupiter.api.Test;
 
-import java.nio.file.AccessDeniedException;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -69,7 +66,7 @@ public class HetconsClientTest extends HetconsTest {
         HetconsParticipantService service = new HetconsParticipantService(serverConfig, hetconsConfig);
         CharlotteNode node1 = new CharlotteNode(service);
 
-        HashMap<String, HetconsStatus> map = service.getProposalStatusHashMap();
+        HashMap<String, HetconsProposalStatus> map = service.getProposalStatusHashMap();
 
         final Thread thread1 = new Thread(node1);
         thread1.start();

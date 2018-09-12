@@ -9,13 +9,14 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.logging.Logger;
 
-public class HetconsStatus {
+public class HetconsProposalStatus {
 
     private HetconsConsensusStage stage;
     private LinkedList<HetconsProposal> proposals;
     private HashMap<String, HetconsMessage2ab> latestMessage2a;
     private HetconsMessage2ab highestBallotM2A;
     private HetconsObserverGroup observerGroup;
+    private Reference observerGroupReference;
     private HashMap<HetconsObserverQuorum, ArrayList<Hash>> quorumOf1bs;
     private HashMap<HetconsObserverQuorum, ArrayList<Hash>> quorumOf2bs;
     private HashMap<HetconsObserverQuorum, ArrayList<HetconsValue>> quorumOf1bsValues;
@@ -31,14 +32,14 @@ public class HetconsStatus {
 
     private String ConsensusID;
 
-    private HetconsStatus parent;
-    private HashMap<String, HetconsStatus> children;
+    private HetconsProposalStatus parent;
+    private HashMap<String, HetconsProposalStatus> children;
 
     private ReadWriteLock lock;
 
     private static final int maxTimeOut = 10 * 1000;
 
-    public HetconsStatus(HetconsConsensusStage stage, HetconsProposal proposal) {
+    public HetconsProposalStatus(HetconsConsensusStage stage, HetconsProposal proposal) {
         this.stage = stage;
         this.proposals = new LinkedList<HetconsProposal>();
         if (proposal != null)
@@ -52,7 +53,7 @@ public class HetconsStatus {
         children = new HashMap<>();
     }
 
-    public HetconsStatus(HetconsConsensusStage stage) {
+    public HetconsProposalStatus(HetconsConsensusStage stage) {
         this(stage, null);
     }
 
@@ -83,7 +84,7 @@ public class HetconsStatus {
 
     }
 
-    public HetconsStatus(HetconsProposal proposal) {
+    public HetconsProposalStatus(HetconsProposal proposal) {
         this(HetconsConsensusStage.ConsensusIdile, proposal);
     }
 
@@ -144,6 +145,14 @@ public class HetconsStatus {
 
     public HetconsObserverGroup getObserverGroup() {
         return observerGroup;
+    }
+
+    public void setObserverGroupReference(Reference observerGroupReference) {
+        this.observerGroupReference = observerGroupReference;
+    }
+
+    public Reference getObserverGroupReference() {
+        return observerGroupReference;
     }
 
     public HashMap<String, ArrayList<HetconsObserverQuorum>> getParticipants() {
@@ -307,7 +316,7 @@ public class HetconsStatus {
         return lock;
     }
 
-    public HashMap<String, HetconsStatus> getChildren() {
+    public HashMap<String, HetconsProposalStatus> getChildren() {
         return children;
     }
 
@@ -319,17 +328,17 @@ public class HetconsStatus {
         return ConsensusID;
     }
 
-    public void setParent(HetconsStatus parent) {
+    public void setParent(HetconsProposalStatus parent) {
         this.parent = parent;
     }
 
-    public HetconsStatus getParent() {
+    public HetconsProposalStatus getParent() {
         return parent;
     }
 
     public void onDecided(String proposalID) {}
 
-    public HetconsStatus getStatus() {
+    public HetconsProposalStatus getStatus() {
         return this;
     }
     public void onReceiveNewProposal(HetconsProposal proposal) {}
