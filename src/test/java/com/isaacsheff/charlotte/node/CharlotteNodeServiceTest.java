@@ -47,12 +47,12 @@ public class CharlotteNodeServiceTest {
   static void setup() {
     GenerateX509.generateKeyFiles("src/test/resources/server.pem",
                                   "src/test/resources/private-key.pem",
-                                  "isheff.cs.cornell.edu",
-                                  "128.84.155.11");
+                                  "localhost",
+                                  "127.0.0.1");
     GenerateX509.generateKeyFiles("src/test/resources/server2.pem",
                                   "src/test/resources/private-key2.pem",
-                                  "isheff.cs.cornell.edu",
-                                  "128.84.155.11");
+                                  "localhost",
+                                  "127.0.0.1");
   }
 
 
@@ -115,12 +115,13 @@ public class CharlotteNodeServiceTest {
     final Thread thread1 = new Thread(node1);
     thread1.start();
 
-    TimeUnit.SECONDS.sleep(1); // wait a second for the server to start up
-
     // create a client, and send the expected sequence of blocks
     final CharlotteNodeClient client = (new Contact(
         new JsonContact("src/test/resources/server.pem", "localhost", port0), Paths.get("."))).
       getCharlotteNodeClient();
+
+    TimeUnit.SECONDS.sleep(1); // wait a second for the server to start up
+
     client.sendBlock(Block.newBuilder().setStr("block 0").build());
     client.sendBlock(Block.newBuilder().setStr("block 1").build());
     client.sendBlock(Block.newBuilder().setStr("block 2").build());
@@ -145,5 +146,13 @@ public class CharlotteNodeServiceTest {
     assertTrue(receivedBlocks0.isEmpty(), "no further blocks should be expected");
     // check to ensure no other blocks somehow got queued
     assertTrue(receivedBlocks1.isEmpty(), "no further blocks should be expected");
+
+    // TODO: I don't know why this shutdown code causes grpc RuntimeExceptions in SendBlocksObserver.
+    //       This isn't really a problem, as the servers' shutdown behaviour doesn't really matter.
+    //       However, it bugs me.
+    //       This should be fixed.
+    client.shutdown();
+    node0.stop();
+    node1.stop();
   }
 }

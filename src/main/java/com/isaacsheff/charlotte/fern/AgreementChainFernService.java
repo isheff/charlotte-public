@@ -1,6 +1,6 @@
 package com.isaacsheff.charlotte.fern;
 
-import static com.isaacsheff.charlotte.fern.AgreementFernClient.checkIntegrityAttestation;
+import static com.isaacsheff.charlotte.fern.AgreementFernClient.checkAgreementIntegrityAttestation;
 
 import com.isaacsheff.charlotte.collections.ConcurrentHolder;
 import com.isaacsheff.charlotte.node.CharlotteNode;
@@ -121,7 +121,7 @@ public class AgreementChainFernService extends AgreementFernService {
       if (reference.hasHash()) {
         final Block parentAttestation = getNode().getBlockMap().get(reference.getHash()); // NOT BLOCKING
         if (parentAttestation != null) {
-          if(checkIntegrityAttestation(parentAttestation) != null) { 
+          if(checkAgreementIntegrityAttestation(parentAttestation) != null) { 
             if (parentAttestation.getIntegrityAttestation().getSignedChainSlot().getChainSlot().hasBlock()) {
               if(parentAttestation.getIntegrityAttestation().getSignedChainSlot().getChainSlot().getBlock().hasHash()){
                 if (// The parent attestation actually refers to the same block listed as parent

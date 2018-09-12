@@ -22,7 +22,7 @@ import io.grpc.stub.StreamObserver;
 /**
  * A gRPC service for the Wilbur API.
  * gRPC separates "service" from "server."
- * One Server can run multiple Serivices.
+ * One Server can run multiple Services.
  * This is a Service implementing the wilbur gRPC API.
  * It can be extended for more interesting implementations.
  * Run as a main class with an arg specifying a config file name to run a Wilbur server.
