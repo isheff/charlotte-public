@@ -47,8 +47,8 @@ public class CharlotteNodeClientTest {
   static void setup() {
     GenerateX509.generateKeyFiles("src/test/resources/server.pem",
                                   "src/test/resources/private-key.pem",
-                                  "isheff.cs.cornell.edu",
-                                  "128.84.155.11");
+                                  "localhost",
+                                  "127.0.0.1");
   }
 
 
