@@ -23,6 +23,11 @@ import com.xinwenwang.hetcons.HetconsParticipantService;
 import com.xinwenwang.hetcons.HetconsStatus;
 import com.xinwenwang.hetcons.config.HetconsConfig;
 
+/**
+ * A small extension of the HetconsParticipantService designed to forward consensus decisions to the HetconsFern service.
+ * It also tracks which 2B message blocks go with which proposals, so those can be referenced.
+ * @author Isaac Sheff
+ */
 public class HetconsParticipantNodeForFern extends HetconsParticipantService {
 
   /** Use logger for logging events in this class. */
@@ -40,6 +45,7 @@ public class HetconsParticipantNodeForFern extends HetconsParticipantService {
   /**
    * A very minor extension of HetconsParticipantService designed to integrate with HetconsFern.
    * This basically just forwards onDecision calls to the Fern service.
+ * It also tracks which 2B message blocks go with which proposals, so those can be referenced.
    * @param config the configuration file for the CharlotteNodeService
    * @param hetconsConfig the configuration for the Hetcons.
    * @param fern the Fern Service
@@ -108,6 +114,8 @@ public class HetconsParticipantNodeForFern extends HetconsParticipantService {
   /**
    * If this is a 2B, we store it away with the associated proposal.
    * Then we pass it along (whether or not it was a 2B).
+   * @param input the SendBlocksInput received over the wire
+   * @return any responses, in this case just forwarded from HetconsParticipantService.onSendBlocksInput
    */
   @Override
   public Iterable<SendBlocksResponse> onSendBlocksInput(SendBlocksInput input) {

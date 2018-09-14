@@ -30,21 +30,67 @@ import com.xinwenwang.hetcons.config.HetconsConfig;
 import io.grpc.ServerBuilder;
 import io.grpc.stub.StreamObserver;
 
+/**
+ * A Fern Server built around Hetcons.
+ * The idea here is that the HetconsParticipantService services (which
+ *  act as CharlotteNode services) run Hetcons, and this interracts
+ *  with clients, issuing attestations.
+ * This can be run as a main class with "HetconsFern hetconsConfig.yaml"
+ *
+ * This server issues 2 kinds of attestations:
+ * <ul>
+ * <li>
+ * Hetcons Attestations merely reference some 2B message blocks.
+ * In principle, these communicate to a client (that understands
+ *  Hetcons) enough information to work out what was decided.
+ * The "value" decided is the one found in each of the 2B messages.
+ * </li>
+ * <li>
+ * AgreementAttestations, in which the signer agrees never to sign a
+ *  conflicting attestation (in this case naming a block as the
+ *  inhabitant of a slot on a chain), are presumably easier for
+ *  clients to parse.
+ * This Fern server creates an AgreementAttestation whenever it
+ *  witnesses a Hetcons decision that makes the observer corresponding
+ *  to this node decide.
+ * That is to say, if the consensus lists this node as an Observer,
+ *  and this Observer decides (which hopefully happens at the end of
+ *  every consensus), then this node will issue an
+ *  AgreementAttestation.
+ * </li>
+ * </ul>
+ *
+ * <p>
+ * Clients can issue requests for either (or both) type of attestation.
+ * The server will wait until it has an attestation in order to respond.
+ * If a client sends a Hetcons attestation request, that must include a
+ *  1A message, which this server will put in a block, thus beginning
+ *  consensus.
+ * Therefore, a valid way to begin consensus is for a client to send a
+ *  HetconsAttestation request to all the servers involved, thus
+ *  sending them all a 1A.
+ * </p>
+ * @author Isaac Sheff
+ */
 public class HetconsFern extends AgreementFernService {
 
   /** Use logger for logging events in this class. */
   private static final Logger logger = Logger.getLogger(HetconsFern.class.getName());
   
+  /** The HetconsNode (which is also a CharlotteNode Service) that also inhabits this server **/
   private final HetconsParticipantNodeForFern hetconsNode;
 
+  /** All responses yet made for agreement requests for each chain slot **/
   private final BlockingMap<ChainSlot, RequestIntegrityAttestationResponse> agreementAttestationCache;
+
+  /** All responses yet made for hetcons requests for each chain slot and observer **/
   private final ConcurrentMap<ChainSlot, BlockingMap<CryptoId, RequestIntegrityAttestationResponse>> hetconsAttestationCache;
 
   /**
-   * Run as a main class with an arg specifying a config file name to run a Fern Timestamp server.
-   * creates and runs a new CharlotteNode which runs a Fern Service
-   *  and a TimestampNode service (which is a CharlotteNode Service), in a new thread.
-   * @param args command line args. args[0] should be the name of the config file, args[1] is BlocksPerTimestamp
+   * Run as a main class with an arg specifying a config file name to run a Fern Hetcons server.
+   * Creates and runs a new HetconsParticipantService (which is a CharlotteNodeService) which also runs this Fern Service.
+   * @param args command line args. args[0] should be the name of the config file
+   * @throws InterruptedException
    */
   public static void main(String[] args) throws InterruptedException{
     if (args.length < 1) {
@@ -59,7 +105,7 @@ public class HetconsFern extends AgreementFernService {
 
 
   /**
-   * @param node a TimestampFern with which we'll build a TimestampFern Service
+   * @param node a HetconsFern Service
    * @return a new CharlotteNode which runs a Fern Service and a CharlotteNodeService
    */
   public static CharlotteNode getFernNode(final HetconsFern fern) {
@@ -70,7 +116,6 @@ public class HetconsFern extends AgreementFernService {
 
   /**
    * @param configFilename the name of the configuration file for this CharlotteNode
-   * @param referencesPerTimestamp the number of references the node acquires to automatically request a timestamp
    * @return a new CharlotteNode which runs a Fern Service and a CharlotteNodeService
    */
   public static CharlotteNode getFernNode(final String configFilename) {
@@ -79,24 +124,17 @@ public class HetconsFern extends AgreementFernService {
 
   /**
    * @param config the name of the configuration file for this CharlotteNode
-   * @param referencesPerTimestamp the number of references the node acquires to automatically request a timestamp
    * @return a new CharlotteNode which runs a Fern Service and a CharlotteNodeService
    */
   public static CharlotteNode getFernNode(final Config config) {
     return getFernNode(new HetconsFern(config, new HetconsConfig()));
   }
 
-  public HetconsFern(final ConcurrentMap<ChainSlot,ConcurrentHolder<RequestIntegrityAttestationResponse>>commitments,
-                     final HetconsParticipantNodeForFern node) {
-    super(node, commitments);
-    node.setFern(this);
-    hetconsNode = node;
-    agreementAttestationCache =
-      new BlockingConcurrentHashMap<ChainSlot, RequestIntegrityAttestationResponse>();
-    hetconsAttestationCache =
-      new ConcurrentHashMap<ChainSlot, BlockingMap<CryptoId, RequestIntegrityAttestationResponse>>();
-  }
 
+  /**
+   * Create a New HetconsFern service.
+   * @param node the corresponding HetconsParticipantNodeForFern service that will pass on decisions to this service.
+   */
   public HetconsFern(final HetconsParticipantNodeForFern node) {
     super(node);
     node.setFern(this);
@@ -107,30 +145,41 @@ public class HetconsFern extends AgreementFernService {
       new ConcurrentHashMap<ChainSlot, BlockingMap<CryptoId, RequestIntegrityAttestationResponse>>();
   }
 
-  public HetconsFern(final ConcurrentMap<ChainSlot,ConcurrentHolder<RequestIntegrityAttestationResponse>>commitments,
-                     final Config config,
-                     final HetconsConfig hetconsConfig) {
-    this(commitments, new HetconsParticipantNodeForFern(config, hetconsConfig, null));
-  }
-
+  /**
+   * Create a New HetconsFern service.
+   * @param config the configuration for the underlying CharlotteNodeService
+   * @param hetconsConfig the configuration for Hetcons
+   * @see com.xinwenwang.hetcons.config.HetconsConfig
+   */
   public HetconsFern(final Config config,
                      final HetconsConfig hetconsConfig) {
     this(new HetconsParticipantNodeForFern(config, hetconsConfig, null));
   }
 
+  /** @return The HetconsNode (which is also a CharlotteNode Service) that also inhabits this server **/
   public HetconsParticipantNodeForFern getHetconsNode() {return hetconsNode;};
 
+  /** @return All responses yet made for agreement requests for each chain slot **/
   public BlockingMap<ChainSlot, RequestIntegrityAttestationResponse> getAgreementAttestationCache() {
     return agreementAttestationCache;
   }
 
+  /** @return All responses yet made for hetcons requests for each chain slot and observer **/
   public ConcurrentMap<ChainSlot, BlockingMap<CryptoId, RequestIntegrityAttestationResponse>> getHetconsAttestationCache() {
     return hetconsAttestationCache;
   }
 
- private RequestIntegrityAttestationResponse putHetconsAttestation(final ChainSlot slot,
-                                                                   final CryptoId observer,
-                                                                   final RequestIntegrityAttestationResponse response) {
+
+  /**
+   * Insert a value into hetconsAttestationCache atomically.
+   * @param slot the ChainSlot this value is in
+   * @param observer the observer for whom this value is decided
+   * @param response the actual response to send to clients
+   * @return the old value, or null, if there was none.
+   */
+  private RequestIntegrityAttestationResponse putHetconsAttestation(final ChainSlot slot,
+                                                                    final CryptoId observer,
+                                                                    final RequestIntegrityAttestationResponse response) {
    final BlockingMap<CryptoId, RequestIntegrityAttestationResponse> newObserverToResponse =
      new BlockingConcurrentHashMap<CryptoId, RequestIntegrityAttestationResponse>();
    final BlockingMap<CryptoId, RequestIntegrityAttestationResponse> oldObserverToResponse =
@@ -142,19 +191,32 @@ public class HetconsFern extends AgreementFernService {
    }
  }
  
-private RequestIntegrityAttestationResponse getHetconsAttestation(final ChainSlot slot, final CryptoId observer) {
-   final BlockingMap<CryptoId, RequestIntegrityAttestationResponse> newObserverToResponse =
-     new BlockingConcurrentHashMap<CryptoId, RequestIntegrityAttestationResponse>();
-   final BlockingMap<CryptoId, RequestIntegrityAttestationResponse> oldObserverToResponse =
-     getHetconsAttestationCache().putIfAbsent(slot, newObserverToResponse);
-   if (oldObserverToResponse == null) {
-     return newObserverToResponse.blockingGet(observer);
-   } else {
-     return oldObserverToResponse.blockingGet(observer);
-   }
- }
+  /**
+   * Retrieve a value from hetconsAttestationCache, waiting, if necessary, until there is one.
+   * @param slot the ChainSlot this value is in
+   * @param observer the observer for whom this value is decided
+   * @return the actual response to send to clients
+   */
+  private RequestIntegrityAttestationResponse getHetconsAttestation(final ChainSlot slot, final CryptoId observer) {
+    final BlockingMap<CryptoId, RequestIntegrityAttestationResponse> newObserverToResponse =
+      new BlockingConcurrentHashMap<CryptoId, RequestIntegrityAttestationResponse>();
+    final BlockingMap<CryptoId, RequestIntegrityAttestationResponse> oldObserverToResponse =
+      getHetconsAttestationCache().putIfAbsent(slot, newObserverToResponse);
+    if (oldObserverToResponse == null) {
+      return newObserverToResponse.blockingGet(observer);
+    } else {
+      return oldObserverToResponse.blockingGet(observer);
+    }
+  }
 
 
+  /**
+   * Called when Hetcons has reached a decision.
+   * This will cause the Fern server to issue attestations, and populate agreementAttestationCache and hetconsAttestationCache.
+   * @param observers the set of observers that decided
+   * @param value the value they decided on
+   * @param proposal the HetconsProposal on which they decided.
+   */
   public void observersDecide(final Set<CryptoId> observers,
                               final HetconsValue value,
                               final HetconsProposal proposal)  {
@@ -204,6 +266,13 @@ private RequestIntegrityAttestationResponse getHetconsAttestation(final ChainSlo
 
 
 
+  /**
+   * Called when a request for integrity attestation comes in over the wire.
+   * This will wait for an attestation to become available, and then respond with it.
+   * If the request is for a HetconsAttestation, it will also initiate consensus.
+   * @param request the incoming request for an attestation from the wire.
+   * @param responseObserver used to send ONE response back over the wire.
+   */
   @Override
   public void requestIntegrityAttestation(final RequestIntegrityAttestationInput request,
                                           final StreamObserver<RequestIntegrityAttestationResponse> responseObserver) {
