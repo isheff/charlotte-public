@@ -26,8 +26,10 @@ import java.util.logging.Logger;
 
 /**
  * A Fern server that runs agreement.
- * That is to say: this Fern server will, when asked, commit to a block in a slot on a chain, and never contradict itself.
- * If you ask it for commitments to the same slot with different blocks, it will keep referring you to the same attestation,
+ * That is to say: this Fern server will, when asked, commit to a
+ *  block in a slot on a chain, and never contradict itself.
+ * If you ask it for commitments to the same slot with different
+ *  blocks, it will keep referring you to the same attestation,
  *  where it commits to one block.
  *
  * <p>

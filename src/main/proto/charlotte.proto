@@ -83,10 +83,15 @@ message IntegrityAttestation {
     GitSimBranch gitSimBranch = 1;
     Signature signature = 2;
   }
+  message HetconsAttestation {
+    repeated CryptoId observers = 1;
+    repeated Reference message2b = 2;
+  }
   oneof integrityattestationtype_oneof {
     SignedChainSlot signedChainSlot = 1;
     SignedTimestampedReferences signedTimestampedReferences = 2;
     SignedGitSimBranch signedGitSimBranch = 3;
+    HetconsAttestation hetconsAttestation = 4;
   }
 }
 
@@ -194,9 +199,13 @@ service WilburQuery { // anything running a WilburQuery service should also run 
 // FERN
 
 message IntegrityPolicy {
+  message HetconsPolicy {
+    HetconsMessage proposal = 1;
+    CryptoId observer = 2;
+  }
   oneof integritypolicytype_oneof {
     IntegrityAttestation fillInTheBlank = 1;
-    // Eventually, I suppose, some kind of consensus request goes in here.
+    HetconsPolicy hetconsPolicy = 2;
   }
 }
 // just wrappers for the RPC input and output
@@ -234,7 +243,7 @@ message HetconsTime {
 
 message HetconsValue {
   oneof proposedContent_oneof {
-    charlotte.Block block = 1;
+    charlotte.Reference block = 1;
     int64 num = 2;
   }
 }
