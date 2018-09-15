@@ -4,6 +4,7 @@ import static com.google.protobuf.util.Timestamps.fromMillis;
 import static com.isaacsheff.charlotte.node.HashUtil.sha3Hash;
 import static com.isaacsheff.charlotte.node.SignatureUtil.checkSignature;
 import static com.isaacsheff.charlotte.node.SignatureUtil.signBytes;
+import static java.lang.Integer.parseInt;
 import static java.lang.System.currentTimeMillis;
 
 import com.isaacsheff.charlotte.collections.ConcurrentHolder;
@@ -28,6 +29,7 @@ import java.util.LinkedList;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 /**
@@ -77,7 +79,7 @@ public class GitSimFern extends AgreementFernService {
   /**
    * Run as a main class with an arg specifying a config file name to run a Fern server.
    * creates and runs a new CharlotteNode which runs a Fern Service and a CharlotteNodeService, in a new thread.
-   * @param args command line args. args[0] should be the name of the config file
+   * @param args command line args. args[0] should be the name of the config file, and args[1] is auto-shutdown time in seconds
    */
   public static void main(String[] args) throws InterruptedException{
     if (args.length < 1) {
@@ -88,6 +90,11 @@ public class GitSimFern extends AgreementFernService {
     thread.start();
     logger.info("Fern service started on new thread");
     thread.join();
+    if (args.length < 2) {
+      TimeUnit.SECONDS.sleep(Integer.MAX_VALUE);
+    } else {
+      TimeUnit.SECONDS.sleep(parseInt(args[1]));
+    }
   }
 
   /**

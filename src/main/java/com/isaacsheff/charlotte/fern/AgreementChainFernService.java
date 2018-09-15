@@ -1,6 +1,7 @@
 package com.isaacsheff.charlotte.fern;
 
 import static com.isaacsheff.charlotte.fern.AgreementFernClient.checkAgreementIntegrityAttestation;
+import static java.lang.Integer.parseInt;
 
 import com.isaacsheff.charlotte.collections.ConcurrentHolder;
 import com.isaacsheff.charlotte.node.CharlotteNode;
@@ -14,6 +15,7 @@ import com.isaacsheff.charlotte.proto.RequestIntegrityAttestationResponse;
 import io.grpc.ServerBuilder;
 import java.nio.file.Path;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 public class AgreementChainFernService extends AgreementFernService {
@@ -32,7 +34,7 @@ public class AgreementChainFernService extends AgreementFernService {
   /**
    * Run as a main class with an arg specifying a config file name to run a Fern Agreement server.
    * creates and runs a new CharlotteNode which runs a Wilbur Service and a CharlotteNodeService, in a new thread.
-   * @param args command line args. args[0] should be the name of the config file
+   * @param args command line args. args[0] should be the name of the config file, and args[1] is auto-shutdown time in seconds
    */
   public static void main(String[] args) throws InterruptedException{
     if (args.length < 1) {
@@ -43,6 +45,11 @@ public class AgreementChainFernService extends AgreementFernService {
     thread.start();
     logger.info("Fern service started on new thread");
     thread.join();
+    if (args.length < 2) {
+      TimeUnit.SECONDS.sleep(Integer.MAX_VALUE);
+    } else {
+      TimeUnit.SECONDS.sleep(parseInt(args[1]));
+    }
   }
 
   /**

@@ -23,6 +23,7 @@ import com.isaacsheff.charlotte.yaml.Config;
 import io.grpc.ServerBuilder;
 import io.grpc.stub.StreamObserver;
 
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 /**
@@ -60,7 +61,7 @@ public class TimestampFern extends FernImplBase {
    * Run as a main class with an arg specifying a config file name to run a Fern Timestamp server.
    * creates and runs a new CharlotteNode which runs a Fern Service
    *  and a TimestampNode service (which is a CharlotteNode Service), in a new thread.
-   * @param args command line args. args[0] should be the name of the config file, args[1] is BlocksPerTimestamp
+   * @param args command line args. args[0] should be the name of the config file, args[1] is BlocksPerTimestamp, args[2] (optional) is timeout until the server shuts down, in seconds
    */
   public static void main(String[] args) throws InterruptedException{
     if (args.length < 1) {
@@ -71,6 +72,12 @@ public class TimestampFern extends FernImplBase {
     thread.start();
     logger.info("Fern service started on new thread");
     thread.join();
+    if (args.length < 3) {
+      TimeUnit.SECONDS.sleep(Integer.MAX_VALUE);
+    } else {
+      TimeUnit.SECONDS.sleep(parseInt(args[2]));
+    }
+
   }
 
 

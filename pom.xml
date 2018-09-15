@@ -284,6 +284,24 @@
                 <finalName>fern_agreement</finalName>
               </configuration>
             </execution>
+            <execution>
+              <id>git-sim-fern-executable</id>
+              <phase>package</phase>
+              <goals>
+                <goal>single</goal>
+              </goals>
+              <configuration>
+                <archive>
+                  <manifest>
+                    <mainClass>com.isaacsheff.charlotte.fern.GitSimFern</mainClass>
+                  </manifest>
+                </archive>
+                <descriptorRefs>
+                  <descriptorRef>jar-with-dependencies</descriptorRef>
+                </descriptorRefs>
+                <finalName>fern_git_sim</finalName>
+              </configuration>
+            </execution>
           </executions>
         </plugin>
 
