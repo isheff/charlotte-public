@@ -1,5 +1,7 @@
 package com.xinwenwang.hetcons;
 
+import static com.isaacsheff.charlotte.node.PortUtil.getFreshPort;
+
 import com.google.protobuf.ByteString;
 import com.isaacsheff.charlotte.node.CharlotteNode;
 import com.isaacsheff.charlotte.proto.*;
@@ -24,29 +26,27 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class HetconsClientTest extends HetconsTest {
 
-    private int port;
 
     @Test
     void proposeBlocks() {
 
-        port = 10080;
 
         JsonContact contactServer = new JsonContact(
                 "server1.pem",
                 "localhost",
-                port++
+                getFreshPort()
         );
 
         JsonContact contact2 = new JsonContact(
                 "server2.pem",
                 "localhost",
-                port++
+                getFreshPort()
         );
 
         JsonContact contactClient = new JsonContact(
                 "server.pem",
                 "localhost",
-                port++
+                getFreshPort()
         );
 
         Map<String, JsonContact> contacts = new HashMap<>();

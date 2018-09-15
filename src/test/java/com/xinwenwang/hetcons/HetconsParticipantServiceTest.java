@@ -1,5 +1,7 @@
 package com.xinwenwang.hetcons;
 
+import static com.isaacsheff.charlotte.node.PortUtil.getFreshPort;
+
 import com.google.protobuf.ByteString;
 import com.isaacsheff.charlotte.node.CharlotteNode;
 import com.isaacsheff.charlotte.node.CharlotteNodeServiceTest;
@@ -32,13 +34,8 @@ public class HetconsParticipantServiceTest extends HetconsTest {
     // 1b sent correctly
 
 
-    static int port = 0;
-
-
     @Test
     void proposeNewBlock() {
-        if (port == 0)
-            port = 10080;
 
         ArrayList<JsonContact> testContacts = new ArrayList<>();
 
@@ -46,7 +43,7 @@ public class HetconsParticipantServiceTest extends HetconsTest {
             testContacts.add(new JsonContact(
                     "server"+i+".pem",
                     "localhost",
-                    port++
+                    getFreshPort()
             ));
         }
 
