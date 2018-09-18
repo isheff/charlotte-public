@@ -1,6 +1,9 @@
 package com.isaacsheff.charlotte.wilbur;
 
+import static java.lang.Integer.parseInt;
+
 import java.nio.file.Path;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -42,15 +45,20 @@ public class WilburService extends WilburGrpc.WilburImplBase {
   /**
    * Run as a main class with an arg specifying a config file name to run a Wilbur server.
    * creates and runs a new CharlotteNode which runs a Wilbur Service and a CharlotteNodeService, in a new thread.
-   * @param args command line args. args[0] should be the name of the config file
+   * @param args command line args. args[0] should be the name of the config file. args[1] (optional) is auto-shutdown time in secodns
    */
-  public static void main(String[] args) {
+  public static void main(String[] args) throws InterruptedException {
     if (args.length < 1) {
       System.out.println("Correct Usage: WilburService configFileName.yaml");
       return;
     }
     (new Thread(getWilburNode(args[0]))).start();
     logger.info("Wilbur service started on new thread");
+    if (args.length < 2) {
+      TimeUnit.SECONDS.sleep(Integer.MAX_VALUE);
+    } else {
+      TimeUnit.SECONDS.sleep(parseInt(args[1]));
+    }
   }
 
   /**

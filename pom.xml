@@ -302,6 +302,42 @@
                 <finalName>fern_git_sim</finalName>
               </configuration>
             </execution>
+            <execution>
+              <id>generate-x509-executable</id>
+              <phase>package</phase>
+              <goals>
+                <goal>single</goal>
+              </goals>
+              <configuration>
+                <archive>
+                  <manifest>
+                    <mainClass>com.isaacsheff.charlotte.yaml.GenerateX509</mainClass>
+                  </manifest>
+                </archive>
+                <descriptorRefs>
+                  <descriptorRef>jar-with-dependencies</descriptorRef>
+                </descriptorRefs>
+                <finalName>generate_x509</finalName>
+              </configuration>
+            </execution>
+            <execution>
+              <id>wilbur-executable</id>
+              <phase>package</phase>
+              <goals>
+                <goal>single</goal>
+              </goals>
+              <configuration>
+                <archive>
+                  <manifest>
+                    <mainClass>com.isaacsheff.charlotte.wilbur.WilburService</mainClass>
+                  </manifest>
+                </archive>
+                <descriptorRefs>
+                  <descriptorRef>jar-with-dependencies</descriptorRef>
+                </descriptorRefs>
+                <finalName>wilbur</finalName>
+              </configuration>
+            </execution>
           </executions>
         </plugin>
 
