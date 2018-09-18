@@ -3,6 +3,7 @@ package com.isaacsheff.charlotte.yaml;
 import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
@@ -12,6 +13,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * In theory the config file can be JSON, XML, or YAML, but we'll use YAML.
  * @author Isaac Sheff
  */
+@JsonIgnoreProperties(ignoreUnknown = true) // if there are random other fields at the top level of config, just ignore them
 public class JsonConfig {
 
   /**
