@@ -144,7 +144,7 @@ public class HetconsParticipantServiceTest extends HetconsTest {
          */
 //        assertEquals(0, map.size(), "sizebefore propose, there should no prosals avalaible");
         client.propose(slots, value, ballot, observerGroup, 1000);
-        client.propose(slots, value1, ballot1, observerGroup, 1000);
+//        client.propose(slots, value1, ballot1, observerGroup, 1000);
 
         try {
             TimeUnit.SECONDS.sleep(1000);
@@ -158,16 +158,15 @@ public class HetconsParticipantServiceTest extends HetconsTest {
     }
 
 
-    private HashMap<String, HetconsProposalStatus> startNewService(JsonConfig config, List<Thread> threads) {
+    private void startNewService(JsonConfig config, List<Thread> threads) {
 
         Config serverConfig = new Config(config, Paths.get(testDirectory));
-        HetconsConfig hetconsConfig = new HetconsConfig();
-        HetconsParticipantService service = new HetconsParticipantService(serverConfig, hetconsConfig);
+        HetconsParticipantService service = new HetconsParticipantService(serverConfig);
         CharlotteNode node = new CharlotteNode(service);
-        HashMap<String, HetconsProposalStatus> map = service.getProposalStatusHashMap();
+//        HashMap<String, HetconsProposalStatus> map = service.getProposalStatusHashMap();
         final Thread thread = new Thread(node);
         threads.add(thread);
         thread.start();
-        return map;
+        return;
     }
 }

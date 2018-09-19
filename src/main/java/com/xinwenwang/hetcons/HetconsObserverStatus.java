@@ -5,6 +5,7 @@ import com.isaacsheff.charlotte.node.SignatureUtil;
 import com.isaacsheff.charlotte.proto.*;
 
 import java.util.*;
+import java.util.logging.Logger;
 
 public class HetconsObserverStatus {
 
@@ -21,6 +22,8 @@ public class HetconsObserverStatus {
     private List<List<CryptoId>> quorum;
 
     private HetconsParticipantService service;
+
+    private static final Logger logger = Logger.getLogger(HetconsParticipantService.class.getName());
 
     public HetconsObserverStatus(HetconsObserver observer, HetconsParticipantService service) {
         this.observer = observer;
@@ -49,9 +52,13 @@ public class HetconsObserverStatus {
             chainIDs.add(HetconsUtil.buildChainSlotID(slot));
         }
 
-        HetconsProposalStatus incomingStatus = new HetconsProposalStatus(proposal);
+        HetconsProposalStatus incomingStatus = new HetconsProposalStatus(HetconsConsensusStage.Proposed,
+                proposal,
+                quorum,
+                block.getHetconsMessage().getObserverGroupReferecne());
         incomingStatus.setChainIDs(chainIDs);
-        HetconsProposalStatus currentStatus = proposalStatus.putIfAbsent(proposalStatusID, incomingStatus);
+        proposalStatus.putIfAbsent(proposalStatusID, incomingStatus);
+        HetconsProposalStatus currentStatus = proposalStatus.get(proposalStatusID);
 
         if (incomingStatus != currentStatus) {
             /* proposal with larger ballot number should be saved and use that number in the future */
@@ -72,7 +79,7 @@ public class HetconsObserverStatus {
         // See if we already have 2as
         for (String slot: chainIDs) {
             HetconsSlotStatus status = slotStatus.get(slot);
-            if (status.has2aFromOtherProposal(proposalStatusID))
+            if (status.has2aFromOtherProposal(proposalStatusID) || status.isDecided())
                 return false;
         }
 
@@ -117,6 +124,7 @@ public class HetconsObserverStatus {
 
         broadcastToParticipants(Block.newBuilder().setHetconsMessage(m).build());
 
+        logger.info("Sent 1Bs");
 
         // set timer for 1b, if we didn't receive enough 1bs after the timeout, we restart the consensus.
         if (currentStatus.getM1bTimer() != null)
@@ -128,7 +136,7 @@ public class HetconsObserverStatus {
             public void run() {
                 if (currentStatus.getStage().equals(HetconsConsensusStage.M1BSent) ||
                         currentStatus.getStage().equals(HetconsConsensusStage.M1ASent)) {
-                    //logger.info("Restart consensus on " + currentStatus.getStage().toString());
+                    logger.info("Restart consensus on " + currentStatus.getStage().toString());
                     currentStatus.setStage(HetconsConsensusStage.HetconsTimeout);
                     restartProposal(proposalStatusID,
                             currentStatus.getCurrentProposal().getValue());
@@ -205,6 +213,7 @@ public class HetconsObserverStatus {
 
         // broadcast 2a
         HetconsMessage m2b = HetconsMessage.newBuilder()
+                .setType(HetconsMessageType.M2b)
                 .setM2B(m2a)
                 .setObserverGroupReferecne(block.getHetconsMessage().getObserverGroupReferecne())
                 .setSig(SignatureUtil.signBytes(service.getConfig().getKeyPair(), m2a))
@@ -220,14 +229,14 @@ public class HetconsObserverStatus {
         if (status.getM1bTimer() != null)
             return;
 
-//        logger.info("Sent M2B:\n");
+        logger.info("Sent M2B:\n");
 
         status.setM2bTimer(new Timer());
         status.getM2bTimer().schedule(new TimerTask() {
             @Override
             public void run() {
                 if (status.getStage().equals(HetconsConsensusStage.M2BSent)) {
-        //            logger.info("Restart consensus on " + status.getStage().toString());
+                    logger.info("Restart consensus on " + status.getStage().toString());
                     status.setStage(HetconsConsensusStage.HetconsTimeout);
                     restartProposal(proposalID, status.getCurrentProposal().getValue());
                     status.setM2bTimer(null);
@@ -284,6 +293,10 @@ public class HetconsObserverStatus {
                 slotStatus.get(slotid).decide(ballot, q, proposalID);
             }
         }
+
+        status.setStage(HetconsConsensusStage.ConsensusDecided);
+
+        System.out.println(formatConsensus(q));
     }
 
     public List<CryptoId> getParticipants() {
@@ -321,13 +334,13 @@ public class HetconsObserverStatus {
             }
         }
 
+        HetconsMessage1b.Builder m1bBuilder = HetconsMessage1b.newBuilder()
+                .setM1A(m1a);
 
-        HetconsMessage1b message1b = HetconsMessage1b.newBuilder()
-                .setM1A(m1a)
-                .setM2A(max2a)
-                .build();
+        if (max2a != null)
+            m1bBuilder.setM2A(max2a);
 
-        return message1b;
+        return m1bBuilder.build();
     }
 
     private HetconsValue get1bValue(HetconsMessage1b m1b) {
@@ -364,7 +377,7 @@ public class HetconsObserverStatus {
                 HetconsUtil.buildBallot(value),
                 current.getTimeout());
 
-        status.updateStatus(proposal, status.getObserverGroup());
+        status.updateProposal(proposal);
 
         HetconsMessage1a message1a = HetconsMessage1a.newBuilder()
                 .setProposal(proposal).build();
@@ -401,6 +414,16 @@ public class HetconsObserverStatus {
         return quorum;
     }
 
+    private String formatConsensus(List<Reference> m2bs) {
+        StringBuilder stringBuilder = new StringBuilder();
+        stringBuilder.append(String.format("A quorum of %d messages for Observer %s have been received\n",
+                m2bs.size(), HetconsUtil.cryptoIdToString(observer.getId())));
+        for (int i = 0; i < m2bs.size(); i++) {
+            Reference r = m2bs.get(i);
+            stringBuilder.append(String.format("\t%s\n", r.getHash().getSha3().toStringUtf8()));
+        }
+        return stringBuilder.toString();
+    }
 
 
 }

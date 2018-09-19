@@ -96,7 +96,8 @@ public class HetconsParticipantService extends CharlotteNodeService {
 
         observerGroup.getObserversList().forEach(o -> {
             HetconsObserverStatus observerStatus = new HetconsObserverStatus(o, this);
-            observerStatus = observers.putIfAbsent(HetconsUtil.cryptoIdToString(o.getId()), observerStatus);
+            observers.putIfAbsent(HetconsUtil.cryptoIdToString(o.getId()), observerStatus);
+            observerStatus = observers.get(HetconsUtil.cryptoIdToString(o.getId()));
             if (!observerStatus.receive1a(block))
                 return;
         });
@@ -125,98 +126,26 @@ public class HetconsParticipantService extends CharlotteNodeService {
         });
 
 
-        // validate 1bs
-        String statusKey = buildConsensusId(message1b.getM1A().getProposal().getSlotsList());
-        HetconsProposalStatus status = getStatus(statusKey);
-
-        if (!validateStatus(status, message1b.getM1A().getProposal(), false))
-            return;
-
-        if (!storeNewBlock(block))
-            return;
-
-        // add this message to the 1b map
-        ArrayList<HetconsObserverQuorum> quora = status.receive1b(id, message1b);
-
-        if (quora.isEmpty())
-            return;
-
-        // prepare for 2a 2b
-        HashMap<CryptoId, HetconsMessage2ab> message2abs = new HashMap<>();
-
-        quora.forEach(quorum -> {
-            message2abs.putIfAbsent(
-                    quorum.getOwner(),
-                    HetconsMessage2ab.newBuilder()
-                            .setProposal(message1b.getM1A().getProposal())
-                            .setValue(message1b.getValue())
-                            .setQuorumOf1Bs(status.get1bQuorumRef(quorum))
-                            .build());
-        });
-
-        // save a 2a
-        // send out 2bs to observes and broadcast to all participants
-        message2abs.forEach((cryptoId, message2ab) -> {
-            status.addM2A(cryptoId, message2ab);
-            Block m2abblock = Block.newBuilder()
-                    .setHetconsMessage(HetconsMessage.newBuilder()
-                            .setIdentity(this.getConfig().getCryptoId())
-                            .setSig(SignatureUtil.signBytes(this.getConfig().getKeyPair(), message2ab.toByteString()))
-                            .setType(HetconsMessageType.M2b)
-                            .setM2B(message2ab)
-                            .build())
-                    .build();
-
-//            sendBlock(cryptoId,block);
-            broadcastHetconsMessageBlocks(status, m2abblock);
-        });
-
-        status.setStage(HetconsConsensusStage.M2BSent);
-        logger.info("Sent M2B:\n");
-
-        if (status.getM2bTimer() != null)
-            return;
-
-        status.setM2bTimer(new Timer());
-        status.getM2bTimer().schedule(new TimerTask() {
-            @Override
-            public void run() {
-                if (status.getStage().equals(HetconsConsensusStage.M2BSent)) {
-                    logger.info("Restart consensus on " + status.getStage().toString());
-                    status.setStage(HetconsConsensusStage.HetconsTimeout);
-                    propose(buildConsensusId(status.getCurrentProposal().getSlotsList()),
-                            status.getHighestBallotM2A().getValue());
-                    status.setM2bTimer(null);
-                }
-            }
-        }, status.getConsensuTimeout());
     }
 
     private void handle2b(HetconsMessage2ab message2b, CryptoId id, Block block) {
-        logger.info(String.format("Server %s Got M2B\n", this.getConfig().getMe()));
-        String statusKey = buildConsensusId(message2b.getProposal().getSlotsList());
-        HetconsProposalStatus status = getStatus(statusKey);
-
-        if (!validateStatus(status, message2b.getProposal(), false))
+        HetconsObserverGroup observerGroup;
+        try {
+            observerGroup = this.getBlock(block.getHetconsMessage().getObserverGroupReferecne())
+                    .getHetconsMessage().getObserverGroup();
+        } catch (Exception ex) {
+            ex.printStackTrace();
             return;
+        }
 
-        if (!storeNewBlock(block))
-            return;
-        ArrayList<HetconsObserverQuorum> quora = status.receive2b(id, message2b);
-
-        if (quora.isEmpty())
-            return;
-
-        //TODO: Is handle 2b run in linear manner or parallel?
-
-        status.setStage(HetconsConsensusStage.ConsensusDecided);
-        String logInfo = "";
-        logInfo += (String.format("Server %s finished consensus\n", this.getConfig().getMe()));
-        logInfo += (String.format("Consensus decided on\nvalue: %d\n", message2b.getValue().getNum()));
-        logInfo += (String.format("Ballot Number: %s\n", message2b.getProposal().getBallot().getBallotSequence()));
-        logInfo += formatConsensus(quora);
-        logger.info(logInfo);
-        status.onDecided(statusKey);
+        observerGroup.getObserversList().forEach(o -> {
+            HetconsObserverStatus observerStatus = observers.get(HetconsUtil.cryptoIdToString(o.getId()));
+            if (observerStatus == null) {
+                logger.warning("Got m1b but no such observer");
+                return;
+            }
+            observerStatus.receive2b(block);
+        });
     }
 
 
@@ -229,24 +158,6 @@ public class HetconsParticipantService extends CharlotteNodeService {
                 stringBuilder.append(String.format("\t%s\n", HetconsUtil.cryptoIdToString(m)));
             });
         }
-        ;
         return stringBuilder.toString();
-    }
-
-    private void broadcastHetconsMessageBlocks(HetconsProposalStatus status, Block block) {
-        HetconsProposal proposal = status.getCurrentProposal();
-        status.getLock().readLock().lock();
-        try {
-            HetconsProposal updatedProposal = status.getCurrentProposal();
-            if (proposal.getBallot().getBallotSequence().compareTo(updatedProposal.getBallot().getBallotSequence()) < 0)
-                return;
-            status.getParticipants().forEach((k, v) -> {
-                if (status.getParticipantIds().get(k) == null)
-                    System.out.printf("k:%s\nsize: %d\n", k, status.getParticipantIds().size());
-                sendBlock(status.getParticipantIds().get(k), block);
-            });
-        } finally {
-            status.getLock().readLock().unlock();
-        }
     }
 }

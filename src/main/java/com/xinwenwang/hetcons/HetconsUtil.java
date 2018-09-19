@@ -5,9 +5,7 @@ import com.isaacsheff.charlotte.node.HashUtil;
 import com.isaacsheff.charlotte.node.SignatureUtil;
 import com.isaacsheff.charlotte.proto.*;
 
-import java.util.Comparator;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 
 public class HetconsUtil {
 
@@ -74,8 +72,9 @@ public class HetconsUtil {
      */
     public static String buildConsensusId(List<IntegrityAttestation.ChainSlot> slots) {
         StringBuilder builder = new StringBuilder();
-        slots.sort(Comparator.comparing(o -> o.getBlock().getHash().getSha3().toStringUtf8()));
-        for (IntegrityAttestation.ChainSlot slot : slots) {
+        List<IntegrityAttestation.ChainSlot> slots2 = new ArrayList<>(slots);
+        Collections.sort(slots2, Comparator.comparing(HetconsUtil::buildChainSlotID));
+        for (IntegrityAttestation.ChainSlot slot : slots2) {
             builder.append(buildChainSlotID(slot));
         }
         return builder.toString();

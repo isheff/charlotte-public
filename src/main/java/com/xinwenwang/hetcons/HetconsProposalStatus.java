@@ -13,42 +13,36 @@ import java.util.logging.Logger;
 public class HetconsProposalStatus {
 
 
+    private static final int maxTimeOut = 10 * 1000;
     private HashMap<Integer, QuorumStatus> quorums;
     private HashMap<String, ParticipantStatus> participantStatuses;
-
-
+    private List<String> chainIDs;
     private HetconsConsensusStage stage;
     private LinkedList<HetconsProposal> proposals;
     private Timer m1bTimer;
     private Timer m2bTimer;
-    private HetconsParticipantService service;
-    private long consensuTimeout;
-
-    private List<String> chainIDs;
-
+    private long consensusTimeout;
     private String ConsensusID;
+    private HetconsParticipantService service;
+    private List<List<CryptoId>> members;
+    private Reference observerGroupReference;
 
-    private static final int maxTimeOut = 10 * 1000;
-
-    public HetconsProposalStatus(HetconsConsensusStage stage, HetconsProposal proposal) {
+    public HetconsProposalStatus(HetconsConsensusStage stage,
+                                 HetconsProposal proposal,
+                                 List<List<CryptoId>> members,
+                                 Reference observerGroupReference) {
         this.stage = stage;
         this.proposals = new LinkedList<HetconsProposal>();
         this.quorums = new HashMap<>();
         this.participantStatuses = new HashMap<>();
         if (proposal != null)
             proposals.add(proposal);
-    }
+        this.members = members;
+        this.observerGroupReference = observerGroupReference;
+        initQuorum(members);
+        initParticipantStatues(members);
+        consensusTimeout = maxTimeOut;
 
-    public HetconsProposalStatus(HetconsConsensusStage stage) {
-        this(stage, null);
-    }
-
-    public HetconsConsensusStage getStage() {
-        return stage;
-    }
-
-    public void setStage(HetconsConsensusStage stage) {
-        this.stage = stage;
     }
 
     public HetconsProposal getCurrentProposal() {
@@ -67,78 +61,87 @@ public class HetconsProposalStatus {
         }
         System.out.printf("Updated Proposal:\n" +
                 proposal + "\n");
-
     }
 
-    public HetconsProposalStatus(HetconsProposal proposal) {
-        this(HetconsConsensusStage.ConsensusIdile, proposal);
+    /**
+     * After timeout, we reset 1b and 2bs
+     */
+    public void reset() {
+        this.participantStatuses = new HashMap<>();
+        initQuorum(members);
+        initParticipantStatues(members);
+
     }
 
     public List<HetconsProposal> getProposalsHistory() {
         return proposals;
     }
 
+    public long getConsensuTimeout() {
+        return consensusTimeout;
+    }
 
     public void setConsensuTimeout(long consensuTimeout) {
         if (consensuTimeout > maxTimeOut) {
             Logger.getGlobal().warning("consensus specified timeout value is greater than the max value. Therefore, we use the max value instead.");
             consensuTimeout = maxTimeOut;
         }
-        this.consensuTimeout = consensuTimeout;
-    }
-
-    public long getConsensuTimeout() {
-        return consensuTimeout;
+        this.consensusTimeout = consensuTimeout;
     }
 
     public Timer getM1bTimer() {
         return m1bTimer;
     }
 
-    public Timer getM2bTimer() {
-        return m2bTimer;
-    }
-
     public void setM1bTimer(Timer m1bTimer) {
         this.m1bTimer = m1bTimer;
+    }
+
+    public Timer getM2bTimer() {
+        return m2bTimer;
     }
 
     public void setM2bTimer(Timer m2bTimer) {
         this.m2bTimer = m2bTimer;
     }
 
-    public void setService(HetconsParticipantService service) {
-        this.service = service;
-    }
-
     public HetconsParticipantService getService() {
         return service;
     }
 
-
-
-
-
-    public void setConsensusID(String consensusID) {
-        ConsensusID = consensusID;
+    public void setService(HetconsParticipantService service) {
+        this.service = service;
     }
 
     public String getConsensusID() {
         return ConsensusID;
     }
 
-    public void onDecided(String proposalID) {}
-
-
-    public void setChainIDs(List<String> chainIDs) {
-        this.chainIDs = chainIDs;
+    public void setConsensusID(String consensusID) {
+        ConsensusID = consensusID;
     }
 
     public List<String> getChainIDs() {
         return chainIDs;
     }
 
-/** -----------------------version 2 ----------------------------------*/
+    public void setChainIDs(List<String> chainIDs) {
+        this.chainIDs = chainIDs;
+    }
+
+    public HetconsConsensusStage getStage() {
+        return stage;
+    }
+
+    public void setStage(HetconsConsensusStage stage) {
+        this.stage = stage;
+    }
+
+    public Reference getObserverGroupReference() {
+        return observerGroupReference;
+    }
+
+    /** -----------------------version 2 ----------------------------------*/
 
     public void initQuorum(List<List<CryptoId>> q) {
 
@@ -150,8 +153,9 @@ public class HetconsProposalStatus {
     public void initParticipantStatues(List<List<CryptoId>> qs) {
         for (int i = 0; i < qs.size(); i++) {
             for (CryptoId m : qs.get(i)) {
-                ParticipantStatus s = participantStatuses.putIfAbsent(HetconsUtil.cryptoIdToString(m),
+                participantStatuses.putIfAbsent(HetconsUtil.cryptoIdToString(m),
                         new ParticipantStatus(m));
+                ParticipantStatus s = participantStatuses.get(HetconsUtil.cryptoIdToString(m));
                 s.addQuorum(quorums.get(i));
             }
         }
