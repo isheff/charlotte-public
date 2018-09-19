@@ -175,26 +175,13 @@ message HetconsTime {
 
 message HetconsValue {
   oneof proposedContent_oneof {
-    charlotte.Block block = 1;
+    charlotte.Reference block = 1;
     int64 num = 2;
   }
 }
 
 enum HetconsProposalType {
   BlockSlot = 0;
-}
-
-
-//message HetconsParticipatedAccountsInfo {
-//  charlotte.Hash chainHash = 1;
-//  HetconsSlot slot = 2;
-//}
-
-message HetconsSlot {
-  oneof slot_type_oneof {
-    int64 blockSlotNumber = 1;
-    IntegrityAttestation.ChainSlot chainSlot = 2;
-  }
 }
 
 message HetconsBallot {
@@ -215,10 +202,6 @@ message HetconsProposal {
   int64 timeout = 7;
 }
 
-// references of a quorum of 1bs or 2bs.
-message HetconsQuorumRefs {
-  repeated charlotte.Hash blockHashes = 1;
-}
 
 message HetconsObserverQuorum {
   charlotte.CryptoId owner = 1;
@@ -234,7 +217,7 @@ message HetconsObserver {
 // the group of observers that the message to be sent.
 message HetconsObserverGroup {
   repeated HetconsObserver observers = 1;
-  repeated Reference chains = 2;
+  repeated Reference roots = 2;
 }
 
 
@@ -253,8 +236,7 @@ message HetconsMessage {
     HetconsMessage1a m1a = 1;
     HetconsMessage1b m1b = 2;
     HetconsMessage2ab m2b = 3;
-    HetconsProposal proposal = 5;
-    HetconsObserverGroup observerGroup = 9;
+    HetconsObserverGroup observerGroup = 5;
   }
   Reference observerGroupReferecne = 10;
   charlotte.Signature sig = 7;
@@ -264,24 +246,24 @@ message HetconsMessage {
 // Leader Propose the new value with a new bollot number
 message HetconsMessage1a {
   HetconsProposal proposal = 1;
-  oneof observerGroupFormat_oneof {
-    HetconsObserverGroup observerGroup = 2;
-  }
 }
 
 // Acceptors reply to the leader with (Proposal for bollet b, and previous accepted proposal which is a 2a message
 message HetconsMessage1b {
   HetconsMessage1a m1a = 1;
   HetconsMessage2ab m2a = 2;
-  HetconsValue value = 3;
 
 }
 
 // 2a and 2b messages have the same format. The difference is that the sig in 2a should be the host server itself.
 message HetconsMessage2ab {
-  HetconsProposal proposal = 1;
+  HetconsMessage1a  m1a = 1;
   HetconsQuorumRefs quorum_of_1bs = 2;
-  HetconsValue value = 3;
+}
+
+// references of a quorum of 1bs or 2bs.
+message HetconsQuorumRefs {
+  repeated charlotte.Reference block_hashes = 1;
 }
 
 

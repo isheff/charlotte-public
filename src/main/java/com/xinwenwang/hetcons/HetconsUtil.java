@@ -5,6 +5,7 @@ import com.isaacsheff.charlotte.node.HashUtil;
 import com.isaacsheff.charlotte.node.SignatureUtil;
 import com.isaacsheff.charlotte.proto.*;
 
+import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 
@@ -63,4 +64,35 @@ public class HetconsUtil {
         }
         return sb.toString();
     }
+
+
+    /**
+     * Return a string to identify a proposal, it is a concatenation of all chain slots, sorted in order,
+     * involved in the proposal.
+     * @param slots
+     * @return a id for the proposal in string
+     */
+    public static String buildConsensusId(List<IntegrityAttestation.ChainSlot> slots) {
+        StringBuilder builder = new StringBuilder();
+        slots.sort(Comparator.comparing(o -> o.getBlock().getHash().getSha3().toStringUtf8()));
+        for (IntegrityAttestation.ChainSlot slot : slots) {
+            builder.append(buildChainSlotID(slot));
+        }
+        return builder.toString();
+    }
+
+    /**
+     * Return a string that represents a chain slot in a format of "root_hash_of_chain || slot_# ",
+     * where || is string concatenation.
+     * @param slot the slot to be use
+     * @return a string id for chain slot
+     */
+    public static String buildChainSlotID(IntegrityAttestation.ChainSlot slot) {
+        return String.format("%s%d", slot.getRoot().getHash().getSha3().toStringUtf8(), slot.getSlot());
+    }
+
+    public static int ballotCompare(HetconsBallot b1, HetconsBallot b2) {
+        return b1.getBallotSequence().compareTo(b2.getBallotSequence());
+    }
+
 }
