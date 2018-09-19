@@ -127,9 +127,16 @@ public class HetconsParticipantServiceTest extends HetconsTest {
                         .build())
                 .setSlot(1)
                 .build();
+        IntegrityAttestation.ChainSlot slot2 = IntegrityAttestation.ChainSlot.newBuilder()
+                .setRoot(Reference.newBuilder()
+                        .setHash(Hash.newBuilder().setSha3(ByteString.copyFromUtf8("efg")).build())
+                        .build())
+                .setSlot(1)
+                .build();
 
         ArrayList<IntegrityAttestation.ChainSlot> slots= new ArrayList<>();
         slots.add(slot);
+        slots.add(slot2);
         HetconsValue value = HetconsValue.newBuilder()
                 .setNum(100).build();
 
@@ -143,15 +150,18 @@ public class HetconsParticipantServiceTest extends HetconsTest {
          * start the test
          */
 //        assertEquals(0, map.size(), "sizebefore propose, there should no prosals avalaible");
-        client.propose(slots, value, ballot, observerGroup, 1000);
+        client.propose(slots, value, ballot, observerGroup, 10000);
 //        client.propose(slots, value1, ballot1, observerGroup, 1000);
 
         try {
-            TimeUnit.SECONDS.sleep(1000);
+            TimeUnit.SECONDS.sleep(10);
         } catch (InterruptedException ex) {
             logger.log(Level.SEVERE, "Interrupt got");
             return;
         }
+        threads.forEach(t -> {
+            t.interrupt();
+        });
 //        assertEquals(1, map.size(), "Propose successfully");
 //        assertEquals(1, map.get("abc|1").getCurrentProposal().getBallot().getBallotNumber(), "ballot number different");
 //        assertEquals(100, map.get("abc|1").getCurrentProposal().getValue().getNum(), "value different");

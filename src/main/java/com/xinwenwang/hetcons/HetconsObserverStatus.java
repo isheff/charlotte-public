@@ -13,6 +13,7 @@ public class HetconsObserverStatus {
     private HetconsObserver observer;
 
     // map from proposal's consensus id to HetconsProposalStatus object. If a set of proposals are conflicting, then they should point to the same status
+
     private HashMap<String, HetconsProposalStatus> proposalStatus;
 
     // Map from a chain slot to a status object which is shared by all proposals related to that slot.
@@ -101,6 +102,7 @@ public class HetconsObserverStatus {
 
         // Echo 1a to all participants
         broadcastToParticipants(block);
+        logger.info("Echo 1as");
 
 
         // Send 1b
@@ -152,6 +154,9 @@ public class HetconsObserverStatus {
         HetconsProposal proposal = block.getHetconsMessage().getM1B().getM1A().getProposal();
         String proposalID = HetconsUtil.buildConsensusId(proposal.getSlotsList());
         HetconsProposalStatus status = proposalStatus.get(proposalID);
+
+        if (status == null)
+            return;
 
         if (status.getCurrentProposal().getBallot().getBallotSequence().compareTo(
                 proposal.getBallot().getBallotSequence()
@@ -249,6 +254,9 @@ public class HetconsObserverStatus {
         HetconsProposal proposal = block.getHetconsMessage().getM2B().getM1A().getProposal();
         String proposalID = HetconsUtil.buildConsensusId(proposal.getSlotsList());
         HetconsProposalStatus status = proposalStatus.get(proposalID);
+
+        if (status == null)
+            return;
 
         if (status.getCurrentProposal().getBallot().getBallotSequence().compareTo(
                 proposal.getBallot().getBallotSequence()
@@ -416,11 +424,13 @@ public class HetconsObserverStatus {
 
     private String formatConsensus(List<Reference> m2bs) {
         StringBuilder stringBuilder = new StringBuilder();
-        stringBuilder.append(String.format("A quorum of %d messages for Observer %s have been received\n",
-                m2bs.size(), HetconsUtil.cryptoIdToString(observer.getId())));
+        HetconsMessage2ab m2b = service.getBlock(m2bs.get(0)).getHetconsMessage().getM2B();
+        stringBuilder.append(String.format("A quorum of %d messages for Observer %s have been received\n\nDecided on value: %s\nForChain: %s\n\nBallot:%s\n\n",
+                m2bs.size(), HetconsUtil.cryptoIdToString(observer.getId()),
+                get2bValue(m2b), HetconsUtil.buildConsensusId(m2b.getM1A().getProposal().getSlotsList()),m2b.getM1A().getProposal().getBallot().getBallotSequence()));
         for (int i = 0; i < m2bs.size(); i++) {
             Reference r = m2bs.get(i);
-            stringBuilder.append(String.format("\t%s\n", r.getHash().getSha3().toStringUtf8()));
+            stringBuilder.append(String.format("\t%s\n", HetconsUtil.bytes2Hex(r.getHash().getSha3().toStringUtf8().getBytes())));
         }
         return stringBuilder.toString();
     }

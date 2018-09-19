@@ -31,7 +31,7 @@ public class HetconsParticipantService extends CharlotteNodeService {
         Block block = input.getBlock();
 
         if (this.getBlockMap().containsKey(HashUtil.sha3Hash(block)))
-            return super.onSendBlocksInput(input);
+            return new ArrayList<>();
 
         if (!block.hasHetconsMessage()) {
             //TODO: handle error
@@ -61,7 +61,10 @@ public class HetconsParticipantService extends CharlotteNodeService {
                         throw new HetconsException(HetconsErrorCode.NO_2B_MESSAGES);
                     break;
                 case OBSERVERGROUP:
+//                    logger.info(String.format("Receive Observer group block %s", block.getHetconsMessage()));
+                    logger.info("Receive Observer group block");
                     storeNewBlock(block);
+                    broadCastObserverGroupBlock(block);
                     break;
                 case UNRECOGNIZED:
                     throw new HetconsException(HetconsErrorCode.EMPTY_MESSAGE);
@@ -93,6 +96,8 @@ public class HetconsParticipantService extends CharlotteNodeService {
             ex.printStackTrace();
             return;
         }
+
+        logger.info("Got 1A");
 
         observerGroup.getObserversList().forEach(o -> {
             HetconsObserverStatus observerStatus = new HetconsObserverStatus(o, this);
@@ -159,5 +164,15 @@ public class HetconsParticipantService extends CharlotteNodeService {
             });
         }
         return stringBuilder.toString();
+    }
+
+    private void broadCastObserverGroupBlock(Block block) {
+        block.getHetconsMessage().getObserverGroup().getObserversList().forEach(o -> {
+            o.getQuorumsList().forEach(q -> {
+                q.getMemebersList().forEach(m -> {
+                    sendBlock(m, block);
+                });
+            });
+        });
     }
 }

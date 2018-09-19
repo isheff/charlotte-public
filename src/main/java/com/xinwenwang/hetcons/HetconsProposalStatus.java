@@ -53,6 +53,8 @@ public class HetconsProposalStatus {
     }
 
     public void updateProposal(HetconsProposal proposal) {
+        if (getCurrentProposal().equals(proposal))
+            return;
         System.out.printf("Old Proposal:\n" +
                 getCurrentProposal() + "\n");
         this.proposals.add(proposal);
@@ -67,9 +69,11 @@ public class HetconsProposalStatus {
      * After timeout, we reset 1b and 2bs
      */
     public void reset() {
-        this.participantStatuses = new HashMap<>();
-        initQuorum(members);
-        initParticipantStatues(members);
+        synchronized (this) {
+            this.participantStatuses = new HashMap<>();
+            initQuorum(members);
+            initParticipantStatues(members);
+        }
 
     }
 
@@ -163,8 +167,10 @@ public class HetconsProposalStatus {
 
     public List<Reference> receive1b(CryptoId id, Reference ref1b) {
         ParticipantStatus s = participantStatuses.get(HetconsUtil.cryptoIdToString(id));
+        if (s == null)
+            return null;
         s.addM1b(ref1b);
-        QuorumStatus q = s.checkQuorum();
+        QuorumStatus q = s.check1bQuorum();
         if (q != null) {
             List<Reference> q1b = new ArrayList<>();
             for (String p : q.participants) {
@@ -177,8 +183,11 @@ public class HetconsProposalStatus {
 
     public List<Reference> receive2b(CryptoId id, Reference ref2b) {
         ParticipantStatus s = participantStatuses.get(HetconsUtil.cryptoIdToString(id));
+        if (s == null) {
+            return null;
+        }
         s.addM2b(ref2b);
-        QuorumStatus q = s.checkQuorum();
+        QuorumStatus q = s.check2bQuorum();
         if (q != null) {
             List<Reference> q2b = new ArrayList<>();
             for (String p : q.participants) {
@@ -212,18 +221,25 @@ public class HetconsProposalStatus {
             }
         }
 
-        QuorumStatus checkQuorum() {
+        void addM2b(Reference m2b) {
+            m2bRef = m2b;
+            quorumStatuses.forEach(q -> {
+                q.add2b(id);
+            });
+        }
+
+        QuorumStatus check1bQuorum() {
             for (QuorumStatus q : quorumStatuses)
                 if (q.isEnough1b())
                     return q;
             return null;
         }
 
-        void addM2b(Reference m2b) {
-            m2bRef = m2bRef;
-            quorumStatuses.forEach(q -> {
-                q.add2b(id);
-            });
+        QuorumStatus check2bQuorum() {
+            for (QuorumStatus q : quorumStatuses)
+                if (q.isEnough2b())
+                    return q;
+            return null;
         }
     }
 
@@ -253,6 +269,10 @@ public class HetconsProposalStatus {
 
         boolean isEnough1b() {
             return m1bs.size() == participants.size();
+        }
+
+        boolean isEnough2b() {
+            return m2bs.size() == participants.size();
         }
 
     }
