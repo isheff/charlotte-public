@@ -32,8 +32,6 @@ public class AgreementChainClient {
   /** used for logging events in this class **/
   private static final Logger logger = Logger.getLogger(AgreementChainClient.class.getName());
 
-  private static final int BLOCKS_PER_EXPERIMENT = 10;
-
   /**
    * Run the experiment.
    * This attempts to append 3 blocks to an agreement chain, and checks at last that it has done so.
@@ -55,9 +53,9 @@ public class AgreementChainClient {
     TimeUnit.SECONDS.sleep(1); // wait a second for the server to start up
 
     // mint a block, and send it out to the HetconsNodes
-    Block[] blocks = new Block[BLOCKS_PER_EXPERIMENT];
+    Block[] blocks = new Block[config.getBlocksPerExperiment()];
 
-    for (int i = 0; i < BLOCKS_PER_EXPERIMENT; ++i) {
+    for (int i = 0; i < config.getBlocksPerExperiment(); ++i) {
       blocks[i] = Block.newBuilder().setStr("block contents "+i).build();
       clientService.onSendBlocksInput(blocks[i]);
     }
@@ -67,7 +65,7 @@ public class AgreementChainClient {
     // get an integrity attestation for the block, and check it.
 
     // get agreement on a root block
-    for (String fern : config.getAgreementChainClientFernServers()) {
+    for (String fern : config.getFernServers()) {
       client.sendWhenReady(clientService.getConfig().getContact(fern).getCryptoId(),
         RequestIntegrityAttestationInput.newBuilder().setPolicy(
           IntegrityPolicy.newBuilder().setFillInTheBlank(
@@ -82,12 +80,18 @@ public class AgreementChainClient {
         ))).build());
     }
 
+    // Once the root block is set up, all the TCP channels and whatnot
+    //  are ready, so we should pause for any lingering computations
+    //  to complete, so we can really time the next part at its best.
+    TimeUnit.SECONDS.sleep(5); // wait a second for the server to start up
+
     // record the inputs sent out for each fern server
-    RequestIntegrityAttestationInput[] inputs =new RequestIntegrityAttestationInput[config.getAgreementChainClientFernServers().size()];
+    RequestIntegrityAttestationInput[] inputs =new RequestIntegrityAttestationInput[config.getFernServers().size()];
     // get agreement on the other blocks
-    for (int i = 1; i < BLOCKS_PER_EXPERIMENT; ++i) {
+    for (int i = 1; i < config.getBlocksPerExperiment(); ++i) {
       int f = 0;
-      for (String fern : config.getAgreementChainClientFernServers()) {
+      logger.info("Setting up request for block "+i);
+      for (String fern : config.getFernServers()) {
         inputs[f] =
           RequestIntegrityAttestationInput.newBuilder().setPolicy(
             IntegrityPolicy.newBuilder().setFillInTheBlank(
@@ -101,14 +105,14 @@ public class AgreementChainClient {
                       setParent(Reference.newBuilder().setHash(sha3Hash(blocks[i-1])))).
                   setSignature(Signature.newBuilder().setCryptoId(clientService.getConfig().getContact(fern).getCryptoId()))
           ))).build();
+        client.sendWhenReady(clientService.getConfig().getContact(fern).getCryptoId(), inputs[f]);
         ++f;
-        client.sendWhenReady(clientService.getConfig().getContact(fern).getCryptoId(),inputs[i]);
       }
     }
 
 
     // wait to receive an attestation from each fern server for the last input
-    for (int f = 0; f < config.getAgreementChainClientFernServers().size(); ++f) {
+    for (int f = 0; f < config.getFernServers().size(); ++f) {
       client.getKnownResponses().putIfAbsent(stripRequest(inputs[f]), new ConcurrentHolder<Hash>());
       if (null == client.getKnownResponses().get(stripRequest(inputs[f])).get()) {
         logger.log(Level.SEVERE, "null known response at end of chain. This should not be possible");
@@ -117,5 +121,6 @@ public class AgreementChainClient {
     logger.info("Experiment Complete");
     client.shutdown();
     clientNode.stop();
+    System.exit(0);
   }
 }

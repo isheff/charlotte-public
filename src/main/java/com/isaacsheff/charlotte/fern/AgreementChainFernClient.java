@@ -120,6 +120,7 @@ public class AgreementChainFernClient {
    * @param input the RequestIntegrityAttestationInput to be sent to each Fern server.
    */
   public void send(CryptoId destination, RequestIntegrityAttestationInput input) {
+    logger.info("sending request: " + input);
     getHandles().get(destination).queueMessage(input);
   }
 

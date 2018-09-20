@@ -55,7 +55,7 @@ public class TimestampFern extends FernImplBase {
   private static final Logger logger = Logger.getLogger(TimestampFern.class.getName());
 
   /** The local CharlotteNodeService used to send and receive blocks */
-  private final CharlotteNodeService node;
+  protected CharlotteNodeService node;
 
   /**
    * Run as a main class with an arg specifying a config file name to run a Fern Timestamp server.
@@ -137,6 +137,8 @@ public class TimestampFern extends FernImplBase {
   public TimestampFern(final CharlotteNodeService node) {
     this.node = node;
   }
+
+  protected TimestampFern() {}
 
   /** @return The local CharlotteNodeService used to send and receive blocks */
   public CharlotteNodeService getNode() {return node;}
