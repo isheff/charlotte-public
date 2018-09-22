@@ -6,6 +6,7 @@ import static java.lang.System.currentTimeMillis;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import com.isaacsheff.charlotte.node.CharlotteNode;
 import com.isaacsheff.charlotte.node.CharlotteNodeService;
 import com.isaacsheff.charlotte.proto.Block;
 import com.isaacsheff.charlotte.proto.IntegrityAttestation;
@@ -33,7 +34,8 @@ public class TimestampExperimentClient {
       logger.log(Level.SEVERE, "no config file name given as argument");
       return;
     }
-    CharlotteNodeService clientService = TimestampExperimentNode.launchServer(args[0]);
+    CharlotteNodeService clientService = new SilentBroadcastNode(args[0]);
+    (new Thread(new CharlotteNode(clientService))).start();
     final TimestampExperimentConfig config =
       (new ObjectMapper(new YAMLFactory())).readValue(Paths.get(args[0]).toFile(), TimestampExperimentConfig.class);
 
