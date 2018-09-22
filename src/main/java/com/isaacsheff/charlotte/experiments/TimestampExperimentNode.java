@@ -1,13 +1,11 @@
 package com.isaacsheff.charlotte.experiments;
 
 import static com.isaacsheff.charlotte.fern.TimestampFern.getFernNode;
-import static com.isaacsheff.charlotte.node.HashUtil.sha3Hash;
 import static java.lang.Integer.parseInt;
 
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -40,10 +38,11 @@ public class TimestampExperimentNode extends TimestampNode {
   @Override
   public void broadcastBlock(Block block) {
     if (block.hasIntegrityAttestation()) {
-      logger.info("integrity attestation with hash: " + sha3Hash(block) + " is: " + block);
       super.broadcastBlock(block);
     }
   }
+
+
 
   public static TimestampExperimentNode launchServer(String filename)  throws InterruptedException, IOException {
     final TimestampExperimentConfig config =

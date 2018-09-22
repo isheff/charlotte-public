@@ -1,27 +1,16 @@
 package com.isaacsheff.charlotte.experiments;
 
-import static com.isaacsheff.charlotte.fern.AgreementChainFernClient.stripRequest;
-import static com.isaacsheff.charlotte.fern.AgreementChainFernService.getFernNode;
-import static com.isaacsheff.charlotte.node.HashUtil.sha3Hash;
+import static com.google.protobuf.util.Timestamps.fromMillis;
+import static com.isaacsheff.charlotte.node.SignatureUtil.signBytes;
+import static java.lang.System.currentTimeMillis;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
-import com.isaacsheff.charlotte.collections.ConcurrentHolder;
-import com.isaacsheff.charlotte.fern.AgreementChainFernClient;
-import com.isaacsheff.charlotte.fern.TimestampClient;
-import com.isaacsheff.charlotte.node.CharlotteNode;
 import com.isaacsheff.charlotte.node.CharlotteNodeService;
-import com.isaacsheff.charlotte.node.TimestampNode;
 import com.isaacsheff.charlotte.proto.Block;
-import com.isaacsheff.charlotte.proto.Hash;
 import com.isaacsheff.charlotte.proto.IntegrityAttestation;
-import com.isaacsheff.charlotte.proto.IntegrityAttestation.ChainSlot;
-import com.isaacsheff.charlotte.proto.IntegrityAttestation.SignedChainSlot;
-import com.isaacsheff.charlotte.proto.IntegrityPolicy;
-import com.isaacsheff.charlotte.proto.Reference;
-import com.isaacsheff.charlotte.proto.RequestIntegrityAttestationInput;
-import com.isaacsheff.charlotte.proto.Signature;
-import com.isaacsheff.charlotte.yaml.Config;
+import com.isaacsheff.charlotte.proto.IntegrityAttestation.SignedTimestampedReferences;
+import com.isaacsheff.charlotte.proto.IntegrityAttestation.TimestampedReferences;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -53,6 +42,17 @@ public class TimestampExperimentClient {
     for (int i = 0; i < config.getBlocksPerExperiment(); ++i) {
       blocks[i] = Block.newBuilder().setStr("block contents "+i).build();
     }
+    TimeUnit.SECONDS.sleep(1); // wait a second for the server to start up
+    // send out an attetation (attesting to 0 blocks) to get those channels warmed up!
+    final TimestampedReferences dummy =
+      TimestampedReferences.newBuilder().setTimestamp(fromMillis(currentTimeMillis())).build();
+    clientService.onSendBlocksInput(Block.newBuilder().setIntegrityAttestation(
+          IntegrityAttestation.newBuilder().setSignedTimestampedReferences(
+            SignedTimestampedReferences.newBuilder().
+              setTimestampedReferences(dummy).
+              setSignature(signBytes(clientService.getConfig().getKeyPair(), dummy))
+              )).build());
+
 
     TimeUnit.SECONDS.sleep(10); // wait a second for the server to start up
 
