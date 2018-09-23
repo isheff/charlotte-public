@@ -7,6 +7,7 @@ option objc_class_prefix = "CHARLOTTE";
 
 package charlotte;
 
+import "google/protobuf/timestamp.proto";
 // To use Any: import "google/protobuf/any.proto";
 // To use Empty: import "google/protobuf/empty.proto";
 
@@ -20,11 +21,11 @@ message Hash {
 }
 
 message PublicKey {
-  message ElipticCurveP256 { // I suppose we may someday want to edit how we store P256s?
+  message EllipticCurveP256 { // I suppose we may someday want to edit how we store P256s?
     bytes byteString = 1;
   }
   oneof keyalgorithm_oneof {    
-    ElipticCurveP256 elipticCurveP256 = 1;
+    EllipticCurveP256 ellipticCurveP256 = 1;
   }
 }
 
@@ -65,8 +66,27 @@ message IntegrityAttestation {
     ChainSlot chainSlot = 1;
     Signature signature = 2;
   }
+  message TimestampedReferences {
+    google.protobuf.Timestamp timestamp = 1;
+    repeated Reference block = 2;
+  }
+  message SignedTimestampedReferences {
+    TimestampedReferences timestampedReferences = 1;
+    Signature signature = 2;
+  }
+  message GitSimBranch {
+    google.protobuf.Timestamp timestamp = 1;
+    string branchName = 2;
+    Reference commit = 3;
+  }
+  message SignedGitSimBranch {
+    GitSimBranch gitSimBranch = 1;
+    Signature signature = 2;
+  }
   oneof integrityattestationtype_oneof {
     SignedChainSlot signedChainSlot = 1;
+    SignedTimestampedReferences signedTimestampedReferences = 2;
+    SignedGitSimBranch signedGitSimBranch = 3;
   }
 }
 
@@ -83,11 +103,32 @@ message AvailabilityAttestation {
   }
 }
 
+message SignedGitSimCommit {
+  message GitSimCommit {
+    message GitSimParents {
+      message GitSimParent {
+        Reference parentCommit = 1;
+        bytes diff = 2;
+      }
+      repeated GitSimParent parent = 1;
+    }
+    string comment = 1;
+    Hash hash = 2;
+    oneof commit_oneof {
+      bytes initialCommit = 3;
+      GitSimParents parents = 4;
+    }
+  }
+  GitSimCommit commit = 1;
+  Signature signature = 2;
+}
+
 message Block {
   oneof blocktype_oneof {
     AvailabilityAttestation availabilityAttestation = 1;
     IntegrityAttestation integrityAttestation = 2;
     string str = 3; // why not?
+    SignedGitSimCommit signedGitSimCommit= 4;
     // This is probably the best place for an Any type, but for now, keep it minimum
   }
 }
@@ -95,58 +136,18 @@ message Block {
 
 // SERVICES
 
-// a statement by a CryptoId that you can contact it at this url:port
-message SignedAddress {
-  message Address {
-    string url = 1;
-    uint32 port = 2;
-  }
-  Address address = 1;
-  Signature signature = 2;
-}
 
-// a challenge: can you prove that this channel (e.g. a TLS channel) connects to a specific cryptoID?
-message Challenge {
-  string str = 1; // should be randomly selected
-  Hash hash = 2; // specifies a hash algorithm only. need not have content.
-}
-
-// I made wrappers for all the inputs and outputs because maybe someday we'll want to expand them.
-message ChallengeInput {
-  Challenge challenge = 1;
-}
-message ResponseToChallenge {
-  string errorMessage = 1;
-  Signature signature = 2;
-}
 message SendBlocksInput {
   Block block = 1;
 }
 message SendBlocksResponse {
   string errorMessage = 1;
 }
-message SendAddressesInput {
-  SignedAddress address = 1;
-}
-message SendAddressesResponse {
-  string errorMessage = 1;
-}
 
 service CharlotteNode {
-  // Using the hash algorithm provided,
-  // ( bytestring"Response to Challenge with Hash: " concat hash(challenge.str))
-  // then sign that and return the signature.
-  // used to guarangee that an open channel (possibly TLS) corresponds to a crypto ID
-  // When using crypto IDs to do your TLS, this would not be necessary.
-  rpc ChallengeResponse(ChallengeInput) returns (ResponseToChallenge) {}
-
   // send blocks to this server.
   // used for gossiping / flooding
   rpc SendBlocks(stream SendBlocksInput) returns (stream SendBlocksResponse) {}
-
-  // Gossip addresses of known participants.
-  // Participants must sign their addresses, allowing others to put a url:port to a CryptoID.
-  rpc SendAddresses(stream SendAddressesInput) returns (stream SendAddressesResponse) {}
 }
 
 
@@ -167,6 +168,24 @@ message RequestAvailabilityAttestationResponse {
 }
 service Wilbur { // anything running a Wilbur service should also run a CharlotteNode
   rpc RequestAvailabilityAttestation(RequestAvailabilityAttestationInput) returns (RequestAvailabilityAttestationResponse) {}
+}
+
+// WILBUR QUERY
+
+message WilburQueryInput {
+  oneof wilburquery_oneof {
+    Reference reference = 1;
+    Block fillInTheBlank = 2;
+  }
+}
+
+message WilburQueryResponse {
+  string errorMessage = 1;
+  repeated Block block = 2;
+}
+
+service WilburQuery { // anything running a WilburQuery service should also run a Wilbur and CharlotteNode service
+  rpc WilburQuery(WilburQueryInput) returns (WilburQueryResponse) {}
 }
 
 

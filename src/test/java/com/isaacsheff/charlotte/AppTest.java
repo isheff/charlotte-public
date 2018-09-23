@@ -1,33 +1,58 @@
 package com.isaacsheff.charlotte;
 
-import junit.framework.Test;
-import junit.framework.TestCase;
-import junit.framework.TestSuite;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import com.isaacsheff.charlotte.App;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
- * Unit test for simple App.
+ * A fairly bland test suite for the fairly meaningless "App" class, mostly to remind myself of how JUnit works.
+ * @author Isaac Sheff
  */
-public class AppTest extends TestCase {
+class AppTest {
+
+  /** An example of a static parameter, which can be set by a BeforeAll method. */
+  private static int staticTestParam;
+
+  /** An example of a test parameter which can be set by a BeforeEach method. */
+  private int testParam;
+
   /**
-   * Create the test case
-   *
-   * @param testName name of the test case
+   * Set stuff up before running any tests in this class.
+   * This won't really count as a test, even if we label it @Test, but I guess we can put assertions in it.
    */
-  public AppTest( String testName ) {
-    super( testName );
+  @BeforeAll
+  static void setup() {
+    staticTestParam = 2;
+    assertTrue(true, "Optional message here");
   }
 
   /**
-   * @return the suite of tests being tested
+   * Set stuff up before running each test in this class.
+   * This won't really count as a test, even if we label it @Test, but I guess we can put assertions in it.
+   * Not sure if there's a different instance object fro each test run.
    */
-  public static Test suite() {
-    return new TestSuite( AppTest.class );
+  @BeforeEach
+  void init() {
+    testParam = 2;
+    assertEquals(2,2, "Optional message here");
+  }
+
+  /** Test pretty much nothing of interest. */
+  @Test
+  void justAnExample() {
+    assertEquals(testParam, staticTestParam, "Optional message here");
   }
 
   /**
-   * Rigourous Test :-)
+   * Run App's main method and see if anything bad happens.
+   * This will probably print out stuff, which is probably bad form, but here we are...
    */
-  public void testApp() {
-    assertTrue( true );
+  @Test
+  void runMain() {
+    App.main(new String[]{});
   }
 }
