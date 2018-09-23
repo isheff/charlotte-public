@@ -101,13 +101,16 @@ public class HetconsParticipantService extends CharlotteNodeService {
 
         // FIXME: Concurrency
         // TODO: parallel receive1a
-        observerGroup.getObserversList().forEach(o -> {
-            HetconsObserverStatus observerStatus = new HetconsObserverStatus(o, this);
-            observers.putIfAbsent(HetconsUtil.cryptoIdToString(o.getId()), observerStatus);
-            observerStatus = observers.get(HetconsUtil.cryptoIdToString(o.getId()));
-            if (!observerStatus.receive1a(block))
-                return;
-        });
+        synchronized (observers) {
+            observerGroup.getObserversList().forEach(o -> {
+                HetconsObserverStatus observerStatus = new HetconsObserverStatus(o, this);
+                observers.putIfAbsent(HetconsUtil.cryptoIdToString(o.getId()), observerStatus);
+                observerStatus = observers.get(HetconsUtil.cryptoIdToString(o.getId()));
+                if (!observerStatus.receive1a(block))
+                    return;
+            });
+        }
+
     }
 
     private void handle1b(HetconsMessage1b message1b, CryptoId id, Block block) {
