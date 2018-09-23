@@ -135,8 +135,10 @@ public class HetconsParticipantServiceTest extends HetconsTest {
                 .build();
 
         ArrayList<IntegrityAttestation.ChainSlot> slots= new ArrayList<>();
+        ArrayList<IntegrityAttestation.ChainSlot> slots2= new ArrayList<>();
         slots.add(slot);
         slots.add(slot2);
+        slots2.add(slot2);
         HetconsValue value = HetconsValue.newBuilder()
                 .setNum(100).build();
 
@@ -151,7 +153,7 @@ public class HetconsParticipantServiceTest extends HetconsTest {
          */
 //        assertEquals(0, map.size(), "sizebefore propose, there should no prosals avalaible");
         client.propose(slots, value, ballot, observerGroup, 10000);
-//        client.propose(slots, value1, ballot1, observerGroup, 1000);
+        client.propose(slots2, value1, ballot1, observerGroup, 10000);
 
         try {
             TimeUnit.SECONDS.sleep(10);

@@ -1,6 +1,7 @@
 package com.xinwenwang.hetcons;
 
 import com.isaacsheff.charlotte.proto.HetconsBallot;
+import com.isaacsheff.charlotte.proto.HetconsMessage1a;
 import com.isaacsheff.charlotte.proto.HetconsMessage2ab;
 import com.isaacsheff.charlotte.proto.Reference;
 
@@ -38,8 +39,8 @@ public class HetconsSlotStatus {
         }
     }
 
-    public boolean has2aFromOtherProposal(String id) {
-        return !(m2a == null || id.equals(HetconsUtil.buildConsensusId(m2a.getM1A().getProposal().getSlotsList())));
+    public boolean has2aFromOtherProposal(String id, HetconsObserverStatus observerStatus) {
+        return !(m2a == null || id.equals(HetconsUtil.buildConsensusId(observerStatus.getM1aFromReference(m2a.getM1ARef()).getProposal().getSlotsList())));
     }
 
     public boolean hasLargerBallot(HetconsBallot ballot) {
@@ -51,9 +52,10 @@ public class HetconsSlotStatus {
      * Only update once message 2a.
      * @param m2a the m2a to be used for this slot.
      */
-    synchronized public void setM2a(HetconsMessage2ab m2a) {
-        if (this.m2a == null || this.m2a.getM1A().getProposal().getBallot().getBallotSequence().compareTo(
-                m2a.getM1A().getProposal().getBallot().getBallotSequence()
+    synchronized public void setM2a(HetconsMessage2ab m2a, HetconsObserverStatus observerStatus) {
+
+        if (this.m2a == null || observerStatus.getM1aFromReference(this.m2a.getM1ARef()).getProposal().getBallot().getBallotSequence().compareTo(
+                observerStatus.getM1aFromReference(m2a.getM1ARef()).getProposal().getBallot().getBallotSequence()
         ) < 0) {
             this.m2a = m2a;
             this.stage = StatusStage.RECEIVED2A;

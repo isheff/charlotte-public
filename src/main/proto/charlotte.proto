@@ -250,14 +250,14 @@ message HetconsMessage1a {
 
 // Acceptors reply to the leader with (Proposal for bollet b, and previous accepted proposal which is a 2a message
 message HetconsMessage1b {
-  HetconsMessage1a m1a = 1;
+  charlotte.Reference m1a_ref = 1;
   HetconsMessage2ab m2a = 2;
 
 }
 
 // 2a and 2b messages have the same format. The difference is that the sig in 2a should be the host server itself.
 message HetconsMessage2ab {
-  HetconsMessage1a  m1a = 1;
+  charlotte.Reference m1a_ref = 1;
   HetconsQuorumRefs quorum_of_1bs = 2;
 }
 

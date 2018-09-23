@@ -181,7 +181,7 @@ public class HetconsProposalStatus {
         return null;
     }
 
-    public List<Reference> receive2b(CryptoId id, Reference ref2b) {
+    public HashMap<String, Object> receive2b(CryptoId id, Reference ref2b) {
         ParticipantStatus s = participantStatuses.get(HetconsUtil.cryptoIdToString(id));
         if (s == null) {
             return null;
@@ -193,7 +193,10 @@ public class HetconsProposalStatus {
             for (String p : q.participants) {
                 q2b.add(this.participantStatuses.get(p).m2bRef);
             }
-            return q2b;
+            HashMap<String, Object> ret = new HashMap<>();
+            ret.put("references", q2b);
+            ret.put("participants", q.participants);
+            return ret;
         }
         return null;
     }

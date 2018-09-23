@@ -99,6 +99,8 @@ public class HetconsParticipantService extends CharlotteNodeService {
 
         logger.info("Got 1A");
 
+        // FIXME: Concurrency
+        // TODO: parallel receive1a
         observerGroup.getObserversList().forEach(o -> {
             HetconsObserverStatus observerStatus = new HetconsObserverStatus(o, this);
             observers.putIfAbsent(HetconsUtil.cryptoIdToString(o.getId()), observerStatus);
@@ -175,4 +177,18 @@ public class HetconsParticipantService extends CharlotteNodeService {
             });
         });
     }
+
+    /**
+     * Invoked whenever an observer reaches a decision.
+     * Extending classes may find it useful to Override this.
+     * Note that this may be called multiple times for the same consensus, as more 2bs arrive.
+     * This implementation does nothing.
+     * @param quora The quora satisfied by the 2b messages known.
+     * @param message2b the actual message that triggered this decision.
+     * @param id the CryptoId of the sender of the most recent 2b.
+     */
+    protected void onDecision(final HetconsObserverQuorum quoraMembers,
+                              final Collection<Reference> quoraMessages,
+                              final HetconsMessage2ab message2b,
+                              final CryptoId id) {}
 }

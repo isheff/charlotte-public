@@ -78,9 +78,10 @@ public class HetconsObserverStatus {
         }
 
         // See if we already have 2as
+        // FIXME: update ballot number instead of discarding the proposal
         for (String slot: chainIDs) {
             HetconsSlotStatus status = slotStatus.get(slot);
-            if (status.has2aFromOtherProposal(proposalStatusID) || status.isDecided())
+            if (status.has2aFromOtherProposal(proposalStatusID, this) || status.isDecided())
                 return false;
         }
 
@@ -106,11 +107,12 @@ public class HetconsObserverStatus {
 
 
         // Send 1b
+        // FIXME: use reference
         Reference m1aRef = Reference.newBuilder().setHash(
                 HashUtil.sha3Hash(block)
         ).build();
 
-        HetconsMessage1b m1b = prepareM1b(m1a, proposalStatusID);
+        HetconsMessage1b m1b = prepareM1b(m1a, m1aRef, proposalStatusID);
 
         if (m1b == null)
             return false;
@@ -151,7 +153,11 @@ public class HetconsObserverStatus {
     }
 
     public void receive1b(Block block) {
-        HetconsProposal proposal = block.getHetconsMessage().getM1B().getM1A().getProposal();
+        HetconsMessage1a message1a = getM1aFromReference(block.getHetconsMessage().getM1B().getM1ARef());
+        if (message1a == null) {
+            return;
+        }
+        HetconsProposal proposal = message1a.getProposal();
         String proposalID = HetconsUtil.buildConsensusId(proposal.getSlotsList());
         HetconsProposalStatus status = proposalStatus.get(proposalID);
 
@@ -173,18 +179,20 @@ public class HetconsObserverStatus {
         HetconsBallot ballot = null;
         HetconsValue value = null;
         HetconsMessage1a m1a = null;
+        Reference m1aRef = null;
 
         // CHeck if the return quorum is valid: same value, same ballot number
         for (Reference r: q) {
             Block b1b = service.getBlock(r);
             HetconsMessage1b m1b = b1b.getHetconsMessage().getM1B();
-            m1a = m1b.getM1A();
+            m1a = getM1aFromReference(m1b.getM1ARef());
+            m1aRef = m1b.getM1ARef();
             if (ballot == null && value == null) {
-                ballot = m1b.getM1A().getProposal().getBallot();
+                ballot = m1a.getProposal().getBallot();
                 value = get1bValue(m1b);
             } else {
                 if (HetconsUtil.ballotCompare(
-                        m1b.getM1A().getProposal().getBallot(),
+                        m1a.getProposal().getBallot(),
                         ballot) != 0 || !value.equals(get1bValue(m1b)))
                     return;
             }
@@ -194,7 +202,7 @@ public class HetconsObserverStatus {
 
         HetconsQuorumRefs refs = HetconsQuorumRefs.newBuilder().addAllBlockHashes(q).build();
         HetconsMessage2ab m2a = HetconsMessage2ab.newBuilder()
-                .setM1A(m1a)
+                .setM1ARef(m1aRef)
                 .setQuorumOf1Bs(refs)
                 .build();
 
@@ -203,15 +211,15 @@ public class HetconsObserverStatus {
                 HetconsSlotStatus slotStatus = this.slotStatus.get(slot);
                 HetconsMessage2ab slot2a = slotStatus.getM2a();
                 if (slot2a != null &&
-                        HetconsUtil.ballotCompare(slot2a.getM1A().getProposal().getBallot(),
-                                m2a.getM1A().getProposal().getBallot()) > 0) {
+                        HetconsUtil.ballotCompare(getM1aFromReference(slot2a.getM1ARef()).getProposal().getBallot(),
+                                getM1aFromReference(m2a.getM1ARef()).getProposal().getBallot()) > 0) {
                     return;
                 }
             }
 
             for (String slot: status.getChainIDs()) {
                 HetconsSlotStatus slotStatus = this.slotStatus.get(slot);
-                slotStatus.setM2a(m2a);
+                slotStatus.setM2a(m2a, this);
             }
         }
 
@@ -251,7 +259,10 @@ public class HetconsObserverStatus {
     }
 
     public void receive2b(Block block) {
-        HetconsProposal proposal = block.getHetconsMessage().getM2B().getM1A().getProposal();
+        HetconsMessage1a message1a = getM1aFromReference(block.getHetconsMessage().getM2B().getM1ARef());
+        if (message1a == null)
+            return;
+        HetconsProposal proposal = message1a.getProposal();
         String proposalID = HetconsUtil.buildConsensusId(proposal.getSlotsList());
         HetconsProposalStatus status = proposalStatus.get(proposalID);
 
@@ -265,8 +276,9 @@ public class HetconsObserverStatus {
         }
         service.storeNewBlock(block);
         Reference refm2b = Reference.newBuilder().setHash(HashUtil.sha3Hash(block)).build();
-        List<Reference> q = status.receive2b(block.getHetconsMessage().getIdentity(), refm2b);
-
+        HashMap m = status.receive2b(block.getHetconsMessage().getIdentity(), refm2b);
+        List<Reference> q = (List<Reference>)m.get("references");
+        List<CryptoId> p = (List<CryptoId>) m.get("participants");
         if (q == null)
             return;
 
@@ -279,11 +291,11 @@ public class HetconsObserverStatus {
             HetconsMessage2ab m2b = b2b.getHetconsMessage().getM2B();
             HetconsValue temp = get2bValue(m2b);
             if (ballot == null && value == null) {
-                ballot = m2b.getM1A().getProposal().getBallot();
+                ballot = getM1aFromReference(m2b.getM1ARef()).getProposal().getBallot();
                 value = get2bValue(m2b);
             } else {
                 if (HetconsUtil.ballotCompare(
-                        m2b.getM1A().getProposal().getBallot(),
+                        getM1aFromReference(m2b.getM1ARef()).getProposal().getBallot(),
                         ballot) != 0 || (temp != null && !value.equals(temp)))
                     return;
             }
@@ -305,6 +317,11 @@ public class HetconsObserverStatus {
         status.setStage(HetconsConsensusStage.ConsensusDecided);
 
         System.out.println(formatConsensus(q));
+
+        HetconsObserverQuorum observerQuorum = HetconsObserverQuorum.newBuilder().setOwner(observer.getId())
+                .addAllMemebers(p)
+                .build();
+        service.onDecision(observerQuorum, q, block.getHetconsMessage().getM2B(), block.getHetconsMessage().getIdentity());
     }
 
     public List<CryptoId> getParticipants() {
@@ -319,23 +336,22 @@ public class HetconsObserverStatus {
      * @param proposalID
      * @return
      */
-    public HetconsMessage1b prepareM1b(HetconsMessage1a m1a, String proposalID) {
+    public HetconsMessage1b prepareM1b(HetconsMessage1a m1a, Reference m1aRef, String proposalID) {
 
         HetconsMessage2ab max2a = null;
         for (String slotID : proposalStatus.get(proposalID).getChainIDs()) {
             HetconsSlotStatus status = this.slotStatus.get(slotID);
             HetconsMessage2ab message2ab = status.getM2a();
-            if (message2ab != null &&
-                    !proposalID.equals(HetconsUtil.buildConsensusId(message2ab.getM1A().getProposal().getSlotsList()))) {
+            if (message2ab != null && // If m2a exists then m1a must exist
+                    !proposalID.equals(HetconsUtil.buildConsensusId(getM1aFromReference(message2ab.getM1ARef()).getProposal().getSlotsList()))) {
                 return null;
             } else {
-
                 if (max2a == null)
                     max2a = message2ab;
                 else {
                     if (message2ab != null) {
-                        max2a = max2a.getM1A().getProposal().getBallot().getBallotSequence().compareTo(
-                                message2ab.getM1A().getProposal().getBallot().getBallotSequence()
+                        max2a = getM1aFromReference(max2a.getM1ARef()).getProposal().getBallot().getBallotSequence().compareTo(
+                                getM1aFromReference(message2ab.getM1ARef()).getProposal().getBallot().getBallotSequence()
                         ) >= 0 ? max2a : message2ab;
                     }
                 }
@@ -343,7 +359,7 @@ public class HetconsObserverStatus {
         }
 
         HetconsMessage1b.Builder m1bBuilder = HetconsMessage1b.newBuilder()
-                .setM1A(m1a);
+                .setM1ARef(m1aRef);
 
         if (max2a != null)
             m1bBuilder.setM2A(max2a);
@@ -352,7 +368,7 @@ public class HetconsObserverStatus {
     }
 
     private HetconsValue get1bValue(HetconsMessage1b m1b) {
-        return m1b.hasM2A() ? m1b.getM2A().getM1A().getProposal().getValue() : m1b.getM1A().getProposal().getValue();
+        return m1b.hasM2A() ? getM1aFromReference(m1b.getM2A().getM1ARef()).getProposal().getValue() : getM1aFromReference(m1b.getM1ARef()).getProposal().getValue();
     }
 
     private HetconsValue get2bValue(HetconsMessage2ab m2b) {
@@ -427,12 +443,23 @@ public class HetconsObserverStatus {
         HetconsMessage2ab m2b = service.getBlock(m2bs.get(0)).getHetconsMessage().getM2B();
         stringBuilder.append(String.format("A quorum of %d messages for Observer %s have been received\n\nDecided on value: %s\nForChain: %s\n\nBallot:%s\n\n",
                 m2bs.size(), HetconsUtil.cryptoIdToString(observer.getId()),
-                get2bValue(m2b), HetconsUtil.buildConsensusId(m2b.getM1A().getProposal().getSlotsList()),m2b.getM1A().getProposal().getBallot().getBallotSequence()));
+                get2bValue(m2b), HetconsUtil.buildConsensusId(getM1aFromReference(m2b.getM1ARef()).getProposal().getSlotsList()),getM1aFromReference(m2b.getM1ARef()).getProposal().getBallot().getBallotSequence()));
         for (int i = 0; i < m2bs.size(); i++) {
             Reference r = m2bs.get(i);
             stringBuilder.append(String.format("\t%s\n", HetconsUtil.bytes2Hex(r.getHash().getSha3().toStringUtf8().getBytes())));
         }
         return stringBuilder.toString();
+    }
+
+    public HetconsMessage1a getM1aFromReference(Reference m1aRef) {
+        try {
+            Block block = service.getBlock(m1aRef);
+            return block.getHetconsMessage().getM1A();
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        }
+
     }
 
 
