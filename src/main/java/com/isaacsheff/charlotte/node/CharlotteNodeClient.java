@@ -11,6 +11,7 @@ import com.isaacsheff.charlotte.proto.CharlotteNodeGrpc;
 import com.isaacsheff.charlotte.proto.CharlotteNodeGrpc.CharlotteNodeStub;
 import com.isaacsheff.charlotte.proto.SendBlocksInput;
 import com.isaacsheff.charlotte.proto.SendBlocksResponse;
+import com.isaacsheff.charlotte.experiments.SendToObserverLogging;
 import com.isaacsheff.charlotte.proto.Block;
 import com.isaacsheff.charlotte.yaml.Contact;
 
@@ -57,7 +58,7 @@ public class CharlotteNodeClient {
    * Runs in the thread: reads blocks from the queue, and sends them along to the server via sendBlocksInputObserver.
    * Never actually accessed in this class outside the constructor.
    */
-  private final SendToObserver<SendBlocksInput> sendBlocksRunnable;
+  private final SendToObserverLogging<SendBlocksInput> sendBlocksRunnable;
 
   /**
    * Represents the single call to sendBlocks which this Client wraps.
@@ -92,7 +93,7 @@ public class CharlotteNodeClient {
     sendBlocksCountDownLatch = new CountDownLatch(1);
     sendBlocksResponseObserver = new SendBlocksResponseObserver(getSendBlocksCountDownLatch());
     sendBlocksInputObserver = asyncStub.sendBlocks(getSendBlocksResponseObserver());
-    sendBlocksRunnable = new SendToObserver<SendBlocksInput>(sendBlocksQueue, sendBlocksInputObserver);
+    sendBlocksRunnable = new SendToObserverLogging<SendBlocksInput>(sendBlocksQueue, sendBlocksInputObserver);
     sendBlocksThread = new Thread(sendBlocksRunnable);
     sendBlocksThread.start();
   }
