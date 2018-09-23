@@ -39,9 +39,9 @@ public class TimestampExperimentClient {
     final TimestampExperimentConfig config =
       (new ObjectMapper(new YAMLFactory())).readValue(Paths.get(args[0]).toFile(), TimestampExperimentConfig.class);
 
-    Block[] blocks = new Block[config.getBlocksPerExperiment()];
+    Block[] blocks = new Block[config.getBlocksPerExperiment()*2];
 
-    for (int i = 0; i < config.getBlocksPerExperiment(); ++i) {
+    for (int i = 0; i < (config.getBlocksPerExperiment() * 2); ++i) {
       blocks[i] = Block.newBuilder().setStr("block contents "+i).build();
     }
     TimeUnit.SECONDS.sleep(1); // wait a second for the server to start up
@@ -63,6 +63,15 @@ public class TimestampExperimentClient {
     for (int i = 0; i < config.getBlocksPerExperiment(); ++i) {
       clientService.sendBlock(config.getFernServers().get(i % fernCount), blocks[i]);
     }
+
+    TimeUnit.SECONDS.sleep(30); // wait a second for the servers to warm up
+    logger.info("SECOND ROUND");
+    for (int i = config.getBlocksPerExperiment(); i < (config.getBlocksPerExperiment() * 2); ++i) {
+      clientService.sendBlock(config.getFernServers().get(i % fernCount), blocks[i]);
+    }
     logger.info("All blocks sent");
+
+    TimeUnit.SECONDS.sleep(60); // wait for everything to be done.
+    System.exit(0);
   }
 }
