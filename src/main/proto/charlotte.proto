@@ -7,6 +7,7 @@ option objc_class_prefix = "CHARLOTTE";
 
 package charlotte;
 
+import "google/protobuf/timestamp.proto";
 // To use Any: import "google/protobuf/any.proto";
 // To use Empty: import "google/protobuf/empty.proto";
 
@@ -65,8 +66,32 @@ message IntegrityAttestation {
     ChainSlot chainSlot = 1;
     Signature signature = 2;
   }
+  message TimestampedReferences {
+    google.protobuf.Timestamp timestamp = 1;
+    repeated Reference block = 2;
+  }
+  message SignedTimestampedReferences {
+    TimestampedReferences timestampedReferences = 1;
+    Signature signature = 2;
+  }
+  message GitSimBranch {
+    google.protobuf.Timestamp timestamp = 1;
+    string branchName = 2;
+    Reference commit = 3;
+  }
+  message SignedGitSimBranch {
+    GitSimBranch gitSimBranch = 1;
+    Signature signature = 2;
+  }
+  message HetconsAttestation {
+    repeated CryptoId observers = 1;
+    repeated Reference message2b = 2;
+  }
   oneof integrityattestationtype_oneof {
     SignedChainSlot signedChainSlot = 1;
+    SignedTimestampedReferences signedTimestampedReferences = 2;
+    SignedGitSimBranch signedGitSimBranch = 3;
+    HetconsAttestation hetconsAttestation = 4;
   }
 }
 
@@ -83,12 +108,33 @@ message AvailabilityAttestation {
   }
 }
 
+message SignedGitSimCommit {
+  message GitSimCommit {
+    message GitSimParents {
+      message GitSimParent {
+        Reference parentCommit = 1;
+        bytes diff = 2;
+      }
+      repeated GitSimParent parent = 1;
+    }
+    string comment = 1;
+    Hash hash = 2;
+    oneof commit_oneof {
+      bytes initialCommit = 3;
+      GitSimParents parents = 4;
+    }
+  }
+  GitSimCommit commit = 1;
+  Signature signature = 2;
+}
+
 message Block {
   oneof blocktype_oneof {
     AvailabilityAttestation availabilityAttestation = 1;
     IntegrityAttestation integrityAttestation = 2;
     string str = 3; // why not?
     HetconsMessage hetconsMessage = 4;
+    SignedGitSimCommit signedGitSimCommit= 5;
     // This is probably the best place for an Any type, but for now, keep it minimum
   }
 }
@@ -130,14 +176,36 @@ service Wilbur { // anything running a Wilbur service should also run a Charlott
   rpc RequestAvailabilityAttestation(RequestAvailabilityAttestationInput) returns (RequestAvailabilityAttestationResponse) {}
 }
 
+// WILBUR QUERY
+
+message WilburQueryInput {
+  oneof wilburquery_oneof {
+    Reference reference = 1;
+    Block fillInTheBlank = 2;
+  }
+}
+
+message WilburQueryResponse {
+  string errorMessage = 1;
+  repeated Block block = 2;
+}
+
+service WilburQuery { // anything running a WilburQuery service should also run a Wilbur and CharlotteNode service
+  rpc WilburQuery(WilburQueryInput) returns (WilburQueryResponse) {}
+}
+
 
 
 // FERN
 
 message IntegrityPolicy {
+  message HetconsPolicy {
+    HetconsMessage proposal = 1;
+    CryptoId observer = 2;
+  }
   oneof integritypolicytype_oneof {
     IntegrityAttestation fillInTheBlank = 1;
-    // Eventually, I suppose, some kind of consensus request goes in here.
+    HetconsPolicy hetconsPolicy = 2;
   }
 }
 // just wrappers for the RPC input and output

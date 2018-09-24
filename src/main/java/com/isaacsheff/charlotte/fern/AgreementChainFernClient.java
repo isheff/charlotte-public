@@ -92,6 +92,17 @@ public class AgreementChainFernClient {
     {return knownResponses;} 
 
   /**
+   * Shut down this client (and therefore all the sub-clients for each server).
+   * This will close all the channels, which may cause warnings to pop up.
+   * @throws InterruptedException  if something goes wrong closing the channels.
+   */
+  public void shutdown() throws InterruptedException {
+    for (AgreementChainClientPerServer perServer : getHandles().values()) {
+      perServer.getClient().shutdown();
+    }
+  }
+
+  /**
    * Send a copy of the RequestIntegrityAttestationInput to all the Fern servers.
    * This will change the CryptoId in the Siganture of the SignedChainSlot of the
    *  FillInTheBlank for each Fern server.
@@ -109,6 +120,7 @@ public class AgreementChainFernClient {
    * @param input the RequestIntegrityAttestationInput to be sent to each Fern server.
    */
   public void send(CryptoId destination, RequestIntegrityAttestationInput input) {
+    logger.info("sending request: " + input);
     getHandles().get(destination).queueMessage(input);
   }
 

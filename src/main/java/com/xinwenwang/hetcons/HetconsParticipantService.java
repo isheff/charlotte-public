@@ -101,16 +101,13 @@ public class HetconsParticipantService extends CharlotteNodeService {
 
         // FIXME: Concurrency
         // TODO: parallel receive1a
-        synchronized (observers) {
-            observerGroup.getObserversList().forEach(o -> {
-                HetconsObserverStatus observerStatus = new HetconsObserverStatus(o, this);
-                observers.putIfAbsent(HetconsUtil.cryptoIdToString(o.getId()), observerStatus);
-                observerStatus = observers.get(HetconsUtil.cryptoIdToString(o.getId()));
-                if (!observerStatus.receive1a(block))
-                    return;
-            });
-        }
-
+        observerGroup.getObserversList().forEach(o -> {
+            HetconsObserverStatus observerStatus = new HetconsObserverStatus(o, this);
+            observers.putIfAbsent(HetconsUtil.cryptoIdToString(o.getId()), observerStatus);
+            observerStatus = observers.get(HetconsUtil.cryptoIdToString(o.getId()));
+            if (!observerStatus.receive1a(block))
+                return;
+        });
     }
 
     private void handle1b(HetconsMessage1b message1b, CryptoId id, Block block) {
@@ -186,7 +183,7 @@ public class HetconsParticipantService extends CharlotteNodeService {
      * Extending classes may find it useful to Override this.
      * Note that this may be called multiple times for the same consensus, as more 2bs arrive.
      * This implementation does nothing.
-     * @param quora The quora satisfied by the 2b messages known.
+     * @param quoraMembers The quora satisfied by the 2b messages known.
      * @param message2b the actual message that triggered this decision.
      * @param id the CryptoId of the sender of the most recent 2b.
      */

@@ -100,7 +100,7 @@ public class AgreementFernClient {
    * @param attestation the block we're hoping contains the IntegrityAttestation
    * @return the Block input if it's valid, null otherwise.
    */
-  public static Block checkIntegrityAttestation(final Block attestation) {
+  public static Block checkAgreementIntegrityAttestation(final Block attestation) {
     if (!attestation.hasIntegrityAttestation()) {
       logger.log(Level.WARNING, "Response from Fern Server referenced block which is not an Integrity Attestation:\n" +
                                 attestation);
@@ -128,6 +128,16 @@ public class AgreementFernClient {
       return null;
     }
     return attestation;
+  }
+
+  /**
+   * Check whether this Block contains a valid IntegrityAttestation.
+   * Checks for a valid signature in a properly formatted SignedChainSlot.
+   * @param attestation the block we're hoping contains the IntegrityAttestation
+   * @return the Block input if it's valid, null otherwise.
+   */
+  public Block checkIntegrityAttestation(final Block attestation) {
+    return checkAgreementIntegrityAttestation(attestation);
   }
 
 

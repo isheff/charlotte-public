@@ -1,5 +1,6 @@
 package com.isaacsheff.charlotte.node;
 
+import static com.isaacsheff.charlotte.node.HashUtil.sha3Hash;
 import static java.util.Collections.emptySet;
 import static java.util.Collections.singleton;
 
@@ -7,11 +8,12 @@ import java.nio.file.Path;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.util.JsonFormat;
 import com.isaacsheff.charlotte.collections.BlockingConcurrentHashMap;
 import com.isaacsheff.charlotte.collections.BlockingMap;
-
 import com.isaacsheff.charlotte.proto.Block;
-import com.isaacsheff.charlotte.proto.CharlotteNodeGrpc;
+import com.isaacsheff.charlotte.proto.CharlotteNodeGrpc.CharlotteNodeImplBase;
 import com.isaacsheff.charlotte.proto.CryptoId;
 import com.isaacsheff.charlotte.proto.Hash;
 import com.isaacsheff.charlotte.proto.Reference;
@@ -25,15 +27,13 @@ import io.grpc.stub.StreamObserver;
 /**
  * A gRPC service for the Charlotte API.
  * gRPC separates "service" from "server."
- * One Server can run multiple Serivices.
+ * One Server can run multiple Services.
  * This is a Service implementing the charlotte gRPC API.
  * It can be extended for more interesting implementations.
  * @author Isaac Sheff
  */
-public class CharlotteNodeService extends CharlotteNodeGrpc.CharlotteNodeImplBase {
-  /**
-   * Use logger for logging events on a CharlotteNodeService.
-   */
+public class CharlotteNodeService extends CharlotteNodeImplBase {
+  /** Use logger for logging events on a CharlotteNodeService. */
   private static final Logger logger = Logger.getLogger(CharlotteNodeService.class.getName());
 
   /**
@@ -42,11 +42,8 @@ public class CharlotteNodeService extends CharlotteNodeGrpc.CharlotteNodeImplBas
    */
   private final BlockingMap<Hash, Block> blockMap;
 
-  /**
-   * The configuration of this service, parsed from a yaml config file, and some x509 key files.
-   */
+  /** The configuration of this service, parsed from a yaml config file, and some x509 key files. */
   private final Config config;
-
 
   /**
    * Create a new service with the given map of blocks, and the given map of addresses.
@@ -54,8 +51,8 @@ public class CharlotteNodeService extends CharlotteNodeGrpc.CharlotteNodeImplBas
    * @param blockMap a map of known hashes and blocks
    * @param config the Configuration settings for this Service
    */
-  public CharlotteNodeService(BlockingMap<Hash, Block> blockMap,
-                              Config config) {
+  public CharlotteNodeService(final BlockingMap<Hash, Block> blockMap,
+                              final Config config) {
     this.blockMap = blockMap;
     this.config = config;
   }
@@ -64,7 +61,7 @@ public class CharlotteNodeService extends CharlotteNodeGrpc.CharlotteNodeImplBas
    * Create a new service with an empty map of blocks and an empty map of addresses.
    * @param config the Configuration settings for this Service
    */
-  public CharlotteNodeService(Config config) {
+  public CharlotteNodeService(final Config config) {
     this(new BlockingConcurrentHashMap<Hash, Block>(), config);
   }
 
@@ -72,7 +69,7 @@ public class CharlotteNodeService extends CharlotteNodeGrpc.CharlotteNodeImplBas
    * Create a new service with an empty map of blocks and an empty map of addresses, parse configuration.
    * @param path the file path for the configuration file
    */
-  public CharlotteNodeService(Path path) {
+  public CharlotteNodeService(final Path path) {
     this(new BlockingConcurrentHashMap<Hash, Block>(), new Config(path));
   }
 
@@ -80,14 +77,11 @@ public class CharlotteNodeService extends CharlotteNodeGrpc.CharlotteNodeImplBas
    * Create a new service with an empty map of blocks and an empty map of addresses, parse configuration.
    * @param filename the file name for the configuration file
    */
-  public CharlotteNodeService(String filename) {
+  public CharlotteNodeService(final String filename) {
     this(new BlockingConcurrentHashMap<Hash, Block>(), new Config(filename));
   }
 
-
-  /**
-   * @return the map of blocks maintained by this service
-   */
+  /** @return the map of blocks maintained by this service */
   public BlockingMap<Hash, Block> getBlockMap() {
     return blockMap;
   }
@@ -96,7 +90,7 @@ public class CharlotteNodeService extends CharlotteNodeGrpc.CharlotteNodeImplBas
    * @param hash the hash of the desired block
    * @return the block corresponding to this hash. Warning: WILL WAIT until such a block arrives
    */
-  public Block getBlock(Hash hash) {
+  public Block getBlock(final Hash hash) {
     return getBlockMap().blockingGet(hash);
   }
 
@@ -104,17 +98,14 @@ public class CharlotteNodeService extends CharlotteNodeGrpc.CharlotteNodeImplBas
    * @param reference a reference to the desired block
    * @return the block corresponding to the hash in this reference. Warning: WILL WAIT until such a block arrives
    */
-  public Block getBlock(Reference reference) {
+  public Block getBlock(final Reference reference) {
     return getBlock(reference.getHash());
   }
 
-  /**
-   * @return The configuration of this service, parsed from a yaml config file, and some x509 key files.
-   */
+  /** @return The configuration of this service, parsed from a yaml config file, and some x509 key files. */
   public Config getConfig() {
     return config;
   }
-
 
   /**
    * Send this block to the server with this CryptoId.
@@ -124,7 +115,7 @@ public class CharlotteNodeService extends CharlotteNodeGrpc.CharlotteNodeImplBas
    * @return true if we sent the block successfully, false otherwise
    * @throws NullPointerException if no contact was found with this identity
    */
-  public boolean sendBlock(CryptoId cryptoid, Block block) {
+  public boolean sendBlock(final CryptoId cryptoid, final Block block) {
     return getConfig().getContact(cryptoid).getCharlotteNodeClient().sendBlock(block);
   }
 
@@ -136,7 +127,7 @@ public class CharlotteNodeService extends CharlotteNodeGrpc.CharlotteNodeImplBas
    * @return true if we sent the block successfully, false otherwise
    * @throws NullPointerException if no contact was found with this identity
    */
-  public boolean sendBlock(CryptoId cryptoid, SendBlocksInput block) {
+  public boolean sendBlock(final CryptoId cryptoid, final SendBlocksInput block) {
     return getConfig().getContact(cryptoid).getCharlotteNodeClient().sendBlock(block);
   }
 
@@ -148,7 +139,7 @@ public class CharlotteNodeService extends CharlotteNodeGrpc.CharlotteNodeImplBas
    * @return true if we sent the block successfully, false otherwise
    * @throws NullPointerException if no contact was found with this identity
    */
-  public boolean sendBlock(String name, Block block) {
+  public boolean sendBlock(final String name, final Block block) {
     return getConfig().getContact(name).getCharlotteNodeClient().sendBlock(block);
   }
 
@@ -160,7 +151,7 @@ public class CharlotteNodeService extends CharlotteNodeGrpc.CharlotteNodeImplBas
    * @return true if we sent the block successfully, false otherwise
    * @throws NullPointerException if no contact was found with this identity
    */
-  public boolean sendBlock(String name, SendBlocksInput block) {
+  public boolean sendBlock(final String name, final SendBlocksInput block) {
     return getConfig().getContact(name).getCharlotteNodeClient().sendBlock(block);
   }
 
@@ -173,7 +164,7 @@ public class CharlotteNodeService extends CharlotteNodeGrpc.CharlotteNodeImplBas
    * @return true if we sent the block successfully, false otherwise
    * @throws NullPointerException if no contact was found with this identity
    */
-  public boolean sendBlock(String url, int port, Block block) {
+  public boolean sendBlock(final String url, final int port, final Block block) {
     return getConfig().getContact(url, port).getCharlotteNodeClient().sendBlock(block);
   }
 
@@ -186,7 +177,7 @@ public class CharlotteNodeService extends CharlotteNodeGrpc.CharlotteNodeImplBas
    * @return true if we sent the block successfully, false otherwise
    * @throws NullPointerException if no contact was found with this identity
    */
-  public boolean sendBlock(String url, int port, SendBlocksInput block) {
+  public boolean sendBlock(final String url, final int port, final SendBlocksInput block) {
     return getConfig().getContact(url, port).getCharlotteNodeClient().sendBlock(block);
   }
 
@@ -195,7 +186,7 @@ public class CharlotteNodeService extends CharlotteNodeGrpc.CharlotteNodeImplBas
    * Since each contact's sendBlock function is nonblocking, this will be done in parallel.
    * @param block the block to send
    */
-  public void broadcastBlock(Block block) {
+  public void broadcastBlock(final Block block) {
     for (Contact contact : getConfig().getContacts().values()) {
       contact.getCharlotteNodeClient().sendBlock(block);
     }
@@ -206,7 +197,7 @@ public class CharlotteNodeService extends CharlotteNodeGrpc.CharlotteNodeImplBas
    * Since each contact's sendBlock function is nonblocking, this will be done in parallel.
    * @param block the block to send
    */
-  public void broadcastBlock(SendBlocksInput block) {
+  public void broadcastBlock(final SendBlocksInput block) {
     for (Contact contact : getConfig().getContacts().values()) {
       contact.getCharlotteNodeClient().sendBlock(block);
     }
@@ -214,11 +205,28 @@ public class CharlotteNodeService extends CharlotteNodeGrpc.CharlotteNodeImplBas
 
   /**
    * Stores a block in the services blockMap, and returns whether it was already known to this service.
+   * Logs (INFO) whenever a block is received, whether it was new or repeat.
+   * This will be a JSON, with fields "block" and either "NewBlockHash" or "RepeatBlockHash"
    * @param block the block to be stored
    * @return whether or not the block was already known to this CharlotteNodeService
    */
-  public boolean storeNewBlock(Block block) {
-    return (getBlockMap().putIfAbsent(HashUtil.sha3Hash(block), block) == null);
+  public boolean storeNewBlock(final Block block) {
+    final Hash hash = sha3Hash(block);
+    if (getBlockMap().putIfAbsent(hash, block) == null) {
+      try {
+        logger.info("{ \"NewBlockHash\":"+JsonFormat.printer().print(hash)+
+                     ",\n\"block\":"+JsonFormat.printer().print(block)+"}");
+      } catch (InvalidProtocolBufferException e) {
+        logger.log(Level.SEVERE, "Invalid protocol buffer parsed as Block", e);
+      }
+      return true;
+    }
+    try {
+      logger.info("{ \"RepeatBlockHash\":"+JsonFormat.printer().print(hash)+"}");
+    } catch (InvalidProtocolBufferException e) {
+      logger.log(Level.SEVERE, "Invalid protocol buffer parsed as Block", e);
+    }
+    return false;
   }
 
   /**
@@ -227,7 +235,7 @@ public class CharlotteNodeService extends CharlotteNodeGrpc.CharlotteNodeImplBas
    * @param block the newly received block
    * @return any SendBlockResponses (including error messages) to be sent back over the wire to the block's sender.
    */
-  public Iterable<SendBlocksResponse> afterBroadcastNewBlock(Block block) {
+  public Iterable<SendBlocksResponse> afterBroadcastNewBlock(final Block block) {
     return emptySet();
   }
 
@@ -244,13 +252,11 @@ public class CharlotteNodeService extends CharlotteNodeGrpc.CharlotteNodeImplBas
    * @param block the newly arrived blcok
    * @return any SendBlocksResponse s you want to send back over the wire
    */
-  public Iterable<SendBlocksResponse> onSendBlocksInput(Block block) {
+  public Iterable<SendBlocksResponse> onSendBlocksInput(final Block block) {
     if (storeNewBlock(block)) {
-      logger.info("New Block received: " + block);
       broadcastBlock(block);
       return afterBroadcastNewBlock(block);
     } 
-    logger.info("Repeat Block received: " + block);
     return emptySet();
   }
 
@@ -265,7 +271,7 @@ public class CharlotteNodeService extends CharlotteNodeGrpc.CharlotteNodeImplBas
    * @param input the newly arrived block
    * @return any SendBlocksResponse s you want to send back over the wire
    */
-  public Iterable<SendBlocksResponse> onSendBlocksInput(SendBlocksInput input) {
+  public Iterable<SendBlocksResponse> onSendBlocksInput(final SendBlocksInput input) {
     if (!input.hasBlock()) {
       logger.log(Level.WARNING, "No Block in this SendBlocksInput");
       return singleton(SendBlocksResponse.newBuilder().
@@ -274,15 +280,14 @@ public class CharlotteNodeService extends CharlotteNodeGrpc.CharlotteNodeImplBas
     return onSendBlocksInput(input.getBlock());
   }
 
-
   /**
    * Spawns a new SendBlocksObserver whenever the server receives a sendBlocks RPC.
    * Override this to use a different kind of observer (and thereby change sendBlocks behaviour).
    * @param responseObserver used to stream back responses to the RPC caller over the wire.
    * @return the SendBlocksObserver which will receive all the blocks streamed in this RPC call.
    */
-  public StreamObserver<SendBlocksInput> sendBlocks(StreamObserver<SendBlocksResponse> responseObserver) {
+  @Override
+  public StreamObserver<SendBlocksInput> sendBlocks(final StreamObserver<SendBlocksResponse> responseObserver) {
     return(new SendBlocksObserver(this, responseObserver));
   }
-  
 }
