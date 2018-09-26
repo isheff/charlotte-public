@@ -596,6 +596,111 @@
         </plugins>
       </build>
     </profile>
+
+    <profile>
+      <id>agreement-nw-fern</id>
+      <build>
+        <plugins>
+          <!-- For executable jars with dependencies included https://mvnrepository.com/artifact/org.apache.maven.plugins/maven-assembly-plugin -->
+          <plugin>
+            <artifactId>maven-assembly-plugin</artifactId>
+            <configuration>
+              <appendAssemblyId>false</appendAssemblyId>
+            </configuration>
+            <executions>
+              <execution>
+                <id>agreement-nw-fern</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>single</goal>
+                </goals>
+                <configuration>
+                  <archive>
+                    <manifest>
+                      <mainClass>com.isaacsheff.charlotte.experiments.AgreementNWFern</mainClass>
+                    </manifest>
+                  </archive>
+                  <descriptorRefs>
+                    <descriptorRef>jar-with-dependencies</descriptorRef>
+                  </descriptorRefs>
+                  <finalName>agreement_nw_fern</finalName>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+    <profile>
+      <id>agreement-nw-wilbur</id>
+      <build>
+        <plugins>
+          <!-- For executable jars with dependencies included https://mvnrepository.com/artifact/org.apache.maven.plugins/maven-assembly-plugin -->
+          <plugin>
+            <artifactId>maven-assembly-plugin</artifactId>
+            <configuration>
+              <appendAssemblyId>false</appendAssemblyId>
+            </configuration>
+            <executions>
+              <execution>
+                <id>agreement-nw-wilbur</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>single</goal>
+                </goals>
+                <configuration>
+                  <archive>
+                    <manifest>
+                      <mainClass>com.isaacsheff.charlotte.experiments.AgreementNWilbur</mainClass>
+                    </manifest>
+                  </archive>
+                  <descriptorRefs>
+                    <descriptorRef>jar-with-dependencies</descriptorRef>
+                  </descriptorRefs>
+                  <finalName>agreement_nw_wilbur</finalName>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+    <profile>
+      <id>agreement-nw-client</id>
+      <build>
+        <plugins>
+          <!-- For executable jars with dependencies included https://mvnrepository.com/artifact/org.apache.maven.plugins/maven-assembly-plugin -->
+          <plugin>
+            <artifactId>maven-assembly-plugin</artifactId>
+            <configuration>
+              <appendAssemblyId>false</appendAssemblyId>
+            </configuration>
+            <executions>
+              <execution>
+                <id>agreement-nw-client</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>single</goal>
+                </goals>
+                <configuration>
+                  <archive>
+                    <manifest>
+                      <mainClass>com.isaacsheff.charlotte.experiments.AgreementNWClient</mainClass>
+                    </manifest>
+                  </archive>
+                  <descriptorRefs>
+                    <descriptorRef>jar-with-dependencies</descriptorRef>
+                  </descriptorRefs>
+                  <finalName>agreement_nw_client</finalName>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
   </profiles>
 
 

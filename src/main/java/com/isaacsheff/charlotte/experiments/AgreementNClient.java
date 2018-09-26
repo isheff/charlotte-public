@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Random;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -73,8 +74,9 @@ public class AgreementNClient {
 
   
   protected void fillBlocks() {
-    for (int i = 0; i < getBlocks().length; ++i) {
-      getBlocks()[i] = Block.newBuilder().setStr("block content " + i).build();
+    getBlocks()[0] = Block.newBuilder().setStr("block content 0").build();
+    for (int i = 1; i < getBlocks().length; ++i) {
+      getBlocks()[i] = Block.newBuilder().setStr(randomString(getJsonConfig().getBlocksize())).build();
     }
   }
 
@@ -150,6 +152,7 @@ public class AgreementNClient {
       done(); // we've finished all the blocks, and we're done.
       return; // unreachable, I'm pretty sure
     }
+    logger.info("Beginning slot " + slot);
     getService().onSendBlocksInput(getBlocks()[slot]); // send out the block the attestations reference
     RequestIntegrityAttestationInput.Builder builder = RequestIntegrityAttestationInput.newBuilder().setPolicy(
             IntegrityPolicy.newBuilder().setFillInTheBlank(
@@ -243,6 +246,19 @@ public class AgreementNClient {
         broadcastRequest(parentBuilder, newSlot);
       }
     }
+  }
+
+  public static String randomString(int targetStringLength) {
+    int leftLimit = 97; // letter 'a'
+    int rightLimit = 122; // letter 'z'
+    Random random = new Random();
+    StringBuilder buffer = new StringBuilder(targetStringLength);
+    for (int i = 0; i < targetStringLength; i++) {
+        int randomLimitedInt = leftLimit + (int) 
+          (random.nextFloat() * (rightLimit - leftLimit + 1));
+        buffer.append((char) randomLimitedInt);
+    }
+    return(buffer.toString());
   }
 
   /**

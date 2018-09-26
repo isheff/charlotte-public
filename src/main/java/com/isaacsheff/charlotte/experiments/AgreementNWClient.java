@@ -3,16 +3,22 @@ package com.isaacsheff.charlotte.experiments;
 import static com.isaacsheff.charlotte.node.HashUtil.sha3Hash;
 import static java.util.concurrent.ConcurrentHashMap.newKeySet;
 
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.nio.file.Paths;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import com.isaacsheff.charlotte.node.CharlotteNode;
 import com.isaacsheff.charlotte.node.CharlotteNodeService;
 import com.isaacsheff.charlotte.proto.AvailabilityAttestation;
 import com.isaacsheff.charlotte.proto.AvailabilityAttestation.SignedStoreForever;
@@ -75,13 +81,6 @@ public class AgreementNWClient extends AgreementNClient {
     }
   }
 
-  @Override
-  protected void fillBlocks() {
-    getBlocks()[0] = Block.newBuilder().setStr("block content 0").build();
-    for (int i = 1; i < getBlocks().length; ++i) {
-      getBlocks()[i] = Block.newBuilder().setStr(randomString(getJsonConfig().getBlocksize())).build();
-    }
-  }
 
   /** 
    * Send a request to all the clients (and so to all the fern servers).
@@ -231,19 +230,25 @@ public class AgreementNWClient extends AgreementNClient {
     }
   }
 
-  public static String randomString(int targetStringLength) {
-    int leftLimit = 97; // letter 'a'
-    int rightLimit = 122; // letter 'z'
-    Random random = new Random();
-    StringBuilder buffer = new StringBuilder(targetStringLength);
-    for (int i = 0; i < targetStringLength; i++) {
-        int randomLimitedInt = leftLimit + (int) 
-          (random.nextFloat() * (rightLimit - leftLimit + 1));
-        buffer.append((char) randomLimitedInt);
+  /**
+   * Run the experiment.
+   * @param args command line arguments args[0] must be the config yaml file.
+   */
+  public static void main(String[] args) throws InterruptedException, FileNotFoundException, IOException {
+    // start the client's CharlotteNode
+    if (args.length < 1) {
+      logger.log(Level.SEVERE, "no config file name given as argument");
+      return;
     }
-    return(buffer.toString());
+    final JsonExperimentConfig jsonConfig =
+      (new ObjectMapper(new YAMLFactory())).readValue(Paths.get(args[0]).toFile(), JsonExperimentConfig.class);
+    final CharlotteNodeService service = new CharlotteNodeService(args[0]);
+    (new Thread(new CharlotteNode(service))).start();
+    final AgreementNClient client = new AgreementNWClient(service, jsonConfig);
+
+    TimeUnit.SECONDS.sleep(1); // wait for servers to start up
+    client.broadcastRequest(Reference.newBuilder(), 0); // send out the root block
+    client.waitUntilDone();
+    System.exit(0);
   }
-
-
-
 }
