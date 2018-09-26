@@ -52,7 +52,8 @@ public class SendToObserverLogging<T extends SendBlocksInput> implements Runnabl
       try {
         element = queue.take();
         observer.onNext(element);
-        logger.info("{ \"SentBlock\":"+JsonFormat.printer().print(sha3Hash(element.getBlock()))+" }");
+        logger.info("{ \"SentBlock\":"+JsonFormat.printer().print(sha3Hash(element.getBlock()))+
+                    ", \"size\":" + element.getSerializedSize() + " }");
       } catch (InvalidProtocolBufferException e) {
         logger.log(Level.SEVERE, "Invalid protocol buffer parsed as Block", e);
       } catch (InterruptedException e) {

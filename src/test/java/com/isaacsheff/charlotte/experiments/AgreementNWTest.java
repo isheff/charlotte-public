@@ -3,7 +3,6 @@ package com.isaacsheff.charlotte.experiments;
 import static com.isaacsheff.charlotte.node.PortUtil.getFreshPort;
 import static com.isaacsheff.charlotte.yaml.GenerateX509.generateKeyFiles;
 import static java.util.Arrays.asList;
-import static java.util.Collections.emptyList;
 
 import java.io.FileNotFoundException;
 import java.nio.file.Paths;
@@ -17,6 +16,7 @@ import org.junit.jupiter.api.Test;
 import com.isaacsheff.charlotte.node.CharlotteNode;
 import com.isaacsheff.charlotte.node.CharlotteNodeService;
 import com.isaacsheff.charlotte.proto.Reference;
+import com.isaacsheff.charlotte.wilbur.WilburService;
 import com.isaacsheff.charlotte.yaml.Config;
 import com.isaacsheff.charlotte.yaml.JsonContact;
 
@@ -26,7 +26,7 @@ import io.grpc.ServerBuilder;
  * Test AgreementFernChain service and client
  * @author Isaac Sheff
  */
-public class AgreementNTest {
+public class AgreementNWTest {
 
   /** the participants map to be used in config files. will be set in setup() **/
   private static Map<String, JsonContact> participants;
@@ -38,7 +38,7 @@ public class AgreementNTest {
   @BeforeAll
   static void setup() {
     participants = new HashMap<String, JsonContact>(5);
-    for (int i = 0; i < 5; ++i) {
+    for (int i = 0; i < 7; ++i) {
       generateKeyFiles("src/test/resources/server" + i + ".pem",
                        "src/test/resources/private-key" + i + ".pem",
                        "localhost",
@@ -54,23 +54,42 @@ public class AgreementNTest {
    */
   @Test
   void endToEnd() throws InterruptedException, FileNotFoundException {
-    final CharlotteNode[] nodes = new CharlotteNode[5];
+    final CharlotteNode[] nodes = new CharlotteNode[7];
 
     // start up all the ferns on seperate threads
     for (int i = 1; i < 5; ++i) {
       final JsonExperimentConfig config =new JsonExperimentConfig(
           asList("participant1","participant2","participant3","participant4"),
-          emptyList(),
-          5,
-          0,
+          asList("participant5","participant6"),
+          50,
+          1,
           "src/test/resources/private-key" + i + ".pem",
           "participant"+i,
           participants,
-          0);
+          10);
       final CharlotteNodeService node = new CharlotteNodeService(new Config(config, Paths.get(".")));
       CharlotteNode charlotteNode = new CharlotteNode(node,
         ServerBuilder.forPort(node.getConfig().getPort()).
-                      addService(new AgreementNFern(config, node)),
+                      addService(new AgreementNWFern(config, node)),
+        node.getConfig().getPort());
+      nodes[i] = charlotteNode;
+      (new Thread(charlotteNode)).start();
+    }
+    // start up all the wilburs on seperate threads
+    for (int i = 5; i < 7; ++i) {
+      final JsonExperimentConfig config =new JsonExperimentConfig(
+          asList("participant1","participant2","participant3","participant4"),
+          asList("participant5","participant6"),
+          50,
+          1,
+          "src/test/resources/private-key" + i + ".pem",
+          "participant"+i,
+          participants,
+          10);
+      final CharlotteNodeService node = new AgreementNWilbur(new Config(config, Paths.get(".")));
+      CharlotteNode charlotteNode = new CharlotteNode(node,
+        ServerBuilder.forPort(node.getConfig().getPort()).
+                      addService(new WilburService(node)),
         node.getConfig().getPort());
       nodes[i] = charlotteNode;
       (new Thread(charlotteNode)).start();
@@ -80,18 +99,18 @@ public class AgreementNTest {
     // launch client
     final JsonExperimentConfig config =new JsonExperimentConfig(
         asList("participant1","participant2","participant3","participant4"),
-        emptyList(),
-        5,
-        0,
+        asList("participant5","participant6"),
+        50,
+        1,
         "src/test/resources/private-key0.pem",
         "participant0",
         participants,
-        0);
+        10);
     final CharlotteNodeService node = new CharlotteNodeService(new Config(config, Paths.get(".")));
     nodes[0] = (new CharlotteNode(node));
     (new Thread(nodes[0])).start();
     TimeUnit.SECONDS.sleep(3); // wait for servers to start up
-    final AgreementNClient client = new AgreementNClient(node, config);
+    final AgreementNWClient client = new AgreementNWClient(node, config);
     TimeUnit.SECONDS.sleep(3); // wait for servers to start up
     client.broadcastRequest(Reference.newBuilder(), 0); // send out the root block
     client.waitUntilDone();

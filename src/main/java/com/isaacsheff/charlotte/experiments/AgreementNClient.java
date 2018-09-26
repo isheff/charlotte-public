@@ -72,6 +72,12 @@ public class AgreementNClient {
   private int currentSlot;
 
   
+  protected void fillBlocks() {
+    for (int i = 0; i < getBlocks().length; ++i) {
+      getBlocks()[i] = Block.newBuilder().setStr("block content " + i).build();
+    }
+  }
+
 
   /**
    * Start up a new client.
@@ -85,9 +91,7 @@ public class AgreementNClient {
     doneLock = new Object();
     totalBlocks = 1 + (2 * config.getBlocksPerExperiment());
     blocks = new Block[totalBlocks];
-    for (int i = 0; i < totalBlocks; ++i) {
-      blocks[i] = Block.newBuilder().setStr("block content " + i).build();
-    }
+    fillBlocks();
     rootHash = sha3Hash(blocks[0]);
     threshold = (2 * config.getFernServers().size()) / 3;
     currentSlot = 0;
@@ -121,11 +125,19 @@ public class AgreementNClient {
   public CharlotteNodeService getService() {return service;}
   
   /** @return The experiment Config file **/
-  public JsonExperimentConfig getConfig() {return config;}
+  public JsonExperimentConfig getJsonConfig() {return config;}
 
   /** @return For each fern, a Queue of requests to be sent out to that Fern (in case sending takes time) **/
   public Map<CryptoId, BlockingQueue<RequestIntegrityAttestationInput>> getRequestQueues() {return requestQueues;}
 
+  /** @return The total number of blocks we'll be sending out **/
+  public int getTotalBlocks() {return totalBlocks;}
+
+  /** @return The blocks we'll be appending to the chain **/
+  public Block[] getBlocks() {return blocks;}
+
+  /** @return The hash of the root block (literally sha3Hash(blocks[0])) **/
+  public Hash getRootHash() {return rootHash;}
 
   /** 
    * Send a request to all the clients (and so to all the fern servers).
@@ -138,14 +150,14 @@ public class AgreementNClient {
       done(); // we've finished all the blocks, and we're done.
       return; // unreachable, I'm pretty sure
     }
-    service.onSendBlocksInput(blocks[slot]); // send out the block the attestations reference
+    getService().onSendBlocksInput(getBlocks()[slot]); // send out the block the attestations reference
     RequestIntegrityAttestationInput.Builder builder = RequestIntegrityAttestationInput.newBuilder().setPolicy(
             IntegrityPolicy.newBuilder().setFillInTheBlank(
               IntegrityAttestation.newBuilder().setSignedChainSlot(
                 SignedChainSlot.newBuilder().setChainSlot(
                   ChainSlot.newBuilder().
-                    setBlock(Reference.newBuilder().setHash(sha3Hash(blocks[slot]))).
-                    setRoot(Reference.newBuilder().setHash(rootHash)).
+                    setBlock(Reference.newBuilder().setHash(sha3Hash(getBlocks()[slot]))).
+                    setRoot(Reference.newBuilder().setHash(getRootHash())).
                     setSlot(slot).
                     setParent(parentBuilder)
                 )
@@ -153,7 +165,7 @@ public class AgreementNClient {
             )
           );
     // for each fern, the request specifies a CryptoId
-    for (Entry<CryptoId, BlockingQueue<RequestIntegrityAttestationInput>> entry : requestQueues.entrySet()) {
+    for (Entry<CryptoId, BlockingQueue<RequestIntegrityAttestationInput>> entry : getRequestQueues().entrySet()){
       builder.getPolicyBuilder().getFillInTheBlankBuilder().getSignedChainSlotBuilder().getSignatureBuilder().
               setCryptoId(entry.getKey());
       try {

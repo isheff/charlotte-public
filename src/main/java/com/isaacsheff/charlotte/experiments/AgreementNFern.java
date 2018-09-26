@@ -89,6 +89,9 @@ public class AgreementNFern extends AgreementChainFernService {
 
   }
 
+  /** the experiment config file */
+  public JsonExperimentConfig getJsonConfig() {return config;}
+
   /**
    * Is this policy, alone, one which this server could ever accept?.
    * check that this ChainSlot actually has a block hash in it.
@@ -97,7 +100,6 @@ public class AgreementNFern extends AgreementChainFernService {
    */
   @Override
   public String validPolicy(IntegrityPolicy policy) {
-    super.validPolicy(policy);
     if ( policy.getFillInTheBlank().getSignedChainSlot().getChainSlot().getSlot() == 0) { // this is a root
       return null;
     }
