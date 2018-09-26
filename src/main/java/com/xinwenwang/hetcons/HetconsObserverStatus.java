@@ -277,6 +277,9 @@ public class HetconsObserverStatus {
         service.storeNewBlock(block);
         Reference refm2b = Reference.newBuilder().setHash(HashUtil.sha3Hash(block)).build();
         HashMap m = status.receive2b(block.getHetconsMessage().getIdentity(), refm2b);
+        if (m == null)
+            return;
+
         List<Reference> q = (List<Reference>)m.get("references");
         List<CryptoId> p = (List<CryptoId>) m.get("participants");
         if (q == null)
@@ -321,7 +324,7 @@ public class HetconsObserverStatus {
         HetconsObserverQuorum observerQuorum = HetconsObserverQuorum.newBuilder().setOwner(observer.getId())
                 .addAllMemebers(p)
                 .build();
-        service.onDecision(observerQuorum, q, block.getHetconsMessage().getM2B(), block.getHetconsMessage().getIdentity());
+        service.onDecision(observerQuorum, q);
     }
 
     public List<CryptoId> getParticipants() {
@@ -459,7 +462,6 @@ public class HetconsObserverStatus {
             ex.printStackTrace();
             return null;
         }
-
     }
 
 

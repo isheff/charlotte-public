@@ -188,7 +188,5 @@ public class HetconsParticipantService extends CharlotteNodeService {
      * @param id the CryptoId of the sender of the most recent 2b.
      */
     protected void onDecision(final HetconsObserverQuorum quoraMembers,
-                              final Collection<Reference> quoraMessages,
-                              final HetconsMessage2ab message2b,
-                              final CryptoId id) {}
+                              final Collection<Reference> quoraMessages) {}
 }

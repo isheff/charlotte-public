@@ -189,13 +189,15 @@ public class HetconsProposalStatus {
         s.addM2b(ref2b);
         QuorumStatus q = s.check2bQuorum();
         if (q != null) {
+            List<CryptoId> qp = new ArrayList<>();
             List<Reference> q2b = new ArrayList<>();
             for (String p : q.participants) {
                 q2b.add(this.participantStatuses.get(p).m2bRef);
+                qp.add(this.participantStatuses.get(p).id);
             }
             HashMap<String, Object> ret = new HashMap<>();
             ret.put("references", q2b);
-            ret.put("participants", q.participants);
+            ret.put("participants", qp);
             return ret;
         }
         return null;

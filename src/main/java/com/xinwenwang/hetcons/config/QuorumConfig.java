@@ -6,6 +6,7 @@ import com.isaacsheff.charlotte.proto.HetconsObserverQuorum;
 import com.isaacsheff.charlotte.yaml.Contact;
 import com.isaacsheff.charlotte.yaml.JsonContact;
 
+import java.nio.file.Path;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -23,12 +24,12 @@ public class QuorumConfig {
         return participants;
     }
 
-    public HetconsObserverQuorum toHetconsObserverQuorum(CryptoId owner) {
+    public HetconsObserverQuorum toHetconsObserverQuorum(CryptoId owner, Path path) {
         return HetconsObserverQuorum.newBuilder()
                 .setOwner(owner)
 //                .setSize(participants.size())
                 .addAllMemebers(participants.stream().map(jsonContact -> {
-                    return new Contact(jsonContact, HetconsConfig.configFileDirectory.toPath()).getCryptoId();
+                    return new Contact(jsonContact, path).getCryptoId();
                 }).collect(Collectors.toList()))
                 .build();
     }

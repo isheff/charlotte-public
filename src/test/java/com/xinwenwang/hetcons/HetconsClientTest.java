@@ -61,7 +61,7 @@ public class HetconsClientTest extends HetconsTest {
         Config clientConfig = new Config(clientJsonConfig, Paths.get(testDirectory));
         HetconsConfig hetconsConfig = new HetconsConfig();
 
-        HetconsConfig.setConfigFileDirectory(testDirectory);
+//        HetconsConfig.setConfigFileDirectory(testDirectory);
 
         HetconsParticipantService service = new HetconsParticipantService(serverConfig);
         CharlotteNode node1 = new CharlotteNode(service);

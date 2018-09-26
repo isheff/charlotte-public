@@ -9,6 +9,7 @@ import com.isaacsheff.charlotte.proto.PublicKey;
 import com.isaacsheff.charlotte.yaml.Contact;
 import com.isaacsheff.charlotte.yaml.JsonContact;
 
+import java.nio.file.Path;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -33,13 +34,13 @@ public class ObserverConfig {
         return quorums;
     }
 
-    public HetconsObserver toHetconsObserver() {
+    public HetconsObserver toHetconsObserver(Path path) {
 
-        Contact contact = new Contact(self, HetconsConfig.configFileDirectory.toPath());
+        Contact contact = new Contact(self, path);
 
         return HetconsObserver.newBuilder().setId(contact.getCryptoId())
                 .addAllQuorums(quorums.stream().map(quorumConfig -> {
-                    return quorumConfig.toHetconsObserverQuorum(contact.getCryptoId());
+                    return quorumConfig.toHetconsObserverQuorum(contact.getCryptoId(), path);
                 }).collect(Collectors.toList()))
                 .build();
     }

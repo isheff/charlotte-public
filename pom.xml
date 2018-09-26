@@ -526,6 +526,78 @@
         </plugins>
       </build>
     </profile>
+
+    <!--Hetcons Experiment-->
+    <profile>
+      <id>hetcons-experiment-client</id>
+      <build>
+        <plugins>
+          <!-- For executable jars with dependencies included https://mvnrepository.com/artifact/org.apache.maven.plugins/maven-assembly-plugin -->
+          <plugin>
+            <artifactId>maven-assembly-plugin</artifactId>
+            <configuration>
+              <appendAssemblyId>false</appendAssemblyId>
+            </configuration>
+            <executions>
+              <execution>
+                <id>hetcons-experiment-client</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>single</goal>
+                </goals>
+                <configuration>
+                  <archive>
+                    <manifest>
+                      <mainClass>com.isaacsheff.charlotte.experiments.HetconsExperimentClient</mainClass>
+                    </manifest>
+                  </archive>
+                  <descriptorRefs>
+                    <descriptorRef>jar-with-dependencies</descriptorRef>
+                  </descriptorRefs>
+                  <finalName>hetcons_experiment_client</finalName>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+    <profile>
+      <id>hetcons-experiment-fern</id>
+      <build>
+        <plugins>
+          <!-- For executable jars with dependencies included https://mvnrepository.com/artifact/org.apache.maven.plugins/maven-assembly-plugin -->
+          <plugin>
+            <artifactId>maven-assembly-plugin</artifactId>
+            <configuration>
+              <appendAssemblyId>false</appendAssemblyId>
+            </configuration>
+            <executions>
+              <execution>
+                <id>hetcons-experiment-fern</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>single</goal>
+                </goals>
+                <configuration>
+                  <archive>
+                    <manifest>
+                      <mainClass>com.isaacsheff.charlotte.experiments.HetconsExperimentFern</mainClass>
+                    </manifest>
+                  </archive>
+                  <descriptorRefs>
+                    <descriptorRef>jar-with-dependencies</descriptorRef>
+                  </descriptorRefs>
+                  <finalName>hetcons_experiment_fern</finalName>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
   </profiles>
 
 

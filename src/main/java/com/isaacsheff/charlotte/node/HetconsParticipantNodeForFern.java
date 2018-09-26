@@ -10,17 +10,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 import com.isaacsheff.charlotte.fern.HetconsFern;
-import com.isaacsheff.charlotte.proto.CryptoId;
-import com.isaacsheff.charlotte.proto.Block;
-import com.isaacsheff.charlotte.proto.HetconsMessage2ab;
-import com.isaacsheff.charlotte.proto.HetconsObserverQuorum;
-import com.isaacsheff.charlotte.proto.HetconsProposal;
-import com.isaacsheff.charlotte.proto.SendBlocksInput;
-import com.isaacsheff.charlotte.proto.SendBlocksResponse;
+import com.isaacsheff.charlotte.proto.*;
 import com.isaacsheff.charlotte.yaml.Config;
 
 import com.xinwenwang.hetcons.HetconsParticipantService;
-import com.xinwenwang.hetcons.HetconsStatus;
 import com.xinwenwang.hetcons.config.HetconsConfig;
 
 /**
@@ -53,7 +46,7 @@ public class HetconsParticipantNodeForFern extends HetconsParticipantService {
   public HetconsParticipantNodeForFern(final Config config,
                                        final HetconsConfig hetconsConfig,
                                        final HetconsFern fern) {
-    super(config, hetconsConfig);
+    super(config);
     this.hetconsConfig = hetconsConfig;
     this.fern = fern;
     this.reference2bsPerProposal = new ConcurrentHashMap<HetconsProposal, Set<Block>>();
@@ -98,17 +91,10 @@ public class HetconsParticipantNodeForFern extends HetconsParticipantService {
    * @param id the CryptoId of the sender of the most recent 2b.
    */
   @Override
-  protected void onDecision(final Collection<HetconsObserverQuorum> quora,
-                            final HetconsStatus status,
-                            final HetconsMessage2ab message2b,
-                            final CryptoId id) {
-    final Set<CryptoId> observers = newKeySet();
-    for (HetconsObserverQuorum quorum : quora) {
-      if (quorum.hasOwner()) {
-        observers.add(quorum.getOwner());
-      }
-    }
-    getFern().observersDecide(observers, message2b.getValue(), message2b.getProposal());
+  protected void onDecision(final HetconsObserverQuorum quora,
+                            final Collection<Reference> quorum2b) {
+
+    getFern().observersDecide(quora, quorum2b);
   }
 
   /**
@@ -120,20 +106,19 @@ public class HetconsParticipantNodeForFern extends HetconsParticipantService {
   @Override
   public Iterable<SendBlocksResponse> onSendBlocksInput(SendBlocksInput input) {
     if (input.hasBlock()
-        && input.getBlock().hasHetconsMessage()
-        && input.getBlock().getHetconsMessage().hasM2B()
-        && input.getBlock().getHetconsMessage().getM2B().hasProposal()) {
-       final Set<Block> newM2bSet = newKeySet();
-       final Set<Block> m2bsKnownForThisHash = getReference2bsPerProposal().putIfAbsent(
-               input.getBlock().getHetconsMessage().getM1A().getProposal(),
-               newM2bSet);
-       // If there was already a set in the map, we use the old one.
-       // Otherwise, newM2bSet WAS ADDED, so we should use that.
-       if (m2bsKnownForThisHash == null) {
-         newM2bSet.add(input.getBlock());
-       } else {
-         m2bsKnownForThisHash.add(input.getBlock());
-       }
+        && input.getBlock().hasHetconsMessage()) {
+//       final Set<Block> newM2bSet = newKeySet();
+//       final Set<Block> m2bsKnownForThisHash = getReference2bsPerProposal().putIfAbsent(
+//               input.getBlock().getHetconsMessage().getM1A().getProposal(),
+//               newM2bSet);
+//       // If there was already a set in the map, we use the old one.
+//       // Otherwise, newM2bSet WAS ADDED, so we should use that.
+//       if (m2bsKnownForThisHash == null) {
+//         newM2bSet.add(input.getBlock());
+//       } else {
+//         m2bsKnownForThisHash.add(input.getBlock());
+//       }
+        storeNewBlock(input.getBlock());
      }
     return super.onSendBlocksInput(input);
   }

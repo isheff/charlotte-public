@@ -1,6 +1,8 @@
 package com.xinwenwang.hetcons;
 
 import com.google.protobuf.ByteString;
+import com.isaacsheff.charlotte.node.CharlotteNode;
+import com.isaacsheff.charlotte.node.CharlotteNodeService;
 import com.isaacsheff.charlotte.node.HashUtil;
 import com.isaacsheff.charlotte.node.SignatureUtil;
 import com.isaacsheff.charlotte.proto.*;
@@ -92,6 +94,29 @@ public class HetconsUtil {
 
     public static int ballotCompare(HetconsBallot b1, HetconsBallot b2) {
         return b1.getBallotSequence().compareTo(b2.getBallotSequence());
+    }
+
+    public static HetconsValue get1bValue(HetconsMessage1b m1b, CharlotteNodeService service) {
+        return m1b.hasM2A() ? getM1aFromReference(m1b.getM2A().getM1ARef(), service).getProposal().getValue() : getM1aFromReference(m1b.getM1ARef(), service).getProposal().getValue();
+    }
+
+    public static HetconsValue get2bValue(HetconsMessage2ab m2b, CharlotteNodeService service) {
+        for (Reference r : m2b.getQuorumOf1Bs().getBlockHashesList()) {
+            Block b2b = service.getBlock(r);
+            if (b2b != null)
+                return get1bValue(b2b.getHetconsMessage().getM1B(), service);
+        }
+        return null;
+    }
+
+    public static HetconsMessage1a getM1aFromReference(Reference m1aRef, CharlotteNodeService service) {
+        try {
+            Block block = service.getBlock(m1aRef);
+            return block.getHetconsMessage().getM1A();
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        }
     }
 
 }

@@ -2,6 +2,7 @@ package com.isaacsheff.charlotte.fern;
 
 import static com.isaacsheff.charlotte.node.HashUtil.sha3Hash;
 
+import java.util.Collection;
 import java.util.logging.Logger;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -12,19 +13,12 @@ import com.isaacsheff.charlotte.collections.BlockingMap;
 import com.isaacsheff.charlotte.collections.ConcurrentHolder;
 import com.isaacsheff.charlotte.node.CharlotteNode;
 import com.isaacsheff.charlotte.node.HetconsParticipantNodeForFern;
-import com.isaacsheff.charlotte.proto.Block;
-import com.isaacsheff.charlotte.proto.CryptoId;
-import com.isaacsheff.charlotte.proto.HetconsProposal;
-import com.isaacsheff.charlotte.proto.HetconsValue;
-import com.isaacsheff.charlotte.proto.IntegrityAttestation;
+import com.isaacsheff.charlotte.proto.*;
 import com.isaacsheff.charlotte.proto.IntegrityAttestation.ChainSlot;
 import com.isaacsheff.charlotte.proto.IntegrityAttestation.HetconsAttestation;
 import com.isaacsheff.charlotte.proto.IntegrityAttestation.SignedChainSlot;
-import com.isaacsheff.charlotte.proto.IntegrityPolicy;
-import com.isaacsheff.charlotte.proto.Reference;
-import com.isaacsheff.charlotte.proto.RequestIntegrityAttestationInput;
-import com.isaacsheff.charlotte.proto.RequestIntegrityAttestationResponse;
 import com.isaacsheff.charlotte.yaml.Config;
+import com.xinwenwang.hetcons.HetconsUtil;
 import com.xinwenwang.hetcons.config.HetconsConfig;
 
 import io.grpc.ServerBuilder;
@@ -217,19 +211,36 @@ public class HetconsFern extends AgreementFernService {
    * @param value the value they decided on
    * @param proposal the HetconsProposal on which they decided.
    */
-  public void observersDecide(final Set<CryptoId> observers,
-                              final HetconsValue value,
-                              final HetconsProposal proposal)  {
+  public void observersDecide(final HetconsObserverQuorum q,
+                              final Collection<Reference> quorum2b)  {
+
     final HetconsAttestation.Builder hetconsAttestationBuilder = HetconsAttestation.newBuilder();
-    final boolean selfInObservers = observers.contains(getNode().getConfig().getCryptoId());
-    for (CryptoId observer : observers) {
-      hetconsAttestationBuilder.addObservers(observer);
-    }
-    for (Block block : getHetconsNode().getReference2bsPerProposal().get(proposal)) { 
-      if (block.getHetconsMessage().getM2B().getValue().equals(value)) {
-        hetconsAttestationBuilder.addMessage2B(Reference.newBuilder().setHash(sha3Hash(block)));
+
+    CryptoId observer = q.getOwner();
+
+    hetconsAttestationBuilder.addObservers(observer);
+
+    HetconsBallot ballot = null;
+    HetconsValue value = null;
+    HetconsMessage1a message1a = null;
+
+    for (Reference r: quorum2b) {
+      Block b2b = getNode().getBlock(r);
+      HetconsMessage2ab m2b = b2b.getHetconsMessage().getM2B();
+      HetconsValue temp = HetconsUtil.get2bValue(m2b, getNode());
+      message1a = HetconsUtil.getM1aFromReference(m2b.getM1ARef(), getNode());
+      if (ballot == null && value == null) {
+        ballot = message1a.getProposal().getBallot();
+        value = HetconsUtil.get2bValue(m2b, getNode());
+      } else {
+        if (HetconsUtil.ballotCompare(
+                message1a.getProposal().getBallot(),
+                ballot) != 0 || (temp != null && !value.equals(temp)))
+          return;
       }
     }
+    hetconsAttestationBuilder.addAllMessage2B(quorum2b);
+
     final Block hetconsAttestation = Block.newBuilder().setIntegrityAttestation(
       IntegrityAttestation.newBuilder().setHetconsAttestation(hetconsAttestationBuilder)).build();
 
@@ -237,30 +248,27 @@ public class HetconsFern extends AgreementFernService {
 
     final RequestIntegrityAttestationResponse hetconsResponse = RequestIntegrityAttestationResponse.newBuilder().
       setReference(Reference.newBuilder().setHash(sha3Hash(hetconsAttestation))).build();
-    for (ChainSlot chainslot : proposal.getSlotsList()) {
+
+    for (ChainSlot chainslot : message1a.getProposal().getSlotsList()) {
       // we're indexing strictly by root and slot.
       // that means different parents or whatever conflict.
       final ChainSlot indexableChainSlot = ChainSlot.newBuilder().
         setRoot(chainslot.getRoot()).
         setSlot(chainslot.getSlot()).
         build();
-      for (CryptoId observer : observers) {
-        putHetconsAttestation(indexableChainSlot, observer, hetconsResponse);
-      }
-      if (selfInObservers) {
-        getAgreementAttestationCache().put(indexableChainSlot, newResponse(
-          IntegrityPolicy.newBuilder().setFillInTheBlank(
-            IntegrityAttestation.newBuilder().setSignedChainSlot(
-              SignedChainSlot.newBuilder().setChainSlot(
-                ChainSlot.newBuilder(chainslot).setBlock(
-                  value.getBlock()
-                )
+
+      putHetconsAttestation(indexableChainSlot, observer, hetconsResponse);
+      getAgreementAttestationCache().put(indexableChainSlot, newResponse(
+        IntegrityPolicy.newBuilder().setFillInTheBlank(
+          IntegrityAttestation.newBuilder().setSignedChainSlot(
+            SignedChainSlot.newBuilder().setChainSlot(
+              ChainSlot.newBuilder(chainslot).setBlock(
+                value.getBlock()
               )
             )
-          ).build()
-        ));
-
-      }
+          )
+        ).build()
+      ));
     }
   }
 

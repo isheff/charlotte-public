@@ -62,7 +62,7 @@ public class HetconsParticipantServiceTest extends HetconsTest {
                 "clientNode",
                 contacts);
 
-        HetconsConfig.setConfigFileDirectory(testDirectory);
+//        HetconsConfig.setConfigFileDirectory(testDirectory);
 
         ArrayList<Thread> threads = new ArrayList<>();
 
