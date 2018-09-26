@@ -142,6 +142,6 @@ public class AgreementNFern extends AgreementChainFernService {
         }
       }
     }
-    return "did not reference enough Ferns' Integrity Attestations for Parent";
+    return "did not reference enough Ferns' Integrity Attestations for Parent: " + policy;
   }
 }

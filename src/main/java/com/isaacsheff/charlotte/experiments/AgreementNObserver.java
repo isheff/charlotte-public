@@ -1,5 +1,6 @@
 package com.isaacsheff.charlotte.experiments;
 
+import com.isaacsheff.charlotte.proto.RequestIntegrityAttestationInput;
 import com.isaacsheff.charlotte.proto.RequestIntegrityAttestationResponse;
 import io.grpc.stub.StreamObserver;
 import java.util.logging.Level;
@@ -16,16 +17,24 @@ public class AgreementNObserver implements StreamObserver<RequestIntegrityAttest
   /** The AgreementNClient for which this observer exists. */
   private final AgreementNClient agreementClient;
 
+  /** The request to the Fern server we're waiting for a response from **/
+  private final RequestIntegrityAttestationInput request;
+
   /**
    * Constructor.
    * @param agreementClient the AgreementNClient for which this exists
+   * @param request The request to the Fern server we're waiting for a response from 
    */
-  public AgreementNObserver(AgreementNClient agreementClient) {
+  public AgreementNObserver(AgreementNClient agreementClient, RequestIntegrityAttestationInput request) {
     this.agreementClient = agreementClient;
+    this.request = request;
   }
 
   /** @return The AgreementNClient for which this observer exists. */
   public AgreementNClient getAgreementClient() {return agreementClient;}
+
+  /** @return The request to the Fern server we're waiting for a response from **/
+  public RequestIntegrityAttestationInput getRequest() {return request;}
 
   /**
    * What do we do each time a response arrives back from the wire.
@@ -33,7 +42,7 @@ public class AgreementNObserver implements StreamObserver<RequestIntegrityAttest
    * @param input the new RequestIntegrityAttestationResponse that has just arrived on the wire.
    */
   public void onNext(RequestIntegrityAttestationResponse response) {
-    getAgreementClient().onFernResponse(response);
+    getAgreementClient().onFernResponse(response, getRequest());
   }
 
   /**

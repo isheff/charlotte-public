@@ -2,7 +2,6 @@ package com.isaacsheff.charlotte.experiments;
 
 import static com.isaacsheff.charlotte.fern.AgreementFernClient.checkAgreementIntegrityAttestation;
 import static com.isaacsheff.charlotte.node.HashUtil.sha3Hash;
-import static java.lang.Integer.parseInt;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
@@ -66,6 +65,9 @@ public class AgreementNClient {
   /** The hash of the root block (literally sha3Hash(blocks[0])) **/
   private final Hash rootHash;
 
+  /** used to wait until we're done */
+  private final Object doneLock;
+
   /** The current slot number we've just tried to append to the chain (MUTABLE) **/
   private int currentSlot;
 
@@ -80,6 +82,7 @@ public class AgreementNClient {
   public AgreementNClient(CharlotteNodeService service, JsonExperimentConfig config) {
     this.service = service;
     this.config = config;
+    doneLock = new Object();
     totalBlocks = 1 + (2 * config.getBlocksPerExperiment());
     blocks = new Block[totalBlocks];
     for (int i = 0; i < totalBlocks; ++i) {
@@ -99,9 +102,11 @@ public class AgreementNClient {
       final BlockingQueue<RequestIntegrityAttestationInput> queue =
         new LinkedBlockingQueue<RequestIntegrityAttestationInput>();
       (new Thread(() -> {
+        RequestIntegrityAttestationInput input;
         while (true) {
           try {
-            client.requestIntegrityAttestation(queue.take(), new AgreementNObserver(this));
+            input = queue.take();
+            client.requestIntegrityAttestation(input, new AgreementNObserver(this, input));
           } catch (InterruptedException e) {
             logger.log(Level.SEVERE, "Interrupted while trying to send to Fern", e);
           }
@@ -133,7 +138,7 @@ public class AgreementNClient {
       done(); // we've finished all the blocks, and we're done.
       return; // unreachable, I'm pretty sure
     }
-    service.broadcastBlock(blocks[slot]); // send out the block the attestations reference
+    service.onSendBlocksInput(blocks[slot]); // send out the block the attestations reference
     RequestIntegrityAttestationInput.Builder builder = RequestIntegrityAttestationInput.newBuilder().setPolicy(
             IntegrityPolicy.newBuilder().setFillInTheBlank(
               IntegrityAttestation.newBuilder().setSignedChainSlot(
@@ -161,8 +166,21 @@ public class AgreementNClient {
 
   /** To be called when the experiment is complete. **/
   public void done() {
-    logger.info("Experiment Complete");
-    System.exit(0);
+    synchronized(doneLock) {
+      doneLock.notifyAll();
+    }
+  }
+
+  /**  Wait until the experiment is done */
+  public void waitUntilDone() {
+    try {
+      synchronized(doneLock) {
+        doneLock.wait();
+      }
+    } catch (InterruptedException e) {
+      logger.log(Level.SEVERE, "Interrupted while waiting to finish experiment", e);
+      waitUntilDone();
+    }
   }
 
   /**
@@ -172,32 +190,41 @@ public class AgreementNClient {
    * If we do, it broadcasts the request for the next block.
    * @param response the response from the Fern server off the wire.
    */
-  public void onFernResponse(RequestIntegrityAttestationResponse response) {
+  public void onFernResponse(final RequestIntegrityAttestationResponse response,
+                             final RequestIntegrityAttestationInput request) {
     if (!(response.hasReference() && response.getReference().hasHash())) {
-      logger.log(Level.SEVERE, "error response: " + response);
+      try { // re-send the request
+        requestQueues.get(request.getPolicy().getFillInTheBlank().getSignedChainSlot().getSignature().
+                          getCryptoId()).put(request);
+      } catch (InterruptedException e) {
+        logger.log(Level.SEVERE, "interrupted while enqueuing to send to fern", e);
+      }
       return;
     }
     final Block block = getService().getBlock(response.getReference().getHash()); // blocking
     if (block.hasIntegrityAttestation()
         && block.getIntegrityAttestation().hasSignedChainSlot()
-        && (block == checkAgreementIntegrityAttestation(block)) // signature verification and such
-        && rootHash == block.getIntegrityAttestation().getSignedChainSlot().getChainSlot().getRoot().getHash()
+        && (block.equals(checkAgreementIntegrityAttestation(block))) // signature verification and such
+        && rootHash.equals(block.getIntegrityAttestation().getSignedChainSlot().getChainSlot().getRoot().getHash())
         && currentSlot == block.getIntegrityAttestation().getSignedChainSlot().getChainSlot().getSlot()
         ) {
       Reference.Builder parentBuilder = null;
       int newSlot = 0;
       synchronized (knownAttestations) { // as usual, I regret having to explicitly syncronize anything
-        knownAttestations.put(
-          block.getIntegrityAttestation().getSignedChainSlot().getSignature().getCryptoId(),
-          sha3Hash(block));
-        if (knownAttestations.size() > threshold) {
-          parentBuilder = Reference.newBuilder().setHash(sha3Hash(blocks[currentSlot]));
-          for (Hash hash : knownAttestations.values()) {
-            parentBuilder.addIntegrityAttestations(Reference.newBuilder().setHash(hash));
+        // if we're still (now that we're in the synchronized block) on the same slot...
+        if (currentSlot == block.getIntegrityAttestation().getSignedChainSlot().getChainSlot().getSlot()) {
+          knownAttestations.put(
+            block.getIntegrityAttestation().getSignedChainSlot().getSignature().getCryptoId(),
+            sha3Hash(block));
+          if (knownAttestations.size() > threshold) {
+            parentBuilder = Reference.newBuilder().setHash(sha3Hash(blocks[currentSlot]));
+            for (Hash hash : knownAttestations.values()) {
+              parentBuilder.addIntegrityAttestations(Reference.newBuilder().setHash(hash));
+            }
+            ++currentSlot;
+            newSlot = currentSlot;
+            knownAttestations.clear();
           }
-          ++currentSlot;
-          newSlot = currentSlot;
-          knownAttestations.clear();
         }
       }
       if (parentBuilder != null) {
@@ -224,11 +251,7 @@ public class AgreementNClient {
 
     TimeUnit.SECONDS.sleep(1); // wait for servers to start up
     client.broadcastRequest(Reference.newBuilder(), 0); // send out the root block
-  
-    if (args.length < 2) {
-      TimeUnit.SECONDS.sleep(Integer.MAX_VALUE);
-    } else {
-      TimeUnit.SECONDS.sleep(parseInt(args[1]));
-    }
+    client.waitUntilDone();
+    System.exit(0);
   }
 }
