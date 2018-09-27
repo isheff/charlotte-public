@@ -127,12 +127,14 @@ public class HetconsObserverStatus {
                 ).build();
 
         broadcastToParticipants(Block.newBuilder().setHetconsMessage(m).build());
+        currentStatus.setStage(HetconsConsensusStage.M1BSent);
 
         logger.info("Sent 1Bs");
 
         // set timer for 1b, if we didn't receive enough 1bs after the timeout, we restart the consensus.
-        if (currentStatus.getM1bTimer() != null)
-            return true;
+        if (currentStatus.getM1bTimer() != null) {
+            currentStatus.getM1bTimer().cancel();
+        }
 
         currentStatus.setM1bTimer(new Timer());
         currentStatus.getM1bTimer().schedule(new TimerTask() {
@@ -239,8 +241,8 @@ public class HetconsObserverStatus {
 
         /** -------------------- Timer for Restart ----------------------------- */
         // set timer for 2b, if we didn't receive enough 1bs after the timeout, we restart the consensus.
-        if (status.getM1bTimer() != null)
-            return;
+        if (status.getM2bTimer() != null)
+            status.getM2bTimer().cancel();
 
         logger.info("Sent M2B:\n");
 

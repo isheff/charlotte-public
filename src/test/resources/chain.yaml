@@ -1,5 +1,6 @@
 ---
-root: "abc"
+root:
+  - "abc"
 observers:
   - self:
       x509: server1.pem

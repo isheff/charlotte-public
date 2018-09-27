@@ -41,7 +41,7 @@ public class HetconsProposalStatus {
         this.observerGroupReference = observerGroupReference;
         initQuorum(members);
         initParticipantStatues(members);
-        consensusTimeout = maxTimeOut;
+        consensusTimeout = proposal.getTimeout();
 
     }
 

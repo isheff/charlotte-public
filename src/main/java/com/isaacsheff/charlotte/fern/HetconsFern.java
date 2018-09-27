@@ -245,7 +245,7 @@ public class HetconsFern extends AgreementFernService {
     final Block hetconsAttestation = Block.newBuilder().setIntegrityAttestation(
       IntegrityAttestation.newBuilder().setHetconsAttestation(hetconsAttestationBuilder)).build();
 
-    getNode().onSendBlocksInput(hetconsAttestation);
+    getHetconsNode().onSendBlocksInput(SendBlocksInput.newBuilder().setBlock(hetconsAttestation).build());
 
     final RequestIntegrityAttestationResponse hetconsResponse = RequestIntegrityAttestationResponse.newBuilder().
       setReference(Reference.newBuilder().setHash(sha3Hash(hetconsAttestation))).build();

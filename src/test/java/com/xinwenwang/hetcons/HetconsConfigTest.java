@@ -10,8 +10,12 @@ import com.xinwenwang.hetcons.config.QuorumConfig;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.lang.reflect.Array;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 public class HetconsConfigTest extends HetconsTest {
@@ -25,12 +29,13 @@ public class HetconsConfigTest extends HetconsTest {
         try {
 
             ChainConfig config = new ObjectMapper(new YAMLFactory()).readValue(path.toFile(), ChainConfig.class);
-            assertEquals(config.getRoot(), "abc");
+            assertEquals(config.getRoot(), Arrays.asList("abc"));
 
             assertEquals(config.getObservers().size(), 2);
             assertEquals(config.getObservers().get(0).getSelf().getUrl(), "server1.com");
             assertEquals(config.getObservers().get(1).getSelf().getUrl(), "server2.com");
-            logger.info(config.getObserverGroup(Paths.get(testDirectory)).toString());
+//            logger.info(config.getObserverGroup(Paths.get(testDirectory)).toString());
+            logger.info("Great! Pass the test!");
         } catch (IOException ex) {
             ex.printStackTrace();
             assert false;

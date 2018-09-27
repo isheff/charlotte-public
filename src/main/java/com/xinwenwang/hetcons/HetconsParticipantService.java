@@ -2,12 +2,12 @@ package com.xinwenwang.hetcons;
 
 import com.isaacsheff.charlotte.node.CharlotteNodeService;
 import com.isaacsheff.charlotte.node.HashUtil;
-import com.isaacsheff.charlotte.node.SignatureUtil;
 import com.isaacsheff.charlotte.proto.*;
 import com.isaacsheff.charlotte.yaml.Config;
-import com.xinwenwang.hetcons.config.HetconsConfig;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.logging.Logger;
 
 public class HetconsParticipantService extends CharlotteNodeService {

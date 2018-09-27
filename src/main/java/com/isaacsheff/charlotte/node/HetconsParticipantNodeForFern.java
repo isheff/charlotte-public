@@ -94,6 +94,7 @@ public class HetconsParticipantNodeForFern extends HetconsParticipantService {
   protected void onDecision(final HetconsObserverQuorum quora,
                             final Collection<Reference> quorum2b) {
 
+    logger.info("Consensus Decided");
     getFern().observersDecide(quora, quorum2b);
   }
 

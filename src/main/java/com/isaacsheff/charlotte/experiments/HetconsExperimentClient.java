@@ -148,7 +148,6 @@ public class HetconsExperimentClient {
         Block observerBlock = Block.newBuilder().setHetconsMessage(observerMessage).build();
         clientNode.getLocalService().sendBlock(clientNode.getContact().getCryptoId(), observerBlock);
 
-
         Reference obsblkRef = Reference.newBuilder()
                 .setHash(HashUtil.sha3Hash(observerBlock)).build();
 
@@ -198,7 +197,6 @@ public class HetconsExperimentClient {
                                     )
                                     .build()
                     ).build();
-
             logger.info(String.format("Beginning slot for chain %s %d", cn, i));
             RequestIntegrityAttestationResponse response = clientNode.requestIntegrityAttestation(input);
             logger.info(String.format("Received response for chain %s %d", cn, i));
