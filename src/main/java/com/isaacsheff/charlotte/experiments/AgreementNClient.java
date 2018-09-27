@@ -5,6 +5,8 @@ import static com.isaacsheff.charlotte.node.HashUtil.sha3Hash;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.util.JsonFormat;
 import com.isaacsheff.charlotte.fern.AgreementFernClient;
 import com.isaacsheff.charlotte.node.CharlotteNode;
 import com.isaacsheff.charlotte.node.CharlotteNodeService;
@@ -273,7 +275,33 @@ public class AgreementNClient {
     }
     final JsonExperimentConfig jsonConfig =
       (new ObjectMapper(new YAMLFactory())).readValue(Paths.get(args[0]).toFile(), JsonExperimentConfig.class);
-    final CharlotteNodeService service = new CharlotteNodeService(args[0]);
+    final CharlotteNodeService service = new CharlotteNodeService(args[0]){
+      /**
+       * Do not log whole blocks.
+       * Logs (INFO) whenever a block is received, whether it was new or repeat.
+       * This will be a JSON, with fields "block" and either "NewBlockHash" or "RepeatBlockHash"
+       * @param block the block to be stored
+       * @return whether or not the block was already known to this CharlotteNodeService
+       */
+      @Override
+      public boolean storeNewBlock(final Block block) {
+        final Hash hash = sha3Hash(block);
+        if (getBlockMap().putIfAbsent(hash, block) == null) {
+          try {
+            logger.info("{ \"NewBlockHash\":"+JsonFormat.printer().print(hash)+"}");
+          } catch (InvalidProtocolBufferException e) {
+            logger.log(Level.SEVERE, "Invalid protocol buffer parsed as Block", e);
+          }
+          return true;
+        }
+        try {
+          logger.info("{ \"RepeatBlockHash\":"+JsonFormat.printer().print(hash)+"}");
+        } catch (InvalidProtocolBufferException e) {
+          logger.log(Level.SEVERE, "Invalid protocol buffer parsed as Block", e);
+        }
+        return false;
+      }
+    };
     (new Thread(new CharlotteNode(service))).start();
     final AgreementNClient client = new AgreementNClient(service, jsonConfig);
 

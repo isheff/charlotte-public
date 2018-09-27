@@ -1,6 +1,7 @@
 package com.isaacsheff.charlotte.experiments;
 
 import static com.isaacsheff.charlotte.fern.AgreementFernClient.checkAgreementIntegrityAttestation;
+import static com.isaacsheff.charlotte.node.HashUtil.sha3Hash;
 import static java.lang.Integer.parseInt;
 import static java.util.concurrent.ConcurrentHashMap.newKeySet;
 
@@ -11,11 +12,14 @@ import java.util.concurrent.TimeUnit;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.util.JsonFormat;
 import com.isaacsheff.charlotte.fern.AgreementChainFernService;
 import com.isaacsheff.charlotte.node.CharlotteNode;
 import com.isaacsheff.charlotte.node.CharlotteNodeService;
 import com.isaacsheff.charlotte.proto.Block;
 import com.isaacsheff.charlotte.proto.CryptoId;
+import com.isaacsheff.charlotte.proto.Hash;
 import com.isaacsheff.charlotte.proto.IntegrityPolicy;
 import com.isaacsheff.charlotte.proto.Reference;
 
@@ -64,7 +68,34 @@ public class AgreementNFern extends AgreementChainFernService {
     try {
       final JsonExperimentConfig config =
         (new ObjectMapper(new YAMLFactory())).readValue(Paths.get(filename).toFile(), JsonExperimentConfig.class);
-      final CharlotteNodeService node = new CharlotteNodeService(filename);
+      final CharlotteNodeService node = new CharlotteNodeService(filename){
+        /**
+         * Do not log whole blocks.
+         * Logs (INFO) whenever a block is received, whether it was new or repeat.
+         * This will be a JSON, with fields "block" and either "NewBlockHash" or "RepeatBlockHash"
+         * @param block the block to be stored
+         * @return whether or not the block was already known to this CharlotteNodeService
+         */
+        @Override
+        public boolean storeNewBlock(final Block block) {
+          final Hash hash = sha3Hash(block);
+          if (getBlockMap().putIfAbsent(hash, block) == null) {
+            try {
+              logger.info("{ \"NewBlockHash\":"+JsonFormat.printer().print(hash)+"}");
+            } catch (InvalidProtocolBufferException e) {
+              logger.log(Level.SEVERE, "Invalid protocol buffer parsed as Block", e);
+            }
+            return true;
+          }
+          try {
+            logger.info("{ \"RepeatBlockHash\":"+JsonFormat.printer().print(hash)+"}");
+          } catch (InvalidProtocolBufferException e) {
+            logger.log(Level.SEVERE, "Invalid protocol buffer parsed as Block", e);
+          }
+          return false;
+        }
+        
+      };
       return new CharlotteNode(node,
                    ServerBuilder.forPort(node.getConfig().getPort()).addService(new AgreementNFern(config, node)),
                    node.getConfig().getPort());
