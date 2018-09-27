@@ -6,6 +6,7 @@ import com.google.protobuf.ByteString;
 import com.isaacsheff.charlotte.fern.HetconsFernClient;
 import com.isaacsheff.charlotte.node.CharlotteNodeService;
 import com.isaacsheff.charlotte.node.HashUtil;
+import com.isaacsheff.charlotte.node.HetconsParticipantNodeForFern;
 import com.isaacsheff.charlotte.node.SignatureUtil;
 import com.isaacsheff.charlotte.proto.*;
 import com.isaacsheff.charlotte.yaml.Config;
@@ -43,9 +44,7 @@ public class HetconsExperimentClient {
         config.getContacts();
         Config localNodeConfig = new Config(config, expDir);
 
-        Contact fernContact = new Contact(config.getContacts().get(config.getContactServer()), expDir);
         CharlotteNodeService service = new CharlotteNodeService(localNodeConfig);
-        HetconsFernClient client = new HetconsFernClient(service, fernContact);
         HetconsConfig hetconsConfig = new HetconsConfig(expDir);
 
         assert config.getContactServer() != null;
@@ -53,18 +52,21 @@ public class HetconsExperimentClient {
             case '1':
                 assert config.getChainNames().size() == 1;
                 assert config.getFernServers().size() == 4;
-                runExperiment(hetconsConfig, config, client, expDir, 1);
+                runExperiment(hetconsConfig, config, service, expDir, 1);
                 break;
             case '2':
                 assert config.getChainNames().size() > 1;
                 assert config.getFernServers().size() >= 4;
-                runExperiment(hetconsConfig, config, client, expDir, 2);
+                runExperiment(hetconsConfig, config, service, expDir, 2);
             case '3':
                 assert config.getChainNames().size() == 1;
                 assert config.getFernServers().size() == 4;
-                runExperiment(hetconsConfig, config, client, expDir, 4);
+                runExperiment(hetconsConfig, config, service, expDir, 3);
             case '4':
-
+                assert config.getChainNames().size() >= 3;
+                assert config.getFernServers().size() >= 4;
+                assert config.getBlocksPerExperiment() >= 1;
+                runExperiment(hetconsConfig, config, service, expDir, 4);
             default:
                 logger.warning("No such experiment");
         }
@@ -73,18 +75,20 @@ public class HetconsExperimentClient {
 
     private static void runExperiment(HetconsConfig hetconsConfig,
                                       HetconsExperimentClientConfig config,
-                                      HetconsFernClient clientNode,
+                                      CharlotteNodeService service,
                                       Path expDir,
                                       int num) throws InterruptedException {
 
 
         ArrayList<Thread> threads = new ArrayList<>();
-
-        for (String cn : config.getChainNames()) {
+        logger.info("Hetcons Experiment Begin");
+        int size = num == 4 ? config.getChainNames().size() - 1 : config.getChainNames().size();
+        for (int i = 0; i < size; i ++) {
+            String cn = config.getChainNames().get(i);
             Thread thread = new Thread(new Runnable() {
                 @Override
                 public void run() {
-                    testPerChain(cn, hetconsConfig, config, clientNode, expDir, num);
+                    testPerChain(cn, hetconsConfig, config, service, expDir, num == 4 ? 2 : num);
                 }
             });
             threads.add(thread);
@@ -94,17 +98,43 @@ public class HetconsExperimentClient {
         for (Thread t : threads) {
             t.join();
         }
+
+        if (num == 4) {
+            String cn = config.getChainNames().get(size);
+            Thread thread = new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    testPerChain(cn, hetconsConfig, config, service, expDir, num);
+                }
+            });
+            thread.start();
+            thread.join();
+        }
+        logger.info("Hetcons Experiment Completed");
+        System.exit(0);
     }
 
+    /**
+     * Test for each given chain or chains with shared block
+     * @param cn
+     * @param hetconsConfig
+     * @param config
+     * @param expDir
+     * @param num
+     */
     private static void testPerChain(String cn,
                                      HetconsConfig hetconsConfig,
                                      HetconsExperimentClientConfig config,
-                                     HetconsFernClient clientNode,
+                                     CharlotteNodeService service,
                                      Path expDir,
                                      int num) {
         ChainConfig chainConfig = hetconsConfig.loadChain(cn);
         if (chainConfig == null)
             return;
+
+        Contact fernContact = new Contact(chainConfig.getObservers().get(0).getSelf(), expDir);
+        HetconsFernClient clientNode = new HetconsFernClient(service, fernContact);
+
         HetconsObserverGroup group = chainConfig.getObserverGroup(expDir);
 
         HetconsMessage observerMessage = HetconsMessage.newBuilder()
@@ -123,7 +153,8 @@ public class HetconsExperimentClient {
                 .setHash(HashUtil.sha3Hash(observerBlock)).build();
 
         logger.info(String.format("Experiment part %d start", num));
-        for (int i = 0; i < config.getBlocksPerExperiment(); i++) {
+        int numBlock = num == 4 ? 1 : config.getBlocksPerExperiment();
+        for (int i = 0; i < numBlock; i++) {
             // Build proposal
             IntegrityAttestation.ChainSlot slot = IntegrityAttestation.ChainSlot.newBuilder()
                     .setRoot(Reference.newBuilder()
@@ -168,7 +199,9 @@ public class HetconsExperimentClient {
                                     .build()
                     ).build();
 
+            logger.info(String.format("Beginning slot for chain %s %d", cn, i));
             RequestIntegrityAttestationResponse response = clientNode.requestIntegrityAttestation(input);
+            logger.info(String.format("Received response for chain %s %d", cn, i));
         }
         logger.info(String.format("Experiment part %d completed", num));
     }
