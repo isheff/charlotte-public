@@ -23,6 +23,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 public class HetconsExperimentClient {
@@ -147,6 +148,12 @@ public class HetconsExperimentClient {
 
         Block observerBlock = Block.newBuilder().setHetconsMessage(observerMessage).build();
         clientNode.getLocalService().sendBlock(clientNode.getContact().getCryptoId(), observerBlock);
+
+        try {
+            TimeUnit.SECONDS.sleep(2);
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
 
         Reference obsblkRef = Reference.newBuilder()
                 .setHash(HashUtil.sha3Hash(observerBlock)).build();
