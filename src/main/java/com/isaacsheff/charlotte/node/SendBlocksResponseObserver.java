@@ -37,15 +37,6 @@ public class SendBlocksResponseObserver implements StreamObserver<SendBlocksResp
 
   public boolean hasFailed() {return failed;}
 
-  private void failure() {
-    synchronized(this) {
-      if (!failed) {
-        failed = true;
-        client.reset();
-      }
-    }
-  }
-
   /**
    * Each time a new SendBlocksResponse comes in, this is called.
    * We just log a warning with the error message.
@@ -63,8 +54,13 @@ public class SendBlocksResponseObserver implements StreamObserver<SendBlocksResp
    */
   @Override
   public void onError(Throwable t) {
-    failure();
-    logger.log(client.getChannelRebootLoggingLevel(), "SendBlocks Failed: ", t);
+    synchronized(this) {
+      if (!failed) {
+        failed = true;
+        logger.log(client.getChannelRebootLoggingLevel(), "SendBlocks Failed: ", t);
+        client.reset();
+      }
+    }
     finishLatch.countDown();
   }
 
@@ -73,7 +69,6 @@ public class SendBlocksResponseObserver implements StreamObserver<SendBlocksResp
    */
   @Override
   public void onCompleted() {
-    failure();
     this.failed = true;
     logger.info("SendBlocks Finished.");
     finishLatch.countDown();

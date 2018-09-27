@@ -112,8 +112,8 @@ public class CharlotteNodeClient {
         ++channelRebootCount;
         if (channelRebootCount > 10) {
           channelRebootLoggingLevel = Level.FINE;
-        logger.log(getChannelRebootLoggingLevel(), "rebooting channel");
         }
+        logger.log(getChannelRebootLoggingLevel(), "rebooting channel");
       }
       channel = contact.getManagedChannel();
       asyncStub = CharlotteNodeGrpc.newStub(channel);
