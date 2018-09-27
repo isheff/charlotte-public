@@ -179,7 +179,7 @@ public class HetconsExperimentClient {
 
             // Propose
 
-            HetconsProposal proposal = HetconsUtil.buildProposal(slots, value, ballot, 1000);
+            HetconsProposal proposal = HetconsUtil.buildProposal(slots, value, ballot, config.getTimeout() * 1000);
             HetconsMessage1a message1a = HetconsMessage1a.newBuilder()
                     .setProposal(proposal)
                     .build();
