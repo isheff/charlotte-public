@@ -1,0 +1,24 @@
+---
+self:
+  x509: server.pem
+  url: server.com
+  port: 9123
+
+quorums:
+  - participants:
+      - x509: server1.pem
+        url: alice.com
+        port: 9123
+
+      - x509: server2.pem
+        url: bob.com
+        port: 9124
+
+  - participants:
+      - x509: server3.pem
+        url: tom.com
+        port: 9125
+
+      - x509: server4.pem
+        url: mike.com
+        port: 9126

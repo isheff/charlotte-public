@@ -13,6 +13,7 @@ import com.isaacsheff.charlotte.yaml.Contact;
 import com.isaacsheff.charlotte.yaml.JsonContact;
 import com.xinwenwang.hetcons.HetconsClientNode;
 import com.xinwenwang.hetcons.HetconsUtil;
+import com.xinwenwang.hetcons.config.ChainConfig;
 import com.xinwenwang.hetcons.config.HetconsConfig;
 
 import java.io.IOException;
@@ -101,7 +102,10 @@ public class HetconsExperimentClient {
                                      HetconsFernClient clientNode,
                                      Path expDir,
                                      int num) {
-        HetconsObserverGroup group = hetconsConfig.getChainConfig(cn).getObserverGroup(expDir);
+        ChainConfig chainConfig = hetconsConfig.loadChain(cn);
+        if (chainConfig == null)
+            return;
+        HetconsObserverGroup group = chainConfig.getObserverGroup(expDir);
 
         HetconsMessage observerMessage = HetconsMessage.newBuilder()
                 .setType(HetconsMessageType.OBSERVERGROUP)

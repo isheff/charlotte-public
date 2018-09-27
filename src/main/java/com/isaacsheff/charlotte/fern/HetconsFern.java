@@ -11,6 +11,7 @@ import java.util.Set;
 import com.isaacsheff.charlotte.collections.BlockingConcurrentHashMap;
 import com.isaacsheff.charlotte.collections.BlockingMap;
 import com.isaacsheff.charlotte.collections.ConcurrentHolder;
+import com.isaacsheff.charlotte.experiments.HetconsExperimentFernNode;
 import com.isaacsheff.charlotte.node.CharlotteNode;
 import com.isaacsheff.charlotte.node.HetconsParticipantNodeForFern;
 import com.isaacsheff.charlotte.proto.*;
@@ -305,8 +306,10 @@ public class HetconsFern extends AgreementFernService {
                && request.getPolicy().getHetconsPolicy().getProposal().getM1A().hasProposal() ) {
       
       // send the request out (this will just show up as a duplicate if the request is already out) as a 1A.
-      getNode().onSendBlocksInput(
-        Block.newBuilder().setHetconsMessage(request.getPolicy().getHetconsPolicy().getProposal()).build());
+      getHetconsNode().onSendBlocksInput(
+              SendBlocksInput.newBuilder().setBlock(
+              Block.newBuilder().setHetconsMessage(request.getPolicy().getHetconsPolicy().getProposal()).build()
+              ).build());
 
       // Whichever Slot reaches consensus first for this observer, return the affiliated response
       request.getPolicy().getHetconsPolicy().getProposal().getM1A().getProposal().getSlotsList().parallelStream().

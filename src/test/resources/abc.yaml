@@ -1,0 +1,236 @@
+---
+root: 
+  - "abc"
+observers:
+  - self:
+      x509: server1.pem
+      url: localhost
+      port: 8001
+
+    quorums:
+      - participants:
+          - x509: server1.pem
+            url: localhost
+            port: 8001
+
+          - x509: server2.pem
+            url: localhost
+            port: 8002
+
+          - x509: server3.pem
+            url: localhost
+            port: 8003
+
+      - participants:
+          - x509: server1.pem
+            url: localhost
+            port: 8001
+
+          - x509: server2.pem
+            url: localhost
+            port: 8002
+
+          - x509: server4.pem
+            url: localhost
+            port: 8004
+
+      - participants:
+          - x509: server1.pem
+            url: localhost
+            port: 8001
+
+          - x509: server3.pem
+            url: localhost
+            port: 8003
+
+          - x509: server4.pem
+            url: localhost
+            port: 8004
+
+      - participants:
+          - x509: server2.pem
+            url: localhost
+            port: 8002
+
+          - x509: server3.pem
+            url: localhost
+            port: 8003
+
+          - x509: server4.pem
+            url: localhost
+            port: 8004
+
+  - self:
+      x509: server2.pem
+      url: localhost
+      port: 8002
+
+    quorums:
+      - participants:
+          - x509: server1.pem
+            url: localhost
+            port: 8001
+
+          - x509: server2.pem
+            url: localhost
+            port: 8002
+
+          - x509: server3.pem
+            url: localhost
+            port: 8003
+
+      - participants:
+          - x509: server1.pem
+            url: localhost
+            port: 8001
+
+          - x509: server2.pem
+            url: localhost
+            port: 8002
+
+          - x509: server4.pem
+            url: localhost
+            port: 8004
+
+      - participants:
+          - x509: server1.pem
+            url: localhost
+            port: 8001
+
+          - x509: server3.pem
+            url: localhost
+            port: 8003
+
+          - x509: server4.pem
+            url: localhost
+            port: 8004
+
+      - participants:
+          - x509: server2.pem
+            url: localhost
+            port: 8002
+
+          - x509: server3.pem
+            url: localhost
+            port: 8003
+
+          - x509: server4.pem
+            url: localhost
+            port: 8004
+
+  - self:
+      x509: server3.pem
+      url: localhost
+      port: 8003
+
+    quorums:
+      - participants:
+          - x509: server1.pem
+            url: localhost
+            port: 8001
+
+          - x509: server2.pem
+            url: localhost
+            port: 8002
+
+          - x509: server3.pem
+            url: localhost
+            port: 8003
+
+      - participants:
+          - x509: server1.pem
+            url: localhost
+            port: 8001
+
+          - x509: server2.pem
+            url: localhost
+            port: 8002
+
+          - x509: server4.pem
+            url: localhost
+            port: 8004
+
+      - participants:
+          - x509: server1.pem
+            url: localhost
+            port: 8001
+
+          - x509: server3.pem
+            url: localhost
+            port: 8003
+
+          - x509: server4.pem
+            url: localhost
+            port: 8004
+
+      - participants:
+          - x509: server2.pem
+            url: localhost
+            port: 8002
+
+          - x509: server3.pem
+            url: localhost
+            port: 8003
+
+          - x509: server4.pem
+            url: localhost
+            port: 8004
+
+  - self:
+      x509: server4.pem
+      url: localhost
+      port: 8004
+
+    quorums:
+      - participants:
+          - x509: server1.pem
+            url: localhost
+            port: 8001
+
+          - x509: server2.pem
+            url: localhost
+            port: 8002
+
+          - x509: server3.pem
+            url: localhost
+            port: 8003
+
+      - participants:
+          - x509: server1.pem
+            url: localhost
+            port: 8001
+
+          - x509: server2.pem
+            url: localhost
+            port: 8002
+
+          - x509: server4.pem
+            url: localhost
+            port: 8004
+
+      - participants:
+          - x509: server1.pem
+            url: localhost
+            port: 8001
+
+          - x509: server3.pem
+            url: localhost
+            port: 8003
+
+          - x509: server4.pem
+            url: localhost
+            port: 8004
+
+      - participants:
+          - x509: server2.pem
+            url: localhost
+            port: 8002
+
+          - x509: server3.pem
+            url: localhost
+            port: 8003
+
+          - x509: server4.pem
+            url: localhost
+            port: 8004
+

@@ -583,7 +583,7 @@
                 <configuration>
                   <archive>
                     <manifest>
-                      <mainClass>com.isaacsheff.charlotte.experiments.HetconsExperimentFern</mainClass>
+                      <mainClass>com.isaacsheff.charlotte.experiments.HetconsExperimentFernNode</mainClass>
                     </manifest>
                   </archive>
                   <descriptorRefs>

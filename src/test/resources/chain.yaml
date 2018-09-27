@@ -1,0 +1,50 @@
+---
+root: "abc"
+observers:
+  - self:
+      x509: server1.pem
+      url: server1.com
+      port: 9120
+
+    quorums:
+      - participants:
+          - x509: server1.pem
+            url: alice.com
+            port: 9123
+
+          - x509: server2.pem
+            url: bob.com
+            port: 9124
+
+      - participants:
+          - x509: server3.pem
+            url: tom.com
+            port: 9125
+
+          - x509: server4.pem
+            url: mike.com
+            port: 9126
+
+  - self:
+      x509: server2.pem
+      url: server2.com
+      port: 9122
+
+    quorums:
+      - participants:
+          - x509: server1.pem
+            url: alice.com
+            port: 9123
+
+          - x509: server2.pem
+            url: bob.com
+            port: 9124
+
+      - participants:
+          - x509: server3.pem
+            url: tom.com
+            port: 9125
+
+          - x509: server4.pem
+            url: mike.com
+            port: 9126

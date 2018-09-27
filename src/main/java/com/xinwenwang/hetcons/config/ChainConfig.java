@@ -11,21 +11,21 @@ import java.util.stream.Collectors;
 
 public class ChainConfig {
 
-    @JsonProperty("root") private String root;
+    @JsonProperty("root") private List<String> roots;
 
     @JsonProperty("observers") private List<ObserverConfig> observers;
 
     @JsonCreator
     public ChainConfig(
-            @JsonProperty("root") String root,
+            @JsonProperty("root") List<String> root,
             @JsonProperty("observers") List<ObserverConfig> observers
     ) {
         this.observers = observers;
-        this.root = root;
+        this.roots = root;
     }
 
-    public String getRoot() {
-        return root;
+    public List<String> getRoot() {
+        return roots;
     }
 
     public List<ObserverConfig> getObservers() {

@@ -21,14 +21,15 @@ public class HetconsConfig {
 
 
     protected Path configFileDirectory;
-    private HashMap<String, ChainConfig> configHashMap;
+    private HashMap<List<String>, ChainConfig> configHashMap;
 
 
-    public boolean loadChain(String name) {
+    public ChainConfig loadChain(String name) {
         ChainConfig config = parseHetconsYaml(Paths.get(configFileDirectory.toString(), name+".yaml"));
-        if (config != null)
+        if (config != null) {
             configHashMap.put(config.getRoot(), config);
-        return config != null;
+        }
+        return config;
     }
 
     public ChainConfig getChainConfig(String hash) {
@@ -53,7 +54,7 @@ public class HetconsConfig {
 
     public HetconsConfig(Path path) {
         this.configFileDirectory = path;
-        this.configHashMap = new HashMap<>();
+        this.configHashMap = new HashMap<List<String>, ChainConfig>();
     }
 
     public HetconsConfig() {
@@ -85,6 +86,8 @@ public class HetconsConfig {
     static public void updateChainConfig() {
         //TODO: May or may not need this
     }
+
+
 
 
 

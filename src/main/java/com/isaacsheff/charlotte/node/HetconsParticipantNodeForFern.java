@@ -118,7 +118,8 @@ public class HetconsParticipantNodeForFern extends HetconsParticipantService {
 //       } else {
 //         m2bsKnownForThisHash.add(input.getBlock());
 //       }
-        storeNewBlock(input.getBlock());
+//        logger.info(input.getBlock().getHetconsMessage().toString());
+//        storeNewBlock(input.getBlock());
      }
     return super.onSendBlocksInput(input);
   }
