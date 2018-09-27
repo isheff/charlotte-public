@@ -23,11 +23,27 @@ public class SendBlocksResponseObserver implements StreamObserver<SendBlocksResp
    */
   private final CountDownLatch finishLatch;
 
+  private boolean failed;
+  private CharlotteNodeClient client;
+
   /**
    * @param finishLatch Used in shutting down
    */
-  public SendBlocksResponseObserver(CountDownLatch finishLatch) {
+  public SendBlocksResponseObserver(CountDownLatch finishLatch, CharlotteNodeClient client) {
     this.finishLatch = finishLatch;
+    this.client = client;
+    failed = false;
+  }
+
+  public boolean hasFailed() {return failed;}
+
+  private void failure() {
+    synchronized(this) {
+      if (!failed) {
+        failed = true;
+        client.reset();
+      }
+    }
   }
 
   /**
@@ -47,7 +63,8 @@ public class SendBlocksResponseObserver implements StreamObserver<SendBlocksResp
    */
   @Override
   public void onError(Throwable t) {
-    logger.log(Level.WARNING, "SendBlocks Failed: ", t);
+    failure();
+    logger.log(client.getChannelRebootLoggingLevel(), "SendBlocks Failed: ", t);
     finishLatch.countDown();
   }
 
@@ -56,6 +73,8 @@ public class SendBlocksResponseObserver implements StreamObserver<SendBlocksResp
    */
   @Override
   public void onCompleted() {
+    failure();
+    this.failed = true;
     logger.info("SendBlocks Finished.");
     finishLatch.countDown();
   }
