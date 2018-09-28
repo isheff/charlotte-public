@@ -9,10 +9,8 @@ import java.util.logging.Logger;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.util.JsonFormat;
 import com.isaacsheff.charlotte.node.CharlotteNodeClient;
-import com.isaacsheff.charlotte.node.SendBlocksResponseObserver;
 import com.isaacsheff.charlotte.proto.SendBlocksInput;
 
-import io.grpc.stub.StreamObserver;
 
 /**
  * Send each element queued to the StreamObserver.
@@ -25,11 +23,6 @@ public class SendToObserverLogging implements Runnable {
 
   private final CharlotteNodeClient client;
 
-  /** The StreamObserver which will receive all the things queued. */
-  private final StreamObserver<SendBlocksInput> observer;
-
-  private final SendBlocksResponseObserver responseObserver;
-  private final SendBlocksInput thingToSendFirst;
   private final String loggingString;
 
   /**
@@ -38,11 +31,8 @@ public class SendToObserverLogging implements Runnable {
    * @param queue The queue from which we pull elements to give to the StreamObserver.
    * @param observer The StreamObserver which will receive all the things queued.
    */
-  public SendToObserverLogging(final CharlotteNodeClient client, final SendBlocksInput thingToSendFirst, final StreamObserver<SendBlocksInput> observer, SendBlocksResponseObserver responseObserver) {
+  public SendToObserverLogging(final CharlotteNodeClient client) {
     this.client = client;
-    this.observer = observer;
-    this.responseObserver = responseObserver;
-    this.thingToSendFirst = thingToSendFirst;
     loggingString=",\n \"originUrl\":\"" + client.getContact().getParentConfig().getUrl() + "\"" +
                   ",\n \"originPort\":\"" + client.getContact().getParentConfig().getPort() + "\"" +
                   ",\n \"destinationUrl\":\"" + client.getContact().getUrl() + "\"" +
@@ -51,7 +41,7 @@ public class SendToObserverLogging implements Runnable {
 
   private void sendToGrpc(final SendBlocksInput element) {
     try {
-      observer.onNext(element);
+      client.getSendBlocksInputObserver().onNext(element);
       logger.info("{ \"SentBlock\":"+JsonFormat.printer().print(sha3Hash(element.getBlock()))+
                   loggingString +
                   ",\n \"size\":" + element.getSerializedSize() + " }");
@@ -67,10 +57,11 @@ public class SendToObserverLogging implements Runnable {
    * This will then log a hash of the thing sent with the json key "SentBlock"
    */
   public void run() {
-    if ((!responseObserver.hasFailed()) && (null != thingToSendFirst)) {
-      sendToGrpc(thingToSendFirst);
+    client.createChannel();
+    if ((!client.getSendBlocksResponseObserver().hasFailed()) && (null != client.getMostRecentSent())) {
+      sendToGrpc(client.getMostRecentSent());
     }
-    while (!responseObserver.hasFailed()) {
+    while (!client.getSendBlocksResponseObserver().hasFailed()) {
       sendToGrpc(client.pullFromQueue());
     }
   }

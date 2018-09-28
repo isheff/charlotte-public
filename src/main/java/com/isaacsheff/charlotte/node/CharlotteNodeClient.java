@@ -117,16 +117,25 @@ public class CharlotteNodeClient {
         }
         logger.log(getChannelRebootLoggingLevel(), "rebooting channel");
       }
+      sendBlocksRunnable = new SendToObserverLogging(this);
+      sendBlocksThread = new Thread(sendBlocksRunnable);
+      sendBlocksThread.start();
+    }
+  }
+
+  public SendBlocksInput getMostRecentSent() {return mostRecentSent;}
+  public StreamObserver<SendBlocksInput> getSendBlocksInputObserver() {return sendBlocksInputObserver;}
+
+  public void createChannel() {
+    synchronized(this) {
       channel = contact.getManagedChannel();
       asyncStub = CharlotteNodeGrpc.newStub(channel);
       sendBlocksCountDownLatch = new CountDownLatch(1);
       sendBlocksResponseObserver = new SendBlocksResponseObserver(getSendBlocksCountDownLatch(), this);
       sendBlocksInputObserver = asyncStub.sendBlocks(getSendBlocksResponseObserver());
-      sendBlocksRunnable = new SendToObserverLogging(this, mostRecentSent, sendBlocksInputObserver, sendBlocksResponseObserver);
-      sendBlocksThread = new Thread(sendBlocksRunnable);
-      sendBlocksThread.start();
     }
   }
+
 
   public Level getChannelRebootLoggingLevel() {return channelRebootLoggingLevel;}
 
@@ -202,5 +211,5 @@ public class CharlotteNodeClient {
    * You can use that, or override getSendBlocksCountDownLatch() too.
    * @return the StreamObserver which will observe the responses from the sendBlocks rpc.
    */
-  protected StreamObserver<SendBlocksResponse> getSendBlocksResponseObserver() {return sendBlocksResponseObserver;}
+  public SendBlocksResponseObserver getSendBlocksResponseObserver() {return sendBlocksResponseObserver;}
 }

@@ -192,7 +192,7 @@ public class Contact {
       TimeUnit.NANOSECONDS.sleep(Math.floorMod((new Random(
           (getParentConfig().getUrl() + ":" + getParentConfig().getPort() + "\t" + getUrl() + ":" + getPort()).
             hashCode()
-        )).nextLong(), 10000000000l /** 10 second */));
+        )).nextLong(), 100000000000l /** 100 second */));
     } catch (InterruptedException e) {
       logger.log(Level.SEVERE, "Interrupted while trying to sleep prior to channel building", e);
     }
