@@ -100,9 +100,9 @@ public class AgreementFernClientTest {
                   setParent(Reference.newBuilder().setHash(sha3Hash(block)))).
               setSignature(Signature.newBuilder().setCryptoId(client.getContact().getCryptoId()))
       ))).build()));
-    client.shutdown();
-    clientNode.stop();
-    fernNode.stop();
+    // client.shutdown();
+    // clientNode.stop();
+    // fernNode.stop();
   }
 
 }

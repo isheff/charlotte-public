@@ -10,7 +10,6 @@ import java.util.logging.Logger;
 import com.isaacsheff.charlotte.proto.CharlotteNodeGrpc;
 import com.isaacsheff.charlotte.proto.CharlotteNodeGrpc.CharlotteNodeStub;
 import com.isaacsheff.charlotte.proto.SendBlocksInput;
-import com.isaacsheff.charlotte.proto.SendBlocksResponse;
 import com.isaacsheff.charlotte.experiments.SendToObserverLogging;
 import com.isaacsheff.charlotte.proto.Block;
 import com.isaacsheff.charlotte.yaml.Contact;
@@ -32,16 +31,21 @@ public class CharlotteNodeClient {
    */
   private static final Logger logger = Logger.getLogger(CharlotteNodeClient.class.getName());
 
+  private final Contact contact;
+
+  private Level channelRebootLoggingLevel;
+  private int channelRebootCount;
+
   /**
    * The channel through which we communicate to the server.
    */
-  private final ManagedChannel channel;
+  private ManagedChannel channel;
 
   /**
    * The stub which sends messages to the CharlotteNode service within the server (this is a gRPC thing).
    * Never actually accessed in this class outside the constructor.
    */
-  private final CharlotteNodeStub asyncStub;
+  private CharlotteNodeStub asyncStub;
 
   /**
    * The Queue of Blocks waiting to be sent
@@ -52,51 +56,35 @@ public class CharlotteNodeClient {
    * The Thread which reads blocks from the queue, and sends them along to the server via sendBlocksInputObserver.
    * Never actually accessed in this class outside the constructor.
    */
-  private final Thread sendBlocksThread;
+  private Thread sendBlocksThread;
 
   /**
    * Runs in the thread: reads blocks from the queue, and sends them along to the server via sendBlocksInputObserver.
    * Never actually accessed in this class outside the constructor.
    */
-  private final SendToObserverLogging<SendBlocksInput> sendBlocksRunnable;
+  private SendToObserverLogging sendBlocksRunnable;
+
+  private SendBlocksInput mostRecentSent;
 
   /**
    * Represents the single call to sendBlocks which this Client wraps.
    * This is used to stream blocks along that call.
    */
-  private final StreamObserver<SendBlocksInput> sendBlocksInputObserver;
+  private StreamObserver<SendBlocksInput> sendBlocksInputObserver;
 
   /**
    * Used in shutting down SendBlocksResponseObserver.
    */
-  private final CountDownLatch sendBlocksCountDownLatch;
+  private CountDownLatch sendBlocksCountDownLatch;
 
   /**
    * This object handles each response sent back over the wire from our single call to SendBlocks.
    * This just logs error messages.
    * Override it or something if you want some other functionality.
    */
-  private final SendBlocksResponseObserver sendBlocksResponseObserver;
+  private SendBlocksResponseObserver sendBlocksResponseObserver;
 
 
-  /**
-   * Opens a sendBlocks rpc to the server.
-   * It queues blocks to be sent via its sendBlock method.
-   * These blocks will be sent as fast as possible, via an internal thread that dequeues and sends them.
-   * Responses that come in are handled by a SendBlocksResponseObserver, which can be overridden, but just logs stuff.
-   * @param channel the ManagedChannel via which we communicate with the server.
-   */
-  public CharlotteNodeClient(ManagedChannel channel) {
-    this.channel = channel;
-    asyncStub = CharlotteNodeGrpc.newStub(channel);
-    sendBlocksQueue = new LinkedBlockingQueue<SendBlocksInput>();
-    sendBlocksCountDownLatch = new CountDownLatch(1);
-    sendBlocksResponseObserver = new SendBlocksResponseObserver(getSendBlocksCountDownLatch());
-    sendBlocksInputObserver = asyncStub.sendBlocks(getSendBlocksResponseObserver());
-    sendBlocksRunnable = new SendToObserverLogging<SendBlocksInput>(sendBlocksQueue, sendBlocksInputObserver);
-    sendBlocksThread = new Thread(sendBlocksRunnable);
-    sendBlocksThread.start();
-  }
 
   /**
    * Opens a sendBlocks rpc to the server.
@@ -106,7 +94,60 @@ public class CharlotteNodeClient {
    * @param contact the Contact representing the server.
    */
   public CharlotteNodeClient(Contact contact) {
-    this(contact.getManagedChannel());
+    this.contact = contact;
+    channelRebootCount = 0;
+    sendBlocksQueue = new LinkedBlockingQueue<SendBlocksInput>();
+    mostRecentSent = null;
+    channelRebootLoggingLevel = Level.WARNING;
+    reset();
+  }
+
+  public Contact getContact() {return contact;}
+
+
+  /** DANGER: only SendBlocksResponseObserver should call this */
+  public void reset() {
+    synchronized (this) {
+      if (channel != null) {
+        channel.shutdown(); // we don't await termination. If the server dies before this does, too bad.
+        ++channelRebootCount;
+        if (channelRebootCount > 10) {
+          channelRebootLoggingLevel = Level.FINE;
+        }
+        logger.log(getChannelRebootLoggingLevel(), "rebooting channel");
+      }
+      sendBlocksRunnable = new SendToObserverLogging(this);
+      sendBlocksThread = new Thread(sendBlocksRunnable);
+      sendBlocksThread.start();
+    }
+  }
+
+  public SendBlocksInput getMostRecentSent() {return mostRecentSent;}
+  public StreamObserver<SendBlocksInput> getSendBlocksInputObserver() {return sendBlocksInputObserver;}
+  public SendToObserverLogging getSendBlocksRunnable() {return sendBlocksRunnable;}
+
+  public void createChannel() {
+    synchronized(this) {
+      channel = contact.getManagedChannel();
+      asyncStub = CharlotteNodeGrpc.newStub(channel);
+      sendBlocksCountDownLatch = new CountDownLatch(1);
+      sendBlocksResponseObserver = new SendBlocksResponseObserver(getSendBlocksCountDownLatch(), this);
+      sendBlocksInputObserver = asyncStub.sendBlocks(getSendBlocksResponseObserver());
+    }
+  }
+
+
+  public Level getChannelRebootLoggingLevel() {return channelRebootLoggingLevel;}
+
+  /** DANGER: only SendToObserver should ever call this **/
+  public SendBlocksInput pullFromQueue() {
+    try {
+      mostRecentSent = sendBlocksQueue.take();
+      return mostRecentSent;
+    } catch (InterruptedException e) {
+      logger.log(Level.SEVERE, "interrupted while taking from sendblocks queue");
+      return null;
+    }
   }
 
   /**
@@ -151,7 +192,10 @@ public class CharlotteNodeClient {
    * @return whether queueing was successful. If something went wrong, it will be in the logs.
    */
   public boolean sendBlock(Block inputBlock) {
-    return sendBlock(SendBlocksInput.newBuilder().setBlock(inputBlock).build());
+    return sendBlock(SendBlocksInput.newBuilder().
+        setBlock(inputBlock).
+        setOrigin(getContact().getParentConfig().getUrl() + ":" + getContact().getParentConfig().getPort()).
+        build());
   }
 
   /**
@@ -167,5 +211,5 @@ public class CharlotteNodeClient {
    * You can use that, or override getSendBlocksCountDownLatch() too.
    * @return the StreamObserver which will observe the responses from the sendBlocks rpc.
    */
-  protected StreamObserver<SendBlocksResponse> getSendBlocksResponseObserver() {return sendBlocksResponseObserver;}
+  public SendBlocksResponseObserver getSendBlocksResponseObserver() {return sendBlocksResponseObserver;}
 }

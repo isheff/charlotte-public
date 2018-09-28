@@ -73,7 +73,7 @@ public class Config extends Contact {
    * @param path the directory in which the config file resides (key filenames are relative to this)
    */
   public Config(JsonConfig jsonConfig, Path path) {
-    super(warnIfNoMe(jsonConfig.getContacts().get(jsonConfig.getMe())), path);
+    super(warnIfNoMe(jsonConfig.getContacts().get(jsonConfig.getMe())), path, null);
     this.jsonConfig = jsonConfig;
     privateKeyBytes = readFile("Private Key File", path.resolve(getPrivateKeyFileName()));
     contacts = new ConcurrentHashMap<String, Contact>(getJsonContacts().size());
@@ -86,7 +86,7 @@ public class Config extends Contact {
       // Create, if necessary, a Map for this contact's url in the contactsByUrl
       // Insert (if none exists yet) this Contact in for the port and url in contactsByUrl
       // Insert (if none exists yet) this Contact in for its cryptoId in contactsByCryptoId
-      Contact newContact = new Contact(entry.getValue(), path);
+      Contact newContact = new Contact(entry.getValue(), path, this);
       Contact contact = contacts.putIfAbsent(entry.getKey(), newContact);
       if (contact == null) {
         contact = newContact;
@@ -102,6 +102,10 @@ public class Config extends Contact {
     keyPair = new KeyPair(getPublicKey(), generatePrivateKey());
     // TODO: maybe test the validity of this key pair?
   }
+
+  /** @return the Config of which this is a part, meaning itself. */
+  @Override
+  public Config getParentConfig() {return this;}
 
   /**
    * Read and parse the Config file, and all the key files to create a new Config object.

@@ -145,6 +145,7 @@ message Block {
 
 message SendBlocksInput {
   Block block = 1;
+  string origin = 2;
 }
 message SendBlocksResponse {
   string errorMessage = 1;

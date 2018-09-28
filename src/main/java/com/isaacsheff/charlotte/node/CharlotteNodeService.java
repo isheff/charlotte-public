@@ -45,6 +45,8 @@ public class CharlotteNodeService extends CharlotteNodeImplBase {
   /** The configuration of this service, parsed from a yaml config file, and some x509 key files. */
   private final Config config;
 
+  private int sendBlocksCancelledCount;
+
   /**
    * Create a new service with the given map of blocks, and the given map of addresses.
    * No input is checked for correctness.
@@ -105,6 +107,16 @@ public class CharlotteNodeService extends CharlotteNodeImplBase {
   /** @return The configuration of this service, parsed from a yaml config file, and some x509 key files. */
   public Config getConfig() {
     return config;
+  }
+
+  /** DANGER: should only be called by SendBlocksObserver */
+  public void sendBlocksCancelled(Throwable t) {
+    ++sendBlocksCancelledCount;
+    if (sendBlocksCancelledCount < 10) {
+      logger.log(Level.WARNING, "sendBlocks cancelled", t);
+    } else {
+      logger.log(Level.FINE, "sendBlocks cancelled", t);
+    }
   }
 
   /**
@@ -273,9 +285,17 @@ public class CharlotteNodeService extends CharlotteNodeImplBase {
    */
   public Iterable<SendBlocksResponse> onSendBlocksInput(final SendBlocksInput input) {
     if (!input.hasBlock()) {
-      logger.log(Level.WARNING, "No Block in this SendBlocksInput");
+      logger.log(Level.WARNING, "No Block in this SendBlocksInput from " + input.getOrigin());
       return singleton(SendBlocksResponse.newBuilder().
-               setErrorMessage("No Block in this SendBlocksInput").build());
+               setErrorMessage("No Block in this SendBlocksInput" + input.getOrigin()).build());
+    }
+    try {
+      logger.info("{ \"ReceivedBlockHash\":"+JsonFormat.printer().print(sha3Hash(input.getBlock()))+
+                   ",\n\"destinationUrl\":\""+getConfig().getUrl() +"\""+
+                   ",\n\"destinationPort\":"+getConfig().getPort() +
+                   ",\n\"origin\":\""+input.getOrigin()+"\"}");
+    } catch (InvalidProtocolBufferException e) {
+      logger.log(Level.SEVERE, "Invalid protocol buffer parsed as Block", e);
     }
     return onSendBlocksInput(input.getBlock());
   }

@@ -3,31 +3,27 @@ package com.isaacsheff.charlotte.experiments;
 
 import static com.isaacsheff.charlotte.node.HashUtil.sha3Hash;
 
-import java.util.concurrent.BlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.util.JsonFormat;
-import com.isaacsheff.charlotte.proto.Hash;
+import com.isaacsheff.charlotte.node.CharlotteNodeClient;
 import com.isaacsheff.charlotte.proto.SendBlocksInput;
 
-import io.grpc.stub.StreamObserver;
 
 /**
  * Send each element queued to the StreamObserver.
  * This is Runnable, so it can be run in a seperate Thread, if the StreamObserver's onNext function might be slow.
  * @author Isaac Sheff
  */
-public class SendToObserverLogging<T extends SendBlocksInput> implements Runnable {
+public class SendToObserverLogging implements Runnable {
   /** Use logger for logging events involving SendToObserver. */
   private static final Logger logger = Logger.getLogger(SendToObserverLogging.class.getName());
 
-  /** The queue from which we pull elements to give to the StreamObserver. */
-  private final BlockingQueue<T> queue;
+  private final CharlotteNodeClient client;
 
-  /** The StreamObserver which will receive all the things queued. */
-  private final StreamObserver<T> observer;
+  private final String loggingString;
 
   /**
    * Create a Runnable which will send each element queued to the StreamObserver.
@@ -35,9 +31,23 @@ public class SendToObserverLogging<T extends SendBlocksInput> implements Runnabl
    * @param queue The queue from which we pull elements to give to the StreamObserver.
    * @param observer The StreamObserver which will receive all the things queued.
    */
-  public SendToObserverLogging(final BlockingQueue<T> queue, final StreamObserver<T> observer) {
-    this.queue = queue;
-    this.observer = observer;
+  public SendToObserverLogging(final CharlotteNodeClient client) {
+    this.client = client;
+    loggingString=",\n \"originUrl\":\"" + client.getContact().getParentConfig().getUrl() + "\"" +
+                  ",\n \"originPort\":\"" + client.getContact().getParentConfig().getPort() + "\"" +
+                  ",\n \"destinationUrl\":\"" + client.getContact().getUrl() + "\"" +
+                  ",\n \"destinationPort\":\"" + client.getContact().getPort() + "\"";
+  }
+
+  private void sendToGrpc(final SendBlocksInput element) {
+    try {
+      client.getSendBlocksInputObserver().onNext(element);
+      logger.info("{ \"SentBlock\":"+JsonFormat.printer().print(sha3Hash(element.getBlock()))+
+                  loggingString +
+                  ",\n \"size\":" + element.getSerializedSize() + " }");
+    } catch (InvalidProtocolBufferException e) {
+      logger.log(Level.SEVERE, "Invalid protocol buffer parsed as Block", e);
+    }
   }
 
   /**
@@ -47,17 +57,12 @@ public class SendToObserverLogging<T extends SendBlocksInput> implements Runnabl
    * This will then log a hash of the thing sent with the json key "SentBlock"
    */
   public void run() {
-    T element;
-    while (true) {
-      try {
-        element = queue.take();
-        observer.onNext(element);
-        logger.info("{ \"SentBlock\":"+JsonFormat.printer().print(sha3Hash(element.getBlock()))+" }");
-      } catch (InvalidProtocolBufferException e) {
-        logger.log(Level.SEVERE, "Invalid protocol buffer parsed as Block", e);
-      } catch (InterruptedException e) {
-        logger.log(Level.WARNING, "SendToObserver was interrupted while trying to pull from queue", e);
-      }
+    client.createChannel();
+    if ((!client.getSendBlocksResponseObserver().hasFailed()) && (null != client.getMostRecentSent())) {
+      sendToGrpc(client.getMostRecentSent());
+    }
+    while ((!client.getSendBlocksResponseObserver().hasFailed()) && (this == client.getSendBlocksRunnable())) {
+      sendToGrpc(client.pullFromQueue());
     }
   }
 }

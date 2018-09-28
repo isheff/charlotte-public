@@ -29,12 +29,15 @@ public class TimestampExperimentConfig extends JsonExperimentConfig {
   public TimestampExperimentConfig (
       @JsonProperty("timestampreferencesperattestation") int timestampReferencesPerAttestation,
       @JsonProperty("fernservers") List<String> fernServers,
+      @JsonProperty("wilburservers") List<String> wilburServers,
       @JsonProperty("blocksperexperiment") int blocksPerExperiment,
+      @JsonProperty("wilburthreshold") int wilburThreshold,
       @JsonProperty("privatekey") String privatekey,
       @JsonProperty("me") String me,
-      @JsonProperty("contacts") Map<String, JsonContact> contacts
+      @JsonProperty("contacts") Map<String, JsonContact> contacts,
+      @JsonProperty("blocksize") int blocksize
       ) {
-    super(fernServers, blocksPerExperiment, privatekey, me, contacts);
+    super(fernServers, wilburServers, blocksPerExperiment, wilburThreshold, privatekey, me, contacts, blocksize);
     this.timestampReferencesPerAttestation = timestampReferencesPerAttestation;
   }
 }

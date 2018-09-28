@@ -1,5 +1,9 @@
 package com.isaacsheff.charlotte.yaml;
 
+import static java.time.LocalTime.now;
+
+import java.util.Random;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -20,6 +24,7 @@ import com.isaacsheff.charlotte.proto.CryptoId;
 import io.grpc.ManagedChannel;
 import io.grpc.netty.GrpcSslContexts;
 import io.grpc.netty.NettyChannelBuilder;
+import io.netty.channel.ChannelOption;
 import io.netty.handler.ssl.SslContext;
 
 import java.io.ByteArrayInputStream;
@@ -59,6 +64,9 @@ public class Contact {
    * The literal data parsed from a contact in a config file.
    */
   private final JsonContact jsonContact;
+
+  /** the Config of which this is a part */
+  private final Config parentConfig;
 
   /**
    * The literal bytes of the x509 certificate file.
@@ -104,8 +112,9 @@ public class Contact {
    * @param jsonContact was parsed from a config file
    * @param path the path representing the dir in which the config file was located
    */
-  public Contact(JsonContact jsonContact, Path path) {
+  public Contact(JsonContact jsonContact, Path path, Config parentConfig) {
     this.jsonContact = jsonContact;
+    this.parentConfig = parentConfig;
     if (null == getJsonContact()) {
       logger.log(Level.WARNING, "Creating a Contact with null json / yaml information. Things may break.");
     }
@@ -131,6 +140,9 @@ public class Contact {
    * @return the JsonContact (from which this Contact was made) parsed from the config file
    */
   public JsonContact getJsonContact() {return this.jsonContact;}
+
+  /** @return the Config of which this is a part */
+  public Config getParentConfig() {return parentConfig;}
 
   /**
    * @return the url string for finding the server this Contact represents
@@ -177,7 +189,18 @@ public class Contact {
    * Used in opening channels to talk to the server this contact represents.
    * @return A ChannelBuilder for this contact's url and port
    */
-  public NettyChannelBuilder getChannelBuilder() {return NettyChannelBuilder.forAddress(getUrl(),getPort());}
+  public NettyChannelBuilder getChannelBuilder() {
+    try {
+      logger.log(Level.INFO, "Channel Start Delay is happening now: " + now());
+      TimeUnit.NANOSECONDS.sleep(Math.floorMod((new Random(
+          (getParentConfig().getUrl() + ":" + getParentConfig().getPort() + "\t" + getUrl() + ":" + getPort()).
+            hashCode()
+        )).nextLong(), 1000000000l /** 1 second */));
+    } catch (InterruptedException e) {
+      logger.log(Level.SEVERE, "Interrupted while trying to sleep prior to channel building", e);
+    }
+    return NettyChannelBuilder.forAddress(getUrl(),getPort());
+  }
 
   /**
    * Create a Managed Channel talking to the server this Contact describes.
@@ -189,7 +212,11 @@ public class Contact {
    * @return A Managed Channel talking to the server this Contact describes.
    */
   public ManagedChannel getManagedChannel() {
-    return getChannelBuilder().useTransportSecurity().enableRetry().sslContext(getSslContext()).build();
+    return getChannelBuilder().withOption(ChannelOption.SO_REUSEADDR, true).
+                               useTransportSecurity().
+                               disableRetry().
+                               sslContext(getSslContext()).
+                               build();
   }
 
   /**
