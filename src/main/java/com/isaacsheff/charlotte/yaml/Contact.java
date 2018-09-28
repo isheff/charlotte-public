@@ -189,7 +189,7 @@ public class Contact {
    * @return A Managed Channel talking to the server this Contact describes.
    */
   public ManagedChannel getManagedChannel() {
-    return getChannelBuilder().useTransportSecurity().enableRetry().sslContext(getSslContext()).build();
+    return getChannelBuilder().useTransportSecurity().disableRetry().sslContext(getSslContext()).build();
   }
 
   /**
