@@ -8,6 +8,7 @@ import com.isaacsheff.charlotte.proto.*;
 import com.isaacsheff.charlotte.yaml.*;
 import com.xinwenwang.hetcons.config.HetconsConfig;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -17,7 +18,9 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class HetconsParticipantServiceTest extends HetconsTest {
 
@@ -30,7 +33,6 @@ public class HetconsParticipantServiceTest extends HetconsTest {
     // 1b sent correctly
 
 
-    @Test
     void proposeNewBlock() {
 
         ArrayList<JsonContact> testContacts = new ArrayList<>();
@@ -66,7 +68,7 @@ public class HetconsParticipantServiceTest extends HetconsTest {
 
         ArrayList<Thread> threads = new ArrayList<>();
 
-        startNewService(serverJsonConfig, threads);
+        Config serverConfig = startNewService(serverJsonConfig, threads);
         for (int i = 3; i <= 10; i ++) {
             startNewService(new JsonConfig("private-key"+i+".pem",
                     "server"+(i),
@@ -81,11 +83,11 @@ public class HetconsParticipantServiceTest extends HetconsTest {
         }
 
         Config clientConfig = new Config(clientJsonConfig, Paths.get(testDirectory));
-        Contact serverContact = new Contact(contactServer, Paths.get(testDirectory));
+        Contact serverContact = new Contact(contactServer, Paths.get(testDirectory), serverConfig);
 
         ArrayList<CryptoId> quorumMembers = new ArrayList<>();
         for (int i = 2; i < 9; i ++) {
-            quorumMembers.add(new Contact(testContacts.get(i), Paths.get(testDirectory)).getCryptoId());
+            quorumMembers.add(new Contact(testContacts.get(i), Paths.get(testDirectory), null).getCryptoId());
         }
         HetconsClientNode client = new HetconsClientNode(serverContact, clientConfig);
 
@@ -167,7 +169,7 @@ public class HetconsParticipantServiceTest extends HetconsTest {
     }
 
 
-    private void startNewService(JsonConfig config, List<Thread> threads) {
+    private Config startNewService(JsonConfig config, List<Thread> threads) {
 
         Config serverConfig = new Config(config, Paths.get(testDirectory));
         HetconsParticipantService service = new HetconsParticipantService(serverConfig);
@@ -176,6 +178,16 @@ public class HetconsParticipantServiceTest extends HetconsTest {
         final Thread thread = new Thread(node);
         threads.add(thread);
         thread.start();
-        return;
+        return serverConfig;
+    }
+
+    @Test
+    void testProposalNewBlock() {
+        assertDoesNotThrow(new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                proposeNewBlock();
+            }
+        });
     }
 }

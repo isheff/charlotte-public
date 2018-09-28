@@ -11,6 +11,7 @@ import com.isaacsheff.charlotte.yaml.JsonConfig;
 import com.isaacsheff.charlotte.yaml.JsonContact;
 import com.xinwenwang.hetcons.config.HetconsConfig;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -19,12 +20,12 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class HetconsClientTest extends HetconsTest {
 
 
-    @Test
     void proposeBlocks() {
 
 
@@ -134,5 +135,15 @@ public class HetconsClientTest extends HetconsTest {
 //        assertEquals(1, map.size(), "Propose successfully");
 //        assertEquals(1, map.get("abc|1").getCurrentProposal().getBallot().getBallotNumber(), "ballot number different");
 //        assertEquals(100, map.get("abc|1").getCurrentProposal().getValue().getNum(), "value different");
+    }
+
+    @Test
+    void testProposalBlocks() {
+        assertDoesNotThrow(new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                proposeBlocks();
+            }
+        });
     }
 }
