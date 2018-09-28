@@ -6,6 +6,8 @@ import com.isaacsheff.charlotte.yaml.Contact;
 import com.isaacsheff.charlotte.yaml.JsonContact;
 import com.xinwenwang.hetcons.config.HetconsConfig;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -32,7 +34,14 @@ public class HetconsExperimentClientConfig extends JsonExperimentConfig {
             @JsonProperty("timeout") int timeout
 
     ) {
-        super(fernServers, blocksPerExperiment, privatekey, me, contacts);
+        super(fernServers,
+                Collections.emptyList(),
+                blocksPerExperiment,
+                0,
+                privatekey,
+                me,
+                contacts,
+                0);
         this.contactServer = contactServer;
         this.chainNames = chainNames;
         this.timeout = timeout;

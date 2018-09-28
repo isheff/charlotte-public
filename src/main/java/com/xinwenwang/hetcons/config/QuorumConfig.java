@@ -29,7 +29,7 @@ public class QuorumConfig {
                 .setOwner(owner)
 //                .setSize(participants.size())
                 .addAllMemebers(participants.stream().map(jsonContact -> {
-                    return new Contact(jsonContact, path).getCryptoId();
+                    return new Contact(jsonContact, path, null).getCryptoId();
                 }).collect(Collectors.toList()))
                 .build();
     }

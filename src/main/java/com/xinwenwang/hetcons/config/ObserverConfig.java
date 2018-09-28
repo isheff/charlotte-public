@@ -36,7 +36,7 @@ public class ObserverConfig {
 
     public HetconsObserver toHetconsObserver(Path path) {
 
-        Contact contact = new Contact(self, path);
+        Contact contact = new Contact(self, path, null);
 
         return HetconsObserver.newBuilder().setId(contact.getCryptoId())
                 .addAllQuorums(quorums.stream().map(quorumConfig -> {
