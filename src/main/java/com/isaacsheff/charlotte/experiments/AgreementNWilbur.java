@@ -42,8 +42,9 @@ public class AgreementNWilbur extends CharlotteNodeService {
   public void broadcastBlock(final Block block) {
     if ( // For reasons unknown ( https://github.com/isheff/charlotte-java/issues/5 ),
          // we get sendBlocks failures unless the Wilburs flood the root block.
-        block.getStr().equals("block content 0")
-        || ( block.hasAvailabilityAttestation()
+        // block.getStr().equals("block content 0")
+        // ||
+        ( block.hasAvailabilityAttestation()
           && block.getAvailabilityAttestation().hasSignedStoreForever()
           && block.getAvailabilityAttestation().getSignedStoreForever().hasSignature()
           && block.getAvailabilityAttestation().getSignedStoreForever().getSignature().hasCryptoId()

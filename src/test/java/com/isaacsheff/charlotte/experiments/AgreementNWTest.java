@@ -115,8 +115,8 @@ public class AgreementNWTest {
     client.broadcastRequest(Reference.newBuilder(), 0); // send out the root block
     client.waitUntilDone();
 
-    for (CharlotteNode n : nodes) {
-      n.stop();
-    }
+//    for (CharlotteNode n : nodes) {
+//      n.stop();
+//    }
   }
 }

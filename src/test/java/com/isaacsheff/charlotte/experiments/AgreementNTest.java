@@ -2,12 +2,13 @@ package com.isaacsheff.charlotte.experiments;
 
 import static com.isaacsheff.charlotte.node.PortUtil.getFreshPort;
 import static com.isaacsheff.charlotte.yaml.GenerateX509.generateKeyFiles;
-import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 
 import java.io.FileNotFoundException;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -30,6 +31,8 @@ public class AgreementNTest {
 
   /** the participants map to be used in config files. will be set in setup() **/
   private static Map<String, JsonContact> participants;
+  private static List<String> fernList;
+  private static int totalServers;
 
   /**
    * Set stuff up before running any tests in this class.
@@ -37,8 +40,10 @@ public class AgreementNTest {
    */
   @BeforeAll
   static void setup() {
-    participants = new HashMap<String, JsonContact>(5);
-    for (int i = 0; i < 5; ++i) {
+    totalServers = 14;
+    participants = new HashMap<String, JsonContact>(totalServers);
+    fernList = new ArrayList<String>(totalServers);
+    for (int i = 0; i < totalServers; ++i) {
       generateKeyFiles("src/test/resources/server" + i + ".pem",
                        "src/test/resources/private-key" + i + ".pem",
                        "localhost",
@@ -47,6 +52,10 @@ public class AgreementNTest {
                                                         "localhost",
                                                         getFreshPort()));
     }
+    for (int i = 1; i < totalServers; ++i) {
+      fernList.add("participant" + i);
+    }
+
   }
 
   /**
@@ -54,19 +63,19 @@ public class AgreementNTest {
    */
   @Test
   void endToEnd() throws InterruptedException, FileNotFoundException {
-    final CharlotteNode[] nodes = new CharlotteNode[5];
+    final CharlotteNode[] nodes = new CharlotteNode[totalServers];
 
     // start up all the ferns on seperate threads
-    for (int i = 1; i < 5; ++i) {
+    for (int i = 1; i < totalServers; ++i) {
       final JsonExperimentConfig config =new JsonExperimentConfig(
-          asList("participant1","participant2","participant3","participant4"),
+          fernList,
           emptyList(),
           5,
           0,
           "src/test/resources/private-key" + i + ".pem",
           "participant"+i,
           participants,
-          0);
+          100);
       final CharlotteNodeService node = new CharlotteNodeService(new Config(config, Paths.get(".")));
       CharlotteNode charlotteNode = new CharlotteNode(node,
         ServerBuilder.forPort(node.getConfig().getPort()).
@@ -79,14 +88,14 @@ public class AgreementNTest {
 
     // launch client
     final JsonExperimentConfig config =new JsonExperimentConfig(
-        asList("participant1","participant2","participant3","participant4"),
+        fernList,
         emptyList(),
         5,
         0,
         "src/test/resources/private-key0.pem",
         "participant0",
         participants,
-        0);
+        100);
     final CharlotteNodeService node = new CharlotteNodeService(new Config(config, Paths.get(".")));
     nodes[0] = (new CharlotteNode(node));
     (new Thread(nodes[0])).start();
@@ -96,8 +105,8 @@ public class AgreementNTest {
     client.broadcastRequest(Reference.newBuilder(), 0); // send out the root block
     client.waitUntilDone();
 
-    for (CharlotteNode n : nodes) {
-      n.stop();
-    }
+//    for (CharlotteNode n : nodes) {
+//      n.stop();
+//    }
   }
 }

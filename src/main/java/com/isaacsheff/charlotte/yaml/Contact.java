@@ -1,5 +1,7 @@
 package com.isaacsheff.charlotte.yaml;
 
+import java.util.Random;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -185,7 +187,17 @@ public class Contact {
    * Used in opening channels to talk to the server this contact represents.
    * @return A ChannelBuilder for this contact's url and port
    */
-  public NettyChannelBuilder getChannelBuilder() {return NettyChannelBuilder.forAddress(getUrl(),getPort());}
+  public NettyChannelBuilder getChannelBuilder() {
+    try {
+      TimeUnit.NANOSECONDS.sleep(Math.floorMod((new Random(
+          (getParentConfig().getUrl() + ":" + getParentConfig().getPort() + "\t" + getUrl() + ":" + getPort()).
+            hashCode()
+        )).nextLong(), 10000000000l /** 10 second */));
+    } catch (InterruptedException e) {
+      logger.log(Level.SEVERE, "Interrupted while trying to sleep prior to channel building", e);
+    }
+    return NettyChannelBuilder.forAddress(getUrl(),getPort());
+  }
 
   /**
    * Create a Managed Channel talking to the server this Contact describes.
