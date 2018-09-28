@@ -183,7 +183,10 @@ public class CharlotteNodeClient {
    * @return whether queueing was successful. If something went wrong, it will be in the logs.
    */
   public boolean sendBlock(Block inputBlock) {
-    return sendBlock(SendBlocksInput.newBuilder().setBlock(inputBlock).build());
+    return sendBlock(SendBlocksInput.newBuilder().
+        setBlock(inputBlock).
+        setOrigin(getContact().getParentConfig().getUrl() + ":" + getContact().getParentConfig().getPort()).
+        build());
   }
 
   /**

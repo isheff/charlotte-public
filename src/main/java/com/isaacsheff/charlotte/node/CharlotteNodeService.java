@@ -285,9 +285,15 @@ public class CharlotteNodeService extends CharlotteNodeImplBase {
    */
   public Iterable<SendBlocksResponse> onSendBlocksInput(final SendBlocksInput input) {
     if (!input.hasBlock()) {
-      logger.log(Level.WARNING, "No Block in this SendBlocksInput");
+      logger.log(Level.WARNING, "No Block in this SendBlocksInput from " + input.getOrigin());
       return singleton(SendBlocksResponse.newBuilder().
-               setErrorMessage("No Block in this SendBlocksInput").build());
+               setErrorMessage("No Block in this SendBlocksInput" + input.getOrigin()).build());
+    }
+    try {
+      logger.info("{ \"ReceivedBlockHash\":"+JsonFormat.printer().print(sha3Hash(input.getBlock()))+
+                   ",\n\"origin\":\""+input.getOrigin()+"\"}");
+    } catch (InvalidProtocolBufferException e) {
+      logger.log(Level.SEVERE, "Invalid protocol buffer parsed as Block", e);
     }
     return onSendBlocksInput(input.getBlock());
   }
