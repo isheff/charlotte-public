@@ -78,7 +78,7 @@ public class HetconsClientTest extends HetconsTest {
             return;
         }
 
-        Contact serverContact = new Contact(contactServer, Paths.get(testDirectory));
+        Contact serverContact = new Contact(contactServer, Paths.get(testDirectory), serverConfig);
         HetconsClientNode client = new HetconsClientNode(serverContact, clientConfig);
 
 
