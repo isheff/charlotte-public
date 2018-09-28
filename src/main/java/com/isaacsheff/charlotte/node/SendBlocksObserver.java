@@ -81,6 +81,6 @@ public class SendBlocksObserver implements StreamObserver<SendBlocksInput> {
    * @param t the error arising from the stream.
    */
   public void onError(Throwable t) {
-    logger.log(Level.WARNING, "sendBlocks cancelled", t);
+    getCharlotteNodeService().sendBlocksCancelled(t);
   }
 }

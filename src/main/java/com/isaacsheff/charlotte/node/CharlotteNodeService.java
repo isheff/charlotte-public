@@ -45,6 +45,8 @@ public class CharlotteNodeService extends CharlotteNodeImplBase {
   /** The configuration of this service, parsed from a yaml config file, and some x509 key files. */
   private final Config config;
 
+  private int sendBlocksCancelledCount;
+
   /**
    * Create a new service with the given map of blocks, and the given map of addresses.
    * No input is checked for correctness.
@@ -105,6 +107,16 @@ public class CharlotteNodeService extends CharlotteNodeImplBase {
   /** @return The configuration of this service, parsed from a yaml config file, and some x509 key files. */
   public Config getConfig() {
     return config;
+  }
+
+  /** DANGER: should only be called by SendBlocksObserver */
+  public void sendBlocksCancelled(Throwable t) {
+    ++sendBlocksCancelledCount;
+    if (sendBlocksCancelledCount < 10) {
+      logger.log(Level.WARNING, "sendBlocks cancelled", t);
+    } else {
+      logger.log(Level.FINE, "sendBlocks cancelled", t);
+    }
   }
 
   /**
