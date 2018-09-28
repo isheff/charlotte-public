@@ -20,6 +20,7 @@ import com.isaacsheff.charlotte.proto.CryptoId;
 import io.grpc.ManagedChannel;
 import io.grpc.netty.GrpcSslContexts;
 import io.grpc.netty.NettyChannelBuilder;
+import io.netty.channel.ChannelOption;
 import io.netty.handler.ssl.SslContext;
 
 import java.io.ByteArrayInputStream;
@@ -196,7 +197,11 @@ public class Contact {
    * @return A Managed Channel talking to the server this Contact describes.
    */
   public ManagedChannel getManagedChannel() {
-    return getChannelBuilder().useTransportSecurity().disableRetry().sslContext(getSslContext()).build();
+    return getChannelBuilder().withOption(ChannelOption.SO_REUSEADDR, true).
+                               useTransportSecurity().
+                               disableRetry().
+                               sslContext(getSslContext()).
+                               build();
   }
 
   /**
