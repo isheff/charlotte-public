@@ -103,6 +103,8 @@ public class CharlotteNodeClient {
     reset();
   }
 
+  public Contact getContact() {return contact;}
+
 
   /** DANGER: only SendBlocksResponseObserver should call this */
   public void reset() {

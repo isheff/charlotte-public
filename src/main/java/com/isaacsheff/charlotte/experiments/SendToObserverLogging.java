@@ -30,6 +30,7 @@ public class SendToObserverLogging implements Runnable {
 
   private final SendBlocksResponseObserver responseObserver;
   private final SendBlocksInput thingToSendFirst;
+  private final String loggingString;
 
   /**
    * Create a Runnable which will send each element queued to the StreamObserver.
@@ -42,13 +43,18 @@ public class SendToObserverLogging implements Runnable {
     this.observer = observer;
     this.responseObserver = responseObserver;
     this.thingToSendFirst = thingToSendFirst;
+    loggingString=",\n \"originUrl\":\"" + client.getContact().getParentConfig().getUrl() + "\"" +
+                  ",\n \"originPort\":\"" + client.getContact().getParentConfig().getPort() + "\"" +
+                  ",\n \"destinationUrl\":\"" + client.getContact().getUrl() + "\"" +
+                  ",\n \"destinationPort\":\"" + client.getContact().getPort() + "\"";
   }
 
   private void sendToGrpc(final SendBlocksInput element) {
     try {
       observer.onNext(element);
       logger.info("{ \"SentBlock\":"+JsonFormat.printer().print(sha3Hash(element.getBlock()))+
-                  ", \"size\":" + element.getSerializedSize() + " }");
+                  loggingString +
+                  ",\n \"size\":" + element.getSerializedSize() + " }");
     } catch (InvalidProtocolBufferException e) {
       logger.log(Level.SEVERE, "Invalid protocol buffer parsed as Block", e);
     }

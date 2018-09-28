@@ -57,7 +57,10 @@ public class SendBlocksResponseObserver implements StreamObserver<SendBlocksResp
     synchronized(this) {
       if (!failed) {
         failed = true;
-        logger.log(client.getChannelRebootLoggingLevel(), "SendBlocks Failed: ", t);
+        logger.log(client.getChannelRebootLoggingLevel(), "SendBlocks from " +
+          client.getContact().getParentConfig().getUrl() + ":" + client.getContact().getParentConfig().getPort() +
+          " to "+ client.getContact().getUrl() + ":" + client.getContact().getPort() +
+          " Failed: ", t);
         client.reset();
       }
     }

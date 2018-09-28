@@ -60,6 +60,9 @@ public class Contact {
    */
   private final JsonContact jsonContact;
 
+  /** the Config of which this is a part */
+  private final Config parentConfig;
+
   /**
    * The literal bytes of the x509 certificate file.
    */
@@ -104,8 +107,9 @@ public class Contact {
    * @param jsonContact was parsed from a config file
    * @param path the path representing the dir in which the config file was located
    */
-  public Contact(JsonContact jsonContact, Path path) {
+  public Contact(JsonContact jsonContact, Path path, Config parentConfig) {
     this.jsonContact = jsonContact;
+    this.parentConfig = parentConfig;
     if (null == getJsonContact()) {
       logger.log(Level.WARNING, "Creating a Contact with null json / yaml information. Things may break.");
     }
@@ -131,6 +135,9 @@ public class Contact {
    * @return the JsonContact (from which this Contact was made) parsed from the config file
    */
   public JsonContact getJsonContact() {return this.jsonContact;}
+
+  /** @return the Config of which this is a part */
+  public Config getParentConfig() {return parentConfig;}
 
   /**
    * @return the url string for finding the server this Contact represents

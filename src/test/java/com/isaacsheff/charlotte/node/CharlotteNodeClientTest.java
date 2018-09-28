@@ -62,17 +62,17 @@ public class CharlotteNodeClientTest {
 
     // populate the stack of blocks we expect to receive
     final BlockingQueue<Block> receivedBlocks = new ArrayBlockingQueue<Block>(3);
-
-    // create a CharlotteNodeService that queues the blocks received
-    final CharlotteNodeService service = new CharlotteNodeService(
+    final Config config = (
         new Config(new JsonConfig("src/test/resources/private-key.pem",
                                   "localhost",
                                   singletonMap("localhost",
                                     new JsonContact("src/test/resources/server.pem", "localhost", port))
                                  ),
               Paths.get(".")
-            )
-        ) {
+            ));
+
+    // create a CharlotteNodeService that queues the blocks received
+    final CharlotteNodeService service = new CharlotteNodeService(config) {
         @Override public Iterable<SendBlocksResponse> onSendBlocksInput(Block block) {
           try {
             receivedBlocks.put(block);
@@ -91,7 +91,7 @@ public class CharlotteNodeClientTest {
 
     // create a client, and send the expected sequence of blocks
     final CharlotteNodeClient client = (new Contact(
-        new JsonContact("src/test/resources/server.pem", "localhost", port), Paths.get("."))).
+        new JsonContact("src/test/resources/server.pem", "localhost", port), Paths.get("."), config)).
       getCharlotteNodeClient();
     client.sendBlock(Block.newBuilder().setStr("block 0").build());
     client.sendBlock(Block.newBuilder().setStr("block 1").build());
