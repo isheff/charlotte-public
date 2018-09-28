@@ -291,6 +291,8 @@ public class CharlotteNodeService extends CharlotteNodeImplBase {
     }
     try {
       logger.info("{ \"ReceivedBlockHash\":"+JsonFormat.printer().print(sha3Hash(input.getBlock()))+
+                   ",\n\"destinationUrl\":\""+getConfig().getUrl() +"\""+
+                   ",\n\"destinationPort\":"+getConfig().getPort() +
                    ",\n\"origin\":\""+input.getOrigin()+"\"}");
     } catch (InvalidProtocolBufferException e) {
       logger.log(Level.SEVERE, "Invalid protocol buffer parsed as Block", e);
