@@ -1,5 +1,7 @@
 package com.isaacsheff.charlotte.yaml;
 
+import static java.time.LocalTime.now;
+
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
@@ -189,10 +191,11 @@ public class Contact {
    */
   public NettyChannelBuilder getChannelBuilder() {
     try {
+      logger.log(Level.INFO, "Channel Start Delay is happening now: " + now());
       TimeUnit.NANOSECONDS.sleep(Math.floorMod((new Random(
           (getParentConfig().getUrl() + ":" + getParentConfig().getPort() + "\t" + getUrl() + ":" + getPort()).
             hashCode()
-        )).nextLong(), 100000000000l /** 100 second */));
+        )).nextLong(), 1000000000l /** 1 second */));
     } catch (InterruptedException e) {
       logger.log(Level.SEVERE, "Interrupted while trying to sleep prior to channel building", e);
     }

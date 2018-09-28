@@ -2,11 +2,12 @@ package com.isaacsheff.charlotte.experiments;
 
 import static com.isaacsheff.charlotte.node.PortUtil.getFreshPort;
 import static com.isaacsheff.charlotte.yaml.GenerateX509.generateKeyFiles;
-import static java.util.Arrays.asList;
 
 import java.io.FileNotFoundException;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -30,6 +31,8 @@ public class AgreementNWTest {
 
   /** the participants map to be used in config files. will be set in setup() **/
   private static Map<String, JsonContact> participants;
+  private static List<String> fern;
+  private static List<String> wilbur;
 
   /**
    * Set stuff up before running any tests in this class.
@@ -37,8 +40,14 @@ public class AgreementNWTest {
    */
   @BeforeAll
   static void setup() {
-    participants = new HashMap<String, JsonContact>(5);
-    for (int i = 0; i < 7; ++i) {
+    final int fernCount = 7;
+    final int wilburCount = 3;
+    fern = new ArrayList<String>(fernCount);
+    wilbur = new ArrayList<String>(wilburCount);
+
+
+    participants = new HashMap<String, JsonContact>(fernCount + wilburCount + 1);
+    for (int i = 0; i < (fernCount + wilburCount + 1); ++i) {
       generateKeyFiles("src/test/resources/server" + i + ".pem",
                        "src/test/resources/private-key" + i + ".pem",
                        "localhost",
@@ -46,6 +55,12 @@ public class AgreementNWTest {
       participants.put("participant"+i, new JsonContact("src/test/resources/server"+i+".pem",
                                                         "localhost",
                                                         getFreshPort()));
+      if ((i > 0) && (i <= fernCount)) {
+        fern.add("participant" + i);
+      }
+      if (i > fernCount) {
+        wilbur.add("participant" + i);
+      }
     }
   }
 
@@ -54,15 +69,15 @@ public class AgreementNWTest {
    */
   @Test
   void endToEnd() throws InterruptedException, FileNotFoundException {
-    final CharlotteNode[] nodes = new CharlotteNode[7];
+    final CharlotteNode[] nodes = new CharlotteNode[(fern.size() + wilbur.size() + 1)];
 
     // start up all the ferns on seperate threads
-    for (int i = 1; i < 5; ++i) {
+    for (int i = 1; i <= fern.size(); ++i) {
       final JsonExperimentConfig config =new JsonExperimentConfig(
-          asList("participant1","participant2","participant3","participant4"),
-          asList("participant5","participant6"),
+          fern,
+          wilbur,
           50,
-          1,
+          wilbur.size()-1,
           "src/test/resources/private-key" + i + ".pem",
           "participant"+i,
           participants,
@@ -76,12 +91,12 @@ public class AgreementNWTest {
       (new Thread(charlotteNode)).start();
     }
     // start up all the wilburs on seperate threads
-    for (int i = 5; i < 7; ++i) {
+    for (int i = (fern.size()+1); i < (fern.size() + wilbur.size() + 1); ++i) {
       final JsonExperimentConfig config =new JsonExperimentConfig(
-          asList("participant1","participant2","participant3","participant4"),
-          asList("participant5","participant6"),
+          fern,
+          wilbur,
           50,
-          1,
+          wilbur.size()-1,
           "src/test/resources/private-key" + i + ".pem",
           "participant"+i,
           participants,
@@ -98,10 +113,10 @@ public class AgreementNWTest {
 
     // launch client
     final JsonExperimentConfig config =new JsonExperimentConfig(
-        asList("participant1","participant2","participant3","participant4"),
-        asList("participant5","participant6"),
+        fern,
+        wilbur,
         50,
-        1,
+        wilbur.size()-1,
         "src/test/resources/private-key0.pem",
         "participant0",
         participants,

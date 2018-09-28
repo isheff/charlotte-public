@@ -40,7 +40,7 @@ public class AgreementNTest {
    */
   @BeforeAll
   static void setup() {
-    totalServers = 14;
+    totalServers = 5;
     participants = new HashMap<String, JsonContact>(totalServers);
     fernList = new ArrayList<String>(totalServers);
     for (int i = 0; i < totalServers; ++i) {

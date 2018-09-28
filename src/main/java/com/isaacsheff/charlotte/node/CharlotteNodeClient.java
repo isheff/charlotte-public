@@ -10,7 +10,6 @@ import java.util.logging.Logger;
 import com.isaacsheff.charlotte.proto.CharlotteNodeGrpc;
 import com.isaacsheff.charlotte.proto.CharlotteNodeGrpc.CharlotteNodeStub;
 import com.isaacsheff.charlotte.proto.SendBlocksInput;
-import com.isaacsheff.charlotte.proto.SendBlocksResponse;
 import com.isaacsheff.charlotte.experiments.SendToObserverLogging;
 import com.isaacsheff.charlotte.proto.Block;
 import com.isaacsheff.charlotte.yaml.Contact;
@@ -125,6 +124,7 @@ public class CharlotteNodeClient {
 
   public SendBlocksInput getMostRecentSent() {return mostRecentSent;}
   public StreamObserver<SendBlocksInput> getSendBlocksInputObserver() {return sendBlocksInputObserver;}
+  public SendToObserverLogging getSendBlocksRunnable() {return sendBlocksRunnable;}
 
   public void createChannel() {
     synchronized(this) {

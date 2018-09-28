@@ -82,9 +82,9 @@ public class WilburClientTest {
     final WilburClient client = new WilburClient(clientService, clientService.getConfig().getContact("wilbur"));
     // get an availability attestation for the block, and check it.
     assertTrue(null != client.checkAvailabilityAttestation(block, client.requestAvailabilityAttestation(block)));
-    client.shutdown();
-    wilburNode.stop();
-    clientNode.stop();
+    // client.shutdown();
+    // wilburNode.stop();
+    // clientNode.stop();
   }
 
 }

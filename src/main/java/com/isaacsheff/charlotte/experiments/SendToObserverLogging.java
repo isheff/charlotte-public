@@ -61,7 +61,7 @@ public class SendToObserverLogging implements Runnable {
     if ((!client.getSendBlocksResponseObserver().hasFailed()) && (null != client.getMostRecentSent())) {
       sendToGrpc(client.getMostRecentSent());
     }
-    while (!client.getSendBlocksResponseObserver().hasFailed()) {
+    while ((!client.getSendBlocksResponseObserver().hasFailed()) && (this == client.getSendBlocksRunnable())) {
       sendToGrpc(client.pullFromQueue());
     }
   }

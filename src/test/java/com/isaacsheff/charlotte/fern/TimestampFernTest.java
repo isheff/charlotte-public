@@ -97,9 +97,9 @@ public class TimestampFernTest {
                   addBlock(Reference.newBuilder().setHash(sha3Hash(block)))).
               setSignature(Signature.newBuilder().setCryptoId(client.getContact().getCryptoId()))
       ))).build()));
-    clientNode.stop();
-    fernNode.stop();
-    client.shutdown();
+    // clientNode.stop();
+    // fernNode.stop();
+    // client.shutdown();
   }
 
 
@@ -165,9 +165,9 @@ public class TimestampFernTest {
               setSignature(Signature.newBuilder().setCryptoId(client.getContact().getCryptoId()))
       ))).build(),
       response));
-    clientNode.stop();
-    fernNode.stop();
-    client.shutdown();
+    // clientNode.stop();
+    // fernNode.stop();
+    // client.shutdown();
   }
 
 
@@ -207,7 +207,7 @@ public class TimestampFernTest {
       referencesBuilder.addBlock(Reference.newBuilder().setHash(sha3Hash(block)));
     }
 
-    TimeUnit.SECONDS.sleep(1); // wait a second for everything to catch up
+    TimeUnit.SECONDS.sleep(5); // wait a second for everything to catch up
 
 
     // search the known blocks for an integrity attestation (should exist by now)
@@ -219,8 +219,8 @@ public class TimestampFernTest {
     }
     assertEquals(2, responseCount); // we should have found exactly 2  integrity attestations
     
-    clientNode.stop();
-    fernNode.stop();
+    // clientNode.stop();
+    // fernNode.stop();
   }
 
 }

@@ -151,8 +151,8 @@ public class CharlotteNodeServiceTest {
     //       This isn't really a problem, as the servers' shutdown behaviour doesn't really matter.
     //       However, it bugs me.
     //       This should be fixed.
-    client.shutdown();
-    node0.stop();
-    node1.stop();
+    // client.shutdown();
+    // node0.stop();
+    // node1.stop();
   }
 }

@@ -115,9 +115,9 @@ public class GitSimTest {
    */
   @AfterAll
   static void cleanup() throws InterruptedException, FileNotFoundException {
-    client.shutdown();
-    clientNode.stop();
-    fernNode.stop();
+    // client.shutdown();
+    // clientNode.stop();
+    // fernNode.stop();
   }
 
   /** Commit an initial commit to the master branch. **/
