@@ -61,7 +61,7 @@ public class HetconsExperimentClient {
         for (String chainLine : config.getChainNames()) {
             logger.info(String.format("Hetcons Experiment Part %d Begin", count));
             ArrayList<Thread> threads = new ArrayList<>();
-            for (String cn : chainLine.split("/s+")) {
+            for (String cn : chainLine.trim().split("\\s+")) {
                 Thread thread = new Thread(new Runnable() {
                     @Override
                     public void run() {
@@ -112,7 +112,7 @@ public class HetconsExperimentClient {
 
         Block observerBlock = Block.newBuilder().setHetconsMessage(observerMessage).build();
         clientNode.getLocalService().sendBlock(clientNode.getContact().getCryptoId(), observerBlock);
-//
+
 //        try {
 //            TimeUnit.SECONDS.sleep(2);
 //        } catch (Exception ex) {
