@@ -47,69 +47,34 @@ public class HetconsExperimentClient {
 
         CharlotteNodeService service = new CharlotteNodeService(localNodeConfig);
         HetconsConfig hetconsConfig = new HetconsConfig(expDir);
-
-        assert config.getContactServer() != null;
-        switch (args[1].charAt(0)) {
-            case '1':
-                assert config.getChainNames().size() == 1;
-                assert config.getFernServers().size() == 4;
-                runExperiment(hetconsConfig, config, service, expDir, 1);
-                break;
-            case '2':
-                assert config.getChainNames().size() > 1;
-                assert config.getFernServers().size() >= 4;
-                runExperiment(hetconsConfig, config, service, expDir, 2);
-            case '3':
-                assert config.getChainNames().size() == 1;
-                assert config.getFernServers().size() == 4;
-                runExperiment(hetconsConfig, config, service, expDir, 3);
-            case '4':
-                assert config.getChainNames().size() >= 3;
-                assert config.getFernServers().size() >= 4;
-                assert config.getBlocksPerExperiment() >= 1;
-                runExperiment(hetconsConfig, config, service, expDir, 4);
-            default:
-                logger.warning("No such experiment");
-        }
-
+        runExperiment(hetconsConfig, config, service, expDir);
     }
 
     private static void runExperiment(HetconsConfig hetconsConfig,
                                       HetconsExperimentClientConfig config,
                                       CharlotteNodeService service,
-                                      Path expDir,
-                                      int num) throws InterruptedException {
+                                      Path expDir) throws InterruptedException {
 
 
-        ArrayList<Thread> threads = new ArrayList<>();
         logger.info("Hetcons Experiment Begin");
-        int size = num == 4 ? config.getChainNames().size() - 1 : config.getChainNames().size();
-        for (int i = 0; i < size; i ++) {
-            String cn = config.getChainNames().get(i);
-            Thread thread = new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    testPerChain(cn, hetconsConfig, config, service, expDir, num == 4 ? 2 : num);
-                }
-            });
-            threads.add(thread);
-            thread.start();
-        }
-
-        for (Thread t : threads) {
-            t.join();
-        }
-
-        if (num == 4) {
-            String cn = config.getChainNames().get(size);
-            Thread thread = new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    testPerChain(cn, hetconsConfig, config, service, expDir, num);
-                }
-            });
-            thread.start();
-            thread.join();
+        int count = 1;
+        for (String chainLine : config.getChainNames()) {
+            logger.info(String.format("Hetcons Experiment Part %d Begin", count));
+            ArrayList<Thread> threads = new ArrayList<>();
+            for (String cn : chainLine.split("/s+")) {
+                Thread thread = new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        testPerChain(cn, hetconsConfig, config, service, expDir);
+                    }
+                });
+                threads.add(thread);
+                thread.start();
+            }
+            for (Thread t : threads) {
+                t.join();
+            }
+            logger.info(String.format("Hetcons Experiment Part %d Completed", count++));
         }
         logger.info("Hetcons Experiment Completed");
         System.exit(0);
@@ -121,14 +86,13 @@ public class HetconsExperimentClient {
      * @param hetconsConfig
      * @param config
      * @param expDir
-     * @param num
+//     * @param num
      */
     private static void testPerChain(String cn,
                                      HetconsConfig hetconsConfig,
                                      HetconsExperimentClientConfig config,
                                      CharlotteNodeService service,
-                                     Path expDir,
-                                     int num) {
+                                     Path expDir) {
         ChainConfig chainConfig = hetconsConfig.loadChain(cn);
         if (chainConfig == null)
             return;
@@ -148,19 +112,18 @@ public class HetconsExperimentClient {
 
         Block observerBlock = Block.newBuilder().setHetconsMessage(observerMessage).build();
         clientNode.getLocalService().sendBlock(clientNode.getContact().getCryptoId(), observerBlock);
-
-        try {
-            TimeUnit.SECONDS.sleep(2);
-        } catch (Exception ex) {
-            ex.printStackTrace();
-        }
+//
+//        try {
+//            TimeUnit.SECONDS.sleep(2);
+//        } catch (Exception ex) {
+//            ex.printStackTrace();
+//        }
 
         Reference obsblkRef = Reference.newBuilder()
                 .setHash(HashUtil.sha3Hash(observerBlock)).build();
 
-        logger.info(String.format("Experiment part %d start", num));
-        int numBlock = num == 4 ? 1 : config.getBlocksPerExperiment();
-        for (int i = 0; i < numBlock; i++) {
+//        logger.info(String.format("Experiment part %d start", num));
+        for (int i = 0; i < config.getBlocksPerExperiment(); i++) {
             // Build proposal
             IntegrityAttestation.ChainSlot slot = IntegrityAttestation.ChainSlot.newBuilder()
                     .setRoot(Reference.newBuilder()
@@ -208,7 +171,7 @@ public class HetconsExperimentClient {
             RequestIntegrityAttestationResponse response = clientNode.requestIntegrityAttestation(input);
             logger.info(String.format("Received response for chain %s %d", cn, i));
         }
-        logger.info(String.format("Experiment part %d completed", num));
+//        logger.info(String.format("Experiment part %d completed", num));
     }
 }
 

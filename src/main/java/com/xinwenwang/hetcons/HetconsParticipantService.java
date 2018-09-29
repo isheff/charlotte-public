@@ -184,8 +184,6 @@ public class HetconsParticipantService extends CharlotteNodeService {
      * Note that this may be called multiple times for the same consensus, as more 2bs arrive.
      * This implementation does nothing.
      * @param quoraMembers The quora satisfied by the 2b messages known.
-     * @param message2b the actual message that triggered this decision.
-     * @param id the CryptoId of the sender of the most recent 2b.
      */
     protected void onDecision(final HetconsObserverQuorum quoraMembers,
                               final Collection<Reference> quoraMessages) {}
