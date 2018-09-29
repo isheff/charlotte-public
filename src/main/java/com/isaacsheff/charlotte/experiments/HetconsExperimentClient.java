@@ -113,11 +113,11 @@ public class HetconsExperimentClient {
         Block observerBlock = Block.newBuilder().setHetconsMessage(observerMessage).build();
         clientNode.getLocalService().sendBlock(clientNode.getContact().getCryptoId(), observerBlock);
 
-//        try {
-//            TimeUnit.SECONDS.sleep(2);
-//        } catch (Exception ex) {
-//            ex.printStackTrace();
-//        }
+        try {
+            TimeUnit.SECONDS.sleep(2);
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
 
         Reference obsblkRef = Reference.newBuilder()
                 .setHash(HashUtil.sha3Hash(observerBlock)).build();
@@ -127,7 +127,7 @@ public class HetconsExperimentClient {
             // Build proposal
             IntegrityAttestation.ChainSlot slot = IntegrityAttestation.ChainSlot.newBuilder()
                     .setRoot(Reference.newBuilder()
-                            .setHash(Hash.newBuilder().setSha3(ByteString.copyFromUtf8("abc")).build())
+                            .setHash(Hash.newBuilder().setSha3(ByteString.copyFromUtf8(cn)).build())
                             .build())
                     .setSlot(i)
                     .build();
