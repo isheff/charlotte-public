@@ -39,6 +39,17 @@ import com.isaacsheff.charlotte.proto.Signature;
 import com.isaacsheff.charlotte.wilbur.WilburClient;
 import com.isaacsheff.charlotte.yaml.Contact;
 
+/**
+ * Client for the AgreementNW experiment, which gathers N fern
+ *  attestations, and some Wilbur attestations, before each block.
+ * The objective of this experiment is to demonstrate that we can save
+ *  bandwidth by storing large blocks only on Wilbur servers, and then
+ *  getting Fern servers to agree only on hashes.
+ * The number of wilbur servers representing "sufficiently available"
+ *  for a block is set in the JsonExperimentConfig.
+ * This experiment uses the JsonExperimentConfig.blockSize parameter to determind block payload size.
+ * @author Isaac Sheff
+ */
 public class AgreementNWClient extends AgreementNClient {
   /** used for logging events in this class **/
   private static final Logger logger = Logger.getLogger(AgreementNWClient.class.getName());
@@ -46,11 +57,18 @@ public class AgreementNWClient extends AgreementNClient {
   /** For each wilbur, a Queue of requests to be sent out to that wilbur (in case sending takes time) **/
   private final Map<CryptoId, BlockingQueue<RequestAvailabilityAttestationInput>> wilburQueues;
 
+  /**
+   * The set of availability attestations known for each block.
+   * The existence of an entry in this map (even the empty set)
+   *  indicates that this client has already requested availability
+   *  attestations for this block.
+   */
   private final Map<Hash, Set<Hash>> pendingRefs;
 
   /**
    * Start up a new client.
    * This does not initiate the experiment.
+   * To start the experiment, you have to broadcast block 0 (root).
    * @param service the local CharlotteNodeService (for sendign blocks and such)
    * @param config the experimental config.
    */
@@ -83,7 +101,7 @@ public class AgreementNWClient extends AgreementNClient {
 
 
   /** 
-   * Send a request to all the clients (and so to all the fern servers).
+   * Send a request to all the server clients (and so to all the wilbur servers, and then the fern servers).
    * This will broadcast the block from blocks[slot], and then enqueue requests built for each fern.
    * @param parentBuilder represents the reference to the parent block
    * @param slot the slot number of this new block
@@ -147,6 +165,15 @@ public class AgreementNWClient extends AgreementNClient {
 
 
 
+  /**
+   * Make the blocks with hashes given sufficiently available. 
+   * Here, that means sending requests to all the Wilbur servers, and
+   *  awaiting enough responses.
+   * If we already have responses, we won't make a new request, and
+   *  we'll just return immediately.
+   * This will block until there are enough responses.
+   * @param hashes the hashes of the blocks for which we want Wilbur attestations.
+   */
   public void makeAvailable(Set<Hash> hashes) {
     final Set<Hash> unRequested = newKeySet();
     for (Hash hash : hashes) {
@@ -172,6 +199,10 @@ public class AgreementNWClient extends AgreementNClient {
     }
   }
 
+  /**
+   * Send a request to all the wilbur servers to attest to all these blocks being available.
+   * @param hashes the hashes of blocks we want available.
+   */
   private void broadcastWilburRequest(Set<Hash> hashes) {
     if (hashes.size() == 0) {
       return;
@@ -197,6 +228,11 @@ public class AgreementNWClient extends AgreementNClient {
     }
   }
 
+  /**
+   * Send a particular requet to a particular wilbur server, as represented by an asynchronous blocking queue.
+   * @param input the input to be sent to the Wilbur server.
+   * @param wilbur the asynchronous blocking queue of stuff to be sent to a particular server.
+   */
   private void sendWilburRequest(final RequestAvailabilityAttestationInput input,
                                  final BlockingQueue<RequestAvailabilityAttestationInput> wilbur) {
     try {
@@ -208,6 +244,12 @@ public class AgreementNWClient extends AgreementNClient {
 
 
 
+  /**
+   * This is called when a wilbur server responds to a request.
+   * @param input the request sent to the wilbur service
+   * @param response the response the wilbur server sent back
+   * @param wilburClient the client that communicates with that Wilbur service.
+   */
   public void onWilburResponse(final RequestAvailabilityAttestationInput input,
                                final RequestAvailabilityAttestationResponse response,
                                final WilburClient wilburClient) {
@@ -232,6 +274,7 @@ public class AgreementNWClient extends AgreementNClient {
 
   /**
    * Run the experiment.
+   * Thi ssets up the AgreementNWclient, broacasts the root block, and waits until it's done.
    * @param args command line arguments args[0] must be the config yaml file.
    */
   public static void main(String[] args) throws InterruptedException, FileNotFoundException, IOException {

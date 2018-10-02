@@ -21,10 +21,23 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+/**
+ * A Fern server for the AgreementNW experiment.
+ * This fern server attests to the first block it sees for a
+ *  particular slot iff its parent reference has enough integrity
+ *  attestations, and all references have enough wilbur attestations.
+ * The number of wilbur servers representing "sufficiently available"
+ *  for a block is set in the JsonExperimentConfig.
+ * This experiment uses the JsonExperimentConfig.blockSize parameter to determind block payload size.
+ * @author Isaac Sheff
+ */
 public class AgreementNWFern extends AgreementNFern {
+
   /** Use logger for logging events in this class. */
   private static final Logger logger = Logger.getLogger(AgreementNWFern.class.getName());
+
   /**
+   * Make a new fern service.
    * @param config the experiment config file
    * @param service the local CharlotteNodeService
    */
@@ -32,6 +45,13 @@ public class AgreementNWFern extends AgreementNFern {
     super(config, service);
   }
 
+  /**
+   * Does this reference have enough valid availability attestations?.
+   * @param config the raw experimental configuration
+   * @param service the local CharlotteNodeService used for sending blocks and such.
+   * @param threshold how many Wilbur servers do you need to be sufficiently available? (> threshold)
+   * @param reference the reference you want to judge the availability of
+   */
   public static boolean sufficientAvailability(final JsonExperimentConfig config,
                                                final CharlotteNodeService service,
                                                final int threshold,
@@ -70,6 +90,7 @@ public class AgreementNWFern extends AgreementNFern {
    * Is this policy, alone, one which this server could ever accept?.
    * check that this ChainSlot actually has a block hash in it.
    * We also check that the parent has enough attestsations.
+   * We also check whether (basically everything) is sufficiently available.
    * @return an error string if it's unacceptable, null if it's acceptable
    */
   @Override
@@ -94,6 +115,7 @@ public class AgreementNWFern extends AgreementNFern {
 
 
   /**
+   * Create a new CharlotteNode featuring a AgreementNWFern Fern service and a CharlotteNodeService.
    * @param node a CharlotteNodeService with which we'll build a AgreementChainFernService
    * @return a new CharlotteNode which runs a Fern Service and a CharlotteNodeService
    */

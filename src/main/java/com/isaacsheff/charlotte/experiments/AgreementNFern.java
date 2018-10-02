@@ -28,6 +28,17 @@ import io.grpc.ServerBuilder;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+/**
+ * A fern server which attests to the first block it sees for a given
+ *  slot, iff that block has SUFFICIENTLY MANY integrity attestations
+ *  in its parent reference.
+ * By default, agreementQuorumSize (which is the number of
+ *  attestations requried for agreement), is > 2/3 of the known fern
+ *  servers.
+ * You use these to run N out of M agreement on a blockchain.
+ * This experiment uses the JsonExperimentConfig.blockSize parameter to determind block payload size.
+ * @author Isaac Sheff
+ */
 public class AgreementNFern extends AgreementChainFernService {
   /** Use logger for logging events in this class. */
   private static final Logger logger = Logger.getLogger(AgreementNFern.class.getName());
@@ -42,7 +53,7 @@ public class AgreementNFern extends AgreementChainFernService {
   /**
    * Run as a main class with an arg specifying a config file name to run a Fern Agreement server.
    * creates and runs a new CharlotteNode which runs a Wilbur Service and a CharlotteNodeService, in a new thread.
-   * @param args command line args. args[0] should be the name of the config file, and args[1] is auto-shutdown time in seconds
+   * @param args command line args. args[0] should be the name of the config file, args[1] is auto-shutdown time in seconds
    */
   public static void main(String[] args) throws InterruptedException{
     if (args.length < 1) {
@@ -61,6 +72,8 @@ public class AgreementNFern extends AgreementChainFernService {
   }
 
   /**
+   * Create a CharlotteNodeService and accompanying AgreementNFern fern service.
+   * The CharlotteNodeService does not log whole blocks, just hashes.
    * @param node a CharlotteNodeService with which we'll build a AgreementChainFernService
    * @return a new CharlotteNode which runs a Fern Service and a CharlotteNodeService
    */
@@ -106,6 +119,9 @@ public class AgreementNFern extends AgreementChainFernService {
   }
 
   /**
+   * Create a new AgreementNFern fern service with the given
+   *  configuration and affiliated CharlotteNodeService (running on
+   *  the same server).
    * @param config the experiment config file
    * @param service the local CharlotteNodeService
    */
@@ -120,7 +136,7 @@ public class AgreementNFern extends AgreementChainFernService {
 
   }
 
-  /** the experiment config file */
+  /** @return  the experiment config file */
   public JsonExperimentConfig getJsonConfig() {return config;}
 
   /**
