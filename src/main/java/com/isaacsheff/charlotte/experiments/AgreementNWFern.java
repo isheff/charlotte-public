@@ -15,8 +15,6 @@ import com.isaacsheff.charlotte.proto.Hash;
 import com.isaacsheff.charlotte.proto.IntegrityPolicy;
 import com.isaacsheff.charlotte.proto.Reference;
 
-import io.grpc.ServerBuilder;
-
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -124,9 +122,7 @@ public class AgreementNWFern extends AgreementNFern {
       final JsonExperimentConfig config =
         (new ObjectMapper(new YAMLFactory())).readValue(Paths.get(filename).toFile(), JsonExperimentConfig.class);
       final CharlotteNodeService node = new CharlotteNodeService(filename);
-      return new CharlotteNode(node,
-                   ServerBuilder.forPort(node.getConfig().getPort()).addService(new AgreementNWFern(config, node)),
-                   node.getConfig().getPort());
+      return new CharlotteNode(node, new AgreementNWFern(config, node));
     } catch (IOException e) {
       logger.log(Level.SEVERE, "could not read config", e);
     }

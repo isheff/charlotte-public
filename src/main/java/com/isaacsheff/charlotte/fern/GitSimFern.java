@@ -22,8 +22,6 @@ import com.isaacsheff.charlotte.proto.RequestIntegrityAttestationInput;
 import com.isaacsheff.charlotte.proto.RequestIntegrityAttestationResponse;
 import com.isaacsheff.charlotte.proto.SignedGitSimCommit.GitSimCommit.GitSimParents.GitSimParent;
 
-import io.grpc.ServerBuilder;
-
 import java.nio.file.Path;
 import java.util.LinkedList;
 import java.util.Queue;
@@ -111,9 +109,7 @@ public class GitSimFern extends AgreementFernService {
    * @return a new CharlotteNode which runs a Fern Service and a CharlotteNodeService
    */
   public static CharlotteNode getFernNode(final CharlotteNodeService node) {
-    return new CharlotteNode(node,
-                             ServerBuilder.forPort(node.getConfig().getPort()).addService(newFern(node)),
-                             node.getConfig().getPort());
+    return new CharlotteNode(node, newFern(node));
   }
 
   /**

@@ -2,6 +2,7 @@ package com.isaacsheff.charlotte.wilburquery;
 
 import java.nio.file.Path;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -17,7 +18,6 @@ import com.isaacsheff.charlotte.proto.WilburQueryInput;
 import com.isaacsheff.charlotte.proto.WilburQueryResponse;
 import com.isaacsheff.charlotte.wilbur.WilburService;
 
-import io.grpc.ServerBuilder;
 import io.grpc.stub.StreamObserver;
 
 
@@ -61,11 +61,7 @@ public class WilburQueryService extends WilburQueryGrpc.WilburQueryImplBase {
    * @return a new CharlotteNode which runs a WilburQueryService, a WilburQuery Service, and a CharlotteNodeService
    */
   public static CharlotteNode getWilburQueryNode(final CharlotteNodeService node) {
-    return new CharlotteNode(node,
-                             ServerBuilder.forPort(node.getConfig().getPort()).
-                               addService(new WilburService(node)).
-                               addService(new WilburQueryService(node)),
-                             node.getConfig().getPort());
+    return new CharlotteNode(node, List.of(new WilburService(node), new WilburQueryService(node)));
   }
 
   /**

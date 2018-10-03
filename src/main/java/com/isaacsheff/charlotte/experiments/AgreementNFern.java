@@ -23,8 +23,6 @@ import com.isaacsheff.charlotte.proto.Hash;
 import com.isaacsheff.charlotte.proto.IntegrityPolicy;
 import com.isaacsheff.charlotte.proto.Reference;
 
-import io.grpc.ServerBuilder;
-
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -109,9 +107,7 @@ public class AgreementNFern extends AgreementChainFernService {
         }
         
       };
-      return new CharlotteNode(node,
-                   ServerBuilder.forPort(node.getConfig().getPort()).addService(new AgreementNFern(config, node)),
-                   node.getConfig().getPort());
+      return new CharlotteNode(node, new AgreementNFern(config, node));
     } catch (IOException e) {
       logger.log(Level.SEVERE, "could not read config", e);
     }

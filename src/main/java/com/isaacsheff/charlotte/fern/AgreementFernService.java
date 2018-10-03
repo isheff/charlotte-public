@@ -16,7 +16,6 @@ import com.isaacsheff.charlotte.proto.Reference;
 import com.isaacsheff.charlotte.proto.RequestIntegrityAttestationInput;
 import com.isaacsheff.charlotte.proto.RequestIntegrityAttestationResponse;
 
-import io.grpc.ServerBuilder;
 import io.grpc.stub.StreamObserver;
 
 import java.nio.file.Path;
@@ -94,9 +93,7 @@ public class AgreementFernService extends FernImplBase {
    * @return a new CharlotteNode which runs a Fern Service and a CharlotteNodeService
    */
   public static CharlotteNode getFernNode(final CharlotteNodeService node) {
-    return new CharlotteNode(node,
-                             ServerBuilder.forPort(node.getConfig().getPort()).addService(newFern(node)),
-                             node.getConfig().getPort());
+    return new CharlotteNode(node, newFern(node));
   }
 
   /**

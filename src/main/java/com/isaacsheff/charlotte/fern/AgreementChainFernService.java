@@ -12,7 +12,6 @@ import com.isaacsheff.charlotte.proto.IntegrityAttestation.ChainSlot;
 import com.isaacsheff.charlotte.proto.IntegrityPolicy;
 import com.isaacsheff.charlotte.proto.Reference;
 import com.isaacsheff.charlotte.proto.RequestIntegrityAttestationResponse;
-import io.grpc.ServerBuilder;
 import java.nio.file.Path;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
@@ -57,9 +56,7 @@ public class AgreementChainFernService extends AgreementFernService {
    * @return a new CharlotteNode which runs a Fern Service and a CharlotteNodeService
    */
   public static CharlotteNode getFernNode(final CharlotteNodeService node) {
-    return new CharlotteNode(node,
-                             ServerBuilder.forPort(node.getConfig().getPort()).addService(newFern(node)),
-                             node.getConfig().getPort());
+    return new CharlotteNode(node, newFern(node));
   }
 
   /**

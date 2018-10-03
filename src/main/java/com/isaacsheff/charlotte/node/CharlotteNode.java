@@ -1,33 +1,29 @@
 package com.isaacsheff.charlotte.node;
 
+import static io.netty.handler.ssl.ClientAuth.REQUIRE;
+import static java.util.Collections.emptySet;
+import static java.util.Collections.singleton;
+
+import io.grpc.BindableService;
+import io.grpc.Server;
+import io.grpc.netty.GrpcSslContexts;
+import io.grpc.netty.NettyServerBuilder;
 import java.io.IOException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
-
-import io.grpc.Server;
-import io.grpc.ServerBuilder;
+import javax.net.ssl.SSLException;
 
 /**
- * When run, a CharlotteNode boots up a server featuring a CharlotteNodeService.
+ * When run, a CharlotteNode boots up a server featuring a CharlotteNodeService,
+ *  and optionally other services.
  * @author Isaac Sheff
  */
 public class CharlotteNode implements Runnable {
-  /**
-   * Use logger for logging events on CharlotteNodes.
-   */
+
+  /** Use logger for logging events on CharlotteNodes. */
   private static final Logger logger = Logger.getLogger(CharlotteNode.class.getName());
 
-  /**
-   * What port (think TCP) does this server run on?.
-   * This is only actually stored so we can put it in log messages.
-   * It's only other use is if we have to create a default serverBuilder.
-   */
-  private final int port;
-
-  /**
-   * The gRPC server which is running this CharlotteNode.
-   */
+  /** The gRPC server which is running this CharlotteNode. */
   private final Server server;
 
   /**
@@ -36,42 +32,40 @@ public class CharlotteNode implements Runnable {
    */
   private final CharlotteNodeService service;
 
-
   /**
-   * Construct a CharlotteNode given a service, a serverBuilder on which to run the service, and a port.
-   * @param service the object which controls what the node does on each RPC call
-   * @param serverBuilder makes a server which listens for RPCs, given a service
-   * @param port the port (think TCP) on which the server will run. Only actually used for logging messages.
+   * Construct a CharlotteNode with a CharloteNodeService, and other services to be run on this server.
+   * The CharlotteNodeService's Config will determine the port this runs on.
+   * @param nodeService the CharlotteNodeService to be run on this server.
+   * @param services the other services to be run on this server (e.g. Fern, Wilbur)
    */
-  public CharlotteNode(CharlotteNodeService service, ServerBuilder<?> serverBuilder, int port) {
-    this.port = port;
-    this.service = service;
-    this.server = serverBuilder.useTransportSecurity(service.getConfig().getX509Stream(),
-                                                     service.getConfig().getPrivateKeyStream()).
-                                addService(service).build();
-  }
-
-
-
-  /**
-   * Construct a CharlotteNode with a default service, given a serverBuilder on which to run the service, and a port.
-   * The service will be a CharlotteNodeService object.
-   * @param filename the name of the config file from which to configure the service
-   * @param serverBuilder makes a server which listens for RPCs, given a service
-   * @param port the port (think TCP) on which the server will run. Only actually used for logging messages.
-   */
-  public CharlotteNode(String filename, ServerBuilder<?> serverBuilder, int port) {
-    this(new CharlotteNodeService(filename), serverBuilder, port);
+  public CharlotteNode(final CharlotteNodeService nodeService, final Iterable<BindableService> services) {
+    service = nodeService;
+    final NettyServerBuilder serverBuilder = NettyServerBuilder.forPort(getPort());
+    try {
+      serverBuilder.sslContext(GrpcSslContexts.forServer(service.getConfig().getX509Stream(),
+                                                         service.getConfig().getPrivateKeyStream()).
+                                               trustManager(service.getConfig().getTrustCertStream()).
+                                               clientAuth(REQUIRE).
+                                               build());
+    } catch (SSLException e) {
+      logger.log(Level.SEVERE, "Problems setting the SSL Context for the serverBuilder", e);
+    }
+    serverBuilder.addService(service);
+    for (BindableService bindableService : services) {
+      serverBuilder.addService(bindableService);
+    }
+    server = serverBuilder.build();
   }
 
   /**
-   * Construct a CharlotteNode with a given service, a default serverBuilder on which to run the service, and a port.
-   * The ServerBuilder will be a default one for the given port.
-   * @param service the object which controls what the node does on each RPC call
-   * @param port the port (think TCP) on which the server will run. Used in generating the serverBuilder.
+   * Construct a CharlotteNode with a CharloteNodeService, and another service to be run on this server.
+   * The CharlotteNodeService's Config will determine the port this runs on.
+   * Equivalent to CharlotteNode(nodeService, java.util.Collections.singleton(otherService));
+   * @param nodeService the CharlotteNodeService to be run on this server.
+   * @param otherService the other service to be run on this server (e.g. Fern, Wilbur)
    */
-  public CharlotteNode(CharlotteNodeService service, int port) {
-    this(service, ServerBuilder.forPort(port), port);
+  public CharlotteNode(final CharlotteNodeService nodeService, final BindableService otherService) {
+    this(nodeService, singleton(otherService));
   }
 
   /**
@@ -79,19 +73,20 @@ public class CharlotteNode implements Runnable {
    * Uses the port from the config file for this contact.
    * @param service the object which controls what the node does on each RPC call
    */
-  public CharlotteNode(CharlotteNodeService service) {
-    this(service, service.getConfig().getPort());
+  public CharlotteNode(final CharlotteNodeService service) {
+    this(service, emptySet());
   }
 
   /**
    * Construct a CharlotteNode configured by the file with the given filename.
    * @param filename name of the config file
    */
-  public CharlotteNode(String filename) {
+  public CharlotteNode(final String filename) {
     this(new CharlotteNodeService(filename));
   }
 
-
+  /** @return the port on which this server operates, as set by the CharlotteNodeService's Config */
+  public int getPort() {return getService().getConfig().getPort();}
 
   /** 
    * This method will be called when a new thread spawns featuring a CharlotteNode.
@@ -100,7 +95,7 @@ public class CharlotteNode implements Runnable {
   public void run() {
     try {
       server.start();
-      logger.info("Server started, listening on " + port);
+      logger.info("Server started, listening on " + getPort());
       Runtime.getRuntime().addShutdownHook(new Thread() {
         @Override
         public void run() {
@@ -128,7 +123,7 @@ public class CharlotteNode implements Runnable {
    * It logs the exception as SEVERE, since this is a bad thing that hopefully never happens.
    * @param exception the IOException which was thrown while running the server.
    */
-  protected void onIOException(IOException exception) {
+  protected void onIOException(final IOException exception) {
     logger.log(Level.SEVERE, "IOException thrown while running server.", exception);
   }
     

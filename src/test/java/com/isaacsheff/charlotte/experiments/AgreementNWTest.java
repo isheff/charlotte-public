@@ -21,8 +21,6 @@ import com.isaacsheff.charlotte.wilbur.WilburService;
 import com.isaacsheff.charlotte.yaml.Config;
 import com.isaacsheff.charlotte.yaml.JsonContact;
 
-import io.grpc.ServerBuilder;
-
 /**
  * Test AgreementFernChain service and client
  * @author Isaac Sheff
@@ -83,10 +81,7 @@ public class AgreementNWTest {
           participants,
           10);
       final CharlotteNodeService node = new CharlotteNodeService(new Config(config, Paths.get(".")));
-      CharlotteNode charlotteNode = new CharlotteNode(node,
-        ServerBuilder.forPort(node.getConfig().getPort()).
-                      addService(new AgreementNWFern(config, node)),
-        node.getConfig().getPort());
+      CharlotteNode charlotteNode = new CharlotteNode(node, new AgreementNWFern(config, node));
       nodes[i] = charlotteNode;
       (new Thread(charlotteNode)).start();
     }
@@ -102,10 +97,7 @@ public class AgreementNWTest {
           participants,
           10);
       final CharlotteNodeService node = new AgreementNWilbur(new Config(config, Paths.get(".")));
-      CharlotteNode charlotteNode = new CharlotteNode(node,
-        ServerBuilder.forPort(node.getConfig().getPort()).
-                      addService(new WilburService(node)),
-        node.getConfig().getPort());
+      CharlotteNode charlotteNode = new CharlotteNode(node, new WilburService(node));
       nodes[i] = charlotteNode;
       (new Thread(charlotteNode)).start();
     }
