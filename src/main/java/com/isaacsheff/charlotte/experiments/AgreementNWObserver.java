@@ -11,6 +11,7 @@ import java.util.logging.Logger;
 /** 
  * Used by AgreementNWClient to wait for responses from the Wilbur servers. 
  * Literally just calls onWilburResponse whenever a response comes in.
+ * @author Isaac Sheff
  */
 public class AgreementNWObserver implements StreamObserver<RequestAvailabilityAttestationResponse> {
   /** Use logger for logging events on this class. */
@@ -49,7 +50,7 @@ public class AgreementNWObserver implements StreamObserver<RequestAvailabilityAt
    * Call getAgreementClient().onFernResponse.
    * @param input the new RequestAvailabilityAttestationResponse that has just arrived on the wire.
    */
-  public void onNext(RequestAvailabilityAttestationResponse response) {
+  public void onNext(final RequestAvailabilityAttestationResponse response) {
     getAgreementClient().onWilburResponse(getRequest(), response, wilburClient);
   }
 
@@ -64,7 +65,7 @@ public class AgreementNWObserver implements StreamObserver<RequestAvailabilityAt
    * We log it as a warning.
    * @param t the error arising from the stream.
    */
-  public void onError(Throwable t) {
+  public void onError(final Throwable t) {
     logger.log(Level.WARNING, "requestAvailabilityAttestation cancelled", t);
   }
 }

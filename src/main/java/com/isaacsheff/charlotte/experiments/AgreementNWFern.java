@@ -39,7 +39,8 @@ public class AgreementNWFern extends AgreementNFern {
    * @param config the experiment config file
    * @param service the local CharlotteNodeService
    */
-  public AgreementNWFern(JsonExperimentConfig config, CharlotteNodeService service) {
+  public AgreementNWFern(final JsonExperimentConfig config,
+                         final CharlotteNodeService service) {
     super(config, service);
   }
 
@@ -92,7 +93,7 @@ public class AgreementNWFern extends AgreementNFern {
    * @return an error string if it's unacceptable, null if it's acceptable
    */
   @Override
-  public String validPolicy(IntegrityPolicy policy) {
+  public String validPolicy(final IntegrityPolicy policy) {
     final String integrityValid = super.validPolicy(policy);
     if (integrityValid != null) {
       return integrityValid;

@@ -107,7 +107,7 @@ public class AgreementNWClient extends AgreementNClient {
    * @param slot the slot number of this new block
    */
   @Override
-  public void broadcastRequest(Reference.Builder parentBuilder, int slot) {
+  public void broadcastRequest(final Reference.Builder parentBuilder, final int slot) {
     logger.info("Beginning slot " + slot);
     if (slot >= getTotalBlocks()) {
       done(); // we've finished all the blocks, and we're done.
@@ -174,7 +174,7 @@ public class AgreementNWClient extends AgreementNClient {
    * This will block until there are enough responses.
    * @param hashes the hashes of the blocks for which we want Wilbur attestations.
    */
-  public void makeAvailable(Set<Hash> hashes) {
+  public void makeAvailable(final Set<Hash> hashes) {
     final Set<Hash> unRequested = newKeySet();
     for (Hash hash : hashes) {
       final Set<Hash> existing = pendingRefs.putIfAbsent(hash, newKeySet());

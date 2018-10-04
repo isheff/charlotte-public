@@ -8,6 +8,12 @@ import com.isaacsheff.charlotte.yaml.JsonContact;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Extra configuration stuff for the Timestamp experiment.
+ * Includes timestampreferencesperattestation, which sets how many
+ *  blocks each Fern server will receive before it issues a new timestamp.
+ * @author Isaac Sheff
+ */
 @JsonIgnoreProperties(ignoreUnknown = true) // if there are random other fields at the top level of config, just ignore them
 public class TimestampExperimentConfig extends JsonExperimentConfig {
 

@@ -43,8 +43,10 @@ public class AgreementNFern extends AgreementChainFernService {
 
   /** the experiment config file */
   private final JsonExperimentConfig config;
+
   /** the number of attestations needed to consider a block committed (default > 2/3 |ferns|) */
   private final int agreementQuorumSize;
+
   /** the set of fern servers' cryotoIds */
   private final Set<CryptoId> ferns;
 
@@ -121,7 +123,7 @@ public class AgreementNFern extends AgreementChainFernService {
    * @param config the experiment config file
    * @param service the local CharlotteNodeService
    */
-  public AgreementNFern(JsonExperimentConfig config, CharlotteNodeService service) {
+  public AgreementNFern(final JsonExperimentConfig config, final CharlotteNodeService service) {
     super(service);
     this.config = config;
     agreementQuorumSize = 1 + (( 2 * this.config.getFernServers().size()) / 3);
@@ -142,7 +144,7 @@ public class AgreementNFern extends AgreementChainFernService {
    * @return an error string if it's unacceptable, null if it's acceptable
    */
   @Override
-  public String validPolicy(IntegrityPolicy policy) {
+  public String validPolicy(final IntegrityPolicy policy) {
     if ( policy.getFillInTheBlank().getSignedChainSlot().getChainSlot().getSlot() == 0) { // this is a root
       return null;
     }

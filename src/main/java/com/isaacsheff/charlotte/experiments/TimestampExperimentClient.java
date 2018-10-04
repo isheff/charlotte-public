@@ -20,13 +20,25 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+/**
+ * Runs the timestamp experiment.
+ * This will divide (2 * blocksPerExperiment) blocks amongst all known Timestamp fern servers,
+ *  and then send each server blocks as fast as it can.
+ * It will pause after having sent blocksPerExperiment blocks, so the system can catch up
+ *  before it begins the "real experiment," which is the last blocksPerExperiment blocks.
+ * @author Isaac Sheff
+ */
 public class TimestampExperimentClient {
   /** used for logging events in this class **/
   private static final Logger logger = Logger.getLogger(TimestampExperimentClient.class.getName());
 
   /**
-   * Run the experiment.
-   * @param args command line arguments args[0] must be the config yaml file.
+   * Runs the timestamp experiment.
+   * This will divide (2 * blocksPerExperiment) blocks amongst all known Timestamp fern servers,
+   *  and then send each server blocks as fast as it can.
+   * It will pause after having sent blocksPerExperiment blocks, so the system can catch up
+   *  before it begins the "real experiment," which is the last blocksPerExperiment blocks.
+   * @param args command line arguments args[0] must be the config yaml file encoding JsonExperimentConfig.
    */
   public static void main(String[] args) throws InterruptedException, FileNotFoundException, IOException {
     // start the client's CharlotteNode

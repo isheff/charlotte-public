@@ -30,7 +30,7 @@ public class AgreementNWilbur extends CharlotteNodeService {
    * Constructor: make a new nodeservice.
    * @param configfile the filename of the config file
    */
-  public AgreementNWilbur(String configfile) {
+  public AgreementNWilbur(final String configfile) {
     super(configfile);
   }
 
@@ -38,7 +38,7 @@ public class AgreementNWilbur extends CharlotteNodeService {
    * Constructor: make a new nodeservice.
    * @param config the Config
    */
-  public AgreementNWilbur(Config config) {
+  public AgreementNWilbur(final Config config) {
     super(config);
   }
 

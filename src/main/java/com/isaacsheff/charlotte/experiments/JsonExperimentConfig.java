@@ -10,6 +10,10 @@ import com.isaacsheff.charlotte.yaml.JsonContact;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Encodes a bunch of values we use in our experiments.
+ * @author Isaac Sheff
+ */
 @JsonIgnoreProperties(ignoreUnknown = true) // if there are random other fields at the top level of config, just ignore them
 public class JsonExperimentConfig extends JsonConfig {
 

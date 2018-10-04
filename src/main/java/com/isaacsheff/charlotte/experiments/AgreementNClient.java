@@ -94,7 +94,7 @@ public class AgreementNClient {
    * @param service the local CharlotteNodeService (for sendign blocks and such)
    * @param config the experimental config.
    */
-  public AgreementNClient(CharlotteNodeService service, JsonExperimentConfig config) {
+  public AgreementNClient(final CharlotteNodeService service, final JsonExperimentConfig config) {
     this.service = service;
     this.config = config;
     doneLock = new Object();
@@ -154,7 +154,7 @@ public class AgreementNClient {
    * @param parentBuilder represents the reference to the parent block
    * @param slot the slot number of this new block
    */
-  public void broadcastRequest(Reference.Builder parentBuilder, int slot) {
+  public void broadcastRequest(final Reference.Builder parentBuilder, final int slot) {
     if (slot >= totalBlocks) {
       done(); // we've finished all the blocks, and we're done.
       return; // unreachable, I'm pretty sure
@@ -256,7 +256,7 @@ public class AgreementNClient {
   }
 
   /** Creates a random alpha-numeric string of the length given. */
-  public static String randomString(int targetStringLength) {
+  public static String randomString(final int targetStringLength) {
     int leftLimit = 97; // letter 'a'
     int rightLimit = 122; // letter 'z'
     Random random = new Random();
