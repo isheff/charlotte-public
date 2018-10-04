@@ -161,15 +161,16 @@ public class Contact {
 
   /**
    * Used in opening channels to talk to the server this contact represents.
+   * @param delayInterval the builder will pseudorandomly delay between 0 and delayInterval NANOSECONDS
    * @return A ChannelBuilder for this contact's url and port
    */
-  public NettyChannelBuilder getChannelBuilder() {
+  public NettyChannelBuilder getChannelBuilder(long delayInterval) {
     try {
       logger.log(Level.INFO, "Channel Start Delay is happening now: " + now());
       TimeUnit.NANOSECONDS.sleep(Math.floorMod((new Random(
           (getParentConfig().getUrl() + ":" + getParentConfig().getPort() + "\t" + getUrl() + ":" + getPort()).
             hashCode()
-        )).nextLong(), 1000000000l /** 1 second */));
+        )).nextLong(), delayInterval));
     } catch (InterruptedException e) {
       logger.log(Level.SEVERE, "Interrupted while trying to sleep prior to channel building", e);
     }
@@ -183,14 +184,35 @@ public class Contact {
    *   <li>TLS using the X509 certificate in this Contact</li>
    *   <li>Automatic Retry (as implemented in NettyChannel objects</li>
    * </ul>
+   * It will pseudorandomly delay between 0 and 1 seconds.
    * @return A Managed Channel talking to the server this Contact describes.
    */
   public ManagedChannel getManagedChannel() {
-    return getChannelBuilder().withOption(ChannelOption.SO_REUSEADDR, true).
-                               useTransportSecurity().
-                               disableRetry().
-                               sslContext(getSslContext()).
-                               build();
+    return getChannelBuilder(1000000000l /** 1 second */).
+             withOption(ChannelOption.SO_REUSEADDR, true).
+             useTransportSecurity().
+             disableRetry().
+             sslContext(getSslContext()).
+             build();
+  }
+
+  /**
+   * Create a Managed Channel talking to the server this Contact describes.
+   * It uses:
+   * <ul>
+   *   <li>TLS using the X509 certificate in this Contact</li>
+   *   <li>Automatic Retry (as implemented in NettyChannel objects</li>
+   * </ul>
+   * @param delayInterval will pseudorandomly delay between 0 and delayInterval NANOSECONDS
+   * @return A Managed Channel talking to the server this Contact describes.
+   */
+  public ManagedChannel getManagedChannel(long delayInterval) {
+    return getChannelBuilder(delayInterval).
+             withOption(ChannelOption.SO_REUSEADDR, true).
+             useTransportSecurity().
+             disableRetry().
+             sslContext(getSslContext()).
+             build();
   }
 
   /** @return a client for use with actually communicating with the server this Contact represents. */
