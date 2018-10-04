@@ -288,7 +288,7 @@ public class Contact {
    * This configuration will be used in opening secure channels to talk to the server this contact
    *  represents.
    * This could go wrong and log WARNING things, and then return null.
-   * This will be run in the constructor.
+   * This will be run when an sslContext is first requested.
    * @return an Ssl configuration in which the X509 certificate file for this contact is trusted
    */
   private SslContext getContext() {
