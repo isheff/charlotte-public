@@ -40,7 +40,8 @@ public class CharlotteNode implements Runnable {
    */
   public CharlotteNode(final CharlotteNodeService nodeService, final Iterable<BindableService> services) {
     service = nodeService;
-    final NettyServerBuilder serverBuilder = NettyServerBuilder.forPort(getPort());
+    final NettyServerBuilder serverBuilder = NettyServerBuilder.forPort(getPort()).
+                                                                intercept(new MutualTLSContextInterceptor());
     try {
       serverBuilder.sslContext(GrpcSslContexts.forServer(service.getConfig().getX509Stream(),
                                                          service.getConfig().getPrivateKeyStream()).
