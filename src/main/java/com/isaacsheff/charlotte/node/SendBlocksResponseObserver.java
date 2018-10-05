@@ -33,7 +33,7 @@ public class SendBlocksResponseObserver implements StreamObserver<SendBlocksResp
    * @param client Represents the local handle for talking to a particular server 
    * @param sendToObserver The object dequeueing messages and sending them to the rRPC on which this object watches responses.
    */
-  public SendBlocksResponseObserver(CharlotteNodeClient client, SendToObserver sendToObserver) {
+  public SendBlocksResponseObserver(final CharlotteNodeClient client, final SendToObserver sendToObserver) {
     this.client = client;
     this.sendToObserver = sendToObserver;
     failed = false;
@@ -48,7 +48,7 @@ public class SendBlocksResponseObserver implements StreamObserver<SendBlocksResp
    * @param response the newly arrived SendBlocksResponse from the wire.
    */
   @Override
-  public void onNext(SendBlocksResponse response) {
+  public void onNext(final SendBlocksResponse response) {
     client.onSendBlocksResponse(response, sendToObserver, this);
   }
 
@@ -64,7 +64,7 @@ public class SendBlocksResponseObserver implements StreamObserver<SendBlocksResp
    * @param t the Throwable from gRPC representing whatever went wrong.
    */
   @Override
-  public synchronized void onError(Throwable t) {
+  public synchronized void onError(final Throwable t) {
     if (!hasFailed()) {
       sendToObserver.failure();
       failed = true;

@@ -40,7 +40,7 @@ public class SignatureUtil {
    * We log them as severe, and then throw a ConfigurationError,
    *  since we assume something must have been configured wrong.
    */
-  private static void logSevereAndServiceConfigurationError(String str, Throwable t) {
+  private static void logSevereAndServiceConfigurationError(final String str, final Throwable t) {
     logger.log(Level.SEVERE, str, t);
     throw (new ServiceConfigurationError(str+t));
   }
@@ -69,7 +69,7 @@ public class SignatureUtil {
    * @param publicKey the Java PublicKey 
    * @return the corresponding CryptoId object
    */
-  public static CryptoId createCryptoId(java.security.PublicKey publicKey) {
+  public static CryptoId createCryptoId(final java.security.PublicKey publicKey) {
     return CryptoId.newBuilder().setPublicKey(PublicKey.newBuilder().setEllipticCurveP256(
              PublicKey.EllipticCurveP256.newBuilder().setByteString(
                ByteString.copyFrom(publicKey.getEncoded())))).build();
@@ -81,7 +81,7 @@ public class SignatureUtil {
    * @param bytes the bytes you want to sign
    * @return the calculated Signature
    */
-  public static Signature signBytes(KeyPair keyPair, byte[] bytes) {
+  public static Signature signBytes(final KeyPair keyPair, byte[] bytes) {
     // Here we start creating the signature string. 
     // Lots of Exceptions are possible, but ought to never happen, so we log severe and throw an error if they do.
     java.security.Signature signature = initSignature();
@@ -115,7 +115,9 @@ public class SignatureUtil {
    * @param bytes the byteString you want to sign
    * @return the calculated Signature
    */
-  public static Signature signBytes(KeyPair keyPair, ByteString bytes) {return signBytes(keyPair,bytes.toByteArray());}
+  public static Signature signBytes(final KeyPair keyPair, final ByteString bytes) {
+    return signBytes(keyPair,bytes.toByteArray());
+  }
 
   /**
    * Create a Signature (charlotte protobuf) object for the given keypair and message.
@@ -123,7 +125,7 @@ public class SignatureUtil {
    * @param message the message you want to sign
    * @return the calculated Signature
    */
-  public static Signature signBytes(KeyPair keyPair, MessageLite message) {
+  public static Signature signBytes(final KeyPair keyPair, final MessageLite message) {
     return signBytes(keyPair, message.toByteArray());
   }
 
@@ -133,7 +135,7 @@ public class SignatureUtil {
    * @param signature the signature
    * @return whether the signature was correct
    */
-  public static boolean checkSignature(byte[] bytes, Signature signature) {
+  public static boolean checkSignature(final byte[] bytes, final Signature signature) {
     // second, parse the public key from X.509 bytes to a java PublicKey object
     java.security.PublicKey publicKey = null;
     try {
@@ -183,7 +185,7 @@ public class SignatureUtil {
    * @param signature the signature
    * @return whether the signature was correct
    */
-  public static boolean checkSignature(ByteString bytes, Signature signature) {
+  public static boolean checkSignature(final ByteString bytes, final Signature signature) {
     return checkSignature(bytes.toByteArray(), signature);
   }
 
@@ -193,7 +195,7 @@ public class SignatureUtil {
    * @param signature the signature
    * @return whether the signature was correct
    */
-  public static boolean checkSignature(MessageLite message, Signature signature) {
+  public static boolean checkSignature(final MessageLite message, final Signature signature) {
     return checkSignature(message.toByteArray(), signature);
   }
 }

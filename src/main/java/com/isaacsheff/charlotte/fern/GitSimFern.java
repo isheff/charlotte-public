@@ -72,6 +72,7 @@ public class GitSimFern extends AgreementFernService {
   /** Use logger for logging events in this class. */
   private static final Logger logger = Logger.getLogger(GitSimFern.class.getName());
 
+  /** The most recent block on each branch (identified by String names) */
   private final ConcurrentMap<String, Hash> latestCommits;
 
   /**
@@ -96,7 +97,7 @@ public class GitSimFern extends AgreementFernService {
   }
 
   /**
-   * Get a new one of these Fern services using this local node.
+   * Get a new one of Fern service (GitSimFern) using this local node.
    * @param node the local CharlotteNodeService
    * @return a new AgreementFernService
    */
@@ -105,6 +106,7 @@ public class GitSimFern extends AgreementFernService {
   }
 
   /**
+   * Create a new CharlotteNode that runs a GitSimFern service.
    * @param node a CharlotteNodeService with which we'll build a GitSimFern service
    * @return a new CharlotteNode which runs a Fern Service and a CharlotteNodeService
    */
@@ -113,6 +115,7 @@ public class GitSimFern extends AgreementFernService {
   }
 
   /**
+   * Create a new CharlotteNode that runs a GitSimFern service.
    * @param configFilename the name of the configuration file for this CharlotteNode
    * @return a new CharlotteNode which runs a Fern Service and a CharlotteNodeService
    */
@@ -121,6 +124,7 @@ public class GitSimFern extends AgreementFernService {
   }
 
   /**
+   * Create a new CharlotteNode that runs a GitSimFern service.
    * @param configFilename the name of the configuration file for this CharlotteNode
    * @return a new CharlotteNode which runs a Fern Service and a CharlotteNodeService
    */
@@ -128,9 +132,9 @@ public class GitSimFern extends AgreementFernService {
     return getFernNode(new CharlotteNodeService(configFilename));
   }
   /**
-   * Make a new Fern with these attributes.
+   * Make a new GitSimFern with these attributes.
    * @param node the local CharlotteNodeService used to send and receive blocks 
-   * @param latestCommits If we've seen a request for a given ChainSlot, this stores the response 
+   * @param latestCommits The most recent block (hash) for each branch (String)
    */
   public GitSimFern(final CharlotteNodeService node,
                     final ConcurrentMap<String, Hash> latestCommits){
@@ -139,7 +143,7 @@ public class GitSimFern extends AgreementFernService {
   }
 
   /**
-   * Make a new Fern with this node and no known commitments.
+   * Make a new GitSimFern with this node and no known commitments.
    * @param node the local CharlotteNodeService used to send and receive blocks 
    */
   public GitSimFern(final CharlotteNodeService node) {
@@ -150,6 +154,7 @@ public class GitSimFern extends AgreementFernService {
   public ConcurrentMap<String, Hash> getLatestCommits() {return latestCommits;}
 
   /**
+   * Get the latesst block (Hash) on a given branch, or null, if there is none.
    * @param branch the git branch in question
    * @return the most recent block (Hash) committed to that branch, or null, if there is none
    */

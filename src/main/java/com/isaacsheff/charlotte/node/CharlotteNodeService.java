@@ -110,8 +110,11 @@ public class CharlotteNodeService extends CharlotteNodeImplBase {
     return config;
   }
 
-  /** DANGER: should only be called by SendBlocksObserver */
-  public void sendBlocksCancelled(Throwable t) {
+  /**
+   * DANGER: should only be called by SendBlocksObserver.
+   * Called when sendBlocks was cancelled, so we can log that.
+   */
+  public void sendBlocksCancelled(final Throwable t) {
     ++sendBlocksCancelledCount;
     if (sendBlocksCancelledCount < 10) {
       logger.log(Level.WARNING, "sendBlocks cancelled", t);

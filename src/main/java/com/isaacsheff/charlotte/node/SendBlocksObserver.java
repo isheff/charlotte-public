@@ -47,6 +47,7 @@ public class SendBlocksObserver implements StreamObserver<SendBlocksInput> {
 
   /**
    * Constructor.
+   * A sendBlocks request has just arrived at the service.
    * @param service the associated CharlotteNodeService. The service that is receiving the RPC this serves.
    * @param responseObserver the stream via which we send responses over the wire.
    */

@@ -20,8 +20,6 @@ import com.isaacsheff.charlotte.wilbur.WilburService;
 
 import io.grpc.stub.StreamObserver;
 
-
-
 /**
  * A gRPC service for the WilburQuery API.
  * gRPC separates "service" from "server."
@@ -32,14 +30,10 @@ import io.grpc.stub.StreamObserver;
  * @author Isaac Sheff
  */
 public class WilburQueryService extends WilburQueryGrpc.WilburQueryImplBase {
-  /**
-   * Use logger for logging events on a WilburQueryService.
-   */
+  /** Use logger for logging events on a WilburQueryService. */
   private static final Logger logger = Logger.getLogger(WilburQueryService.class.getName());
 
-  /** 
-   * The CharlotteNodeService running on the same server as this WilburQuery service (there must be one).
-   */
+  /** The CharlotteNodeService running on the same server as this WilburQuery service (there must be one). */
   private final CharlotteNodeService node;
 
   /**
@@ -81,16 +75,12 @@ public class WilburQueryService extends WilburQueryGrpc.WilburQueryImplBase {
   }
 
 
-  /**
-   * @param node The CharlotteNodeService running on the same server as this Wilbur service (there must be one).
-   */
+  /** @param node The CharlotteNodeService running on the same server as this Wilbur service (there must be one). */
   public WilburQueryService(final CharlotteNodeService node) {
     this.node = node;
   }
 
-  /**
-   * @return The CharlotteNodeService running on the same server as this WilburQuery service (there must be one).
-   */
+  /** @return The CharlotteNodeService running on the same server as this WilburQuery service (there must be one). */
   public CharlotteNodeService getNode() { return node; }
 
   /**

@@ -31,14 +31,10 @@ import io.grpc.stub.StreamObserver;
  * @author Isaac Sheff
  */
 public class WilburService extends WilburGrpc.WilburImplBase {
-  /**
-   * Use logger for logging events on a WilburService.
-   */
+  /** Use logger for logging events on a WilburService. */
   private static final Logger logger = Logger.getLogger(WilburService.class.getName());
 
-  /** 
-   * The CharlotteNodeService running on the same server as this Wilbur service (there must be one).
-   */
+  /** The CharlotteNodeService running on the same server as this Wilbur service (there must be one). */
   private final CharlotteNodeService node;
 
   /**
@@ -92,9 +88,7 @@ public class WilburService extends WilburGrpc.WilburImplBase {
     this.node = node;
   }
 
-  /**
-   * @return The CharlotteNodeService running on the same server as this Wilbur service (there must be one).
-   */
+  /** @return The CharlotteNodeService running on the same server as this Wilbur service (there must be one). */
   public CharlotteNodeService getNode() { return node; }
 
   /**

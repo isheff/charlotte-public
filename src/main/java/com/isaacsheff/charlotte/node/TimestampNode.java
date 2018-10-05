@@ -41,9 +41,7 @@ import com.isaacsheff.charlotte.yaml.Config;
  * @author Isaac Sheff
  */
 public class TimestampNode extends CharlotteNodeService {
-  /**
-   * Use logger for logging events on a CharlotteNodeService.
-   */
+  /** Use logger for logging events on a CharlotteNodeService. */
   private static final Logger logger = Logger.getLogger(TimestampNode.class.getName());
 
   /** a local timestamping service **/
@@ -63,10 +61,10 @@ public class TimestampNode extends CharlotteNodeService {
    * @param blockMap a map of known hashes and blocks
    * @param config the Configuration settings for this Service
    */
-  public TimestampNode(int referencesPerAttestation, 
-                       TimestampFern fern,
-                       BlockingMap<Hash, Block> blockMap,
-                       Config config) {
+  public TimestampNode(final int referencesPerAttestation, 
+                       final TimestampFern fern,
+                       final BlockingMap<Hash, Block> blockMap,
+                       final Config config) {
     super(blockMap, config);
     this.fern = fern;
     untimestamped = newKeySet();
@@ -79,7 +77,7 @@ public class TimestampNode extends CharlotteNodeService {
    * @param fern the local timestamping service
    * @param config the Configuration settings for this Service
    */
-  public TimestampNode(int referencesPerAttestation, TimestampFern fern, Config config) {
+  public TimestampNode(final int referencesPerAttestation, final TimestampFern fern, final Config config) {
     super(config);
     this.fern = fern;
     untimestamped = newKeySet();
@@ -92,7 +90,7 @@ public class TimestampNode extends CharlotteNodeService {
    * @param fern the local timestamping service
    * @param path the file path for the configuration file
    */
-  public TimestampNode(int referencesPerAttestation, TimestampFern fern, Path path) {
+  public TimestampNode(final int referencesPerAttestation, final TimestampFern fern, final Path path) {
     super(path);
     this.fern = fern;
     untimestamped = newKeySet();
@@ -105,7 +103,7 @@ public class TimestampNode extends CharlotteNodeService {
    * @param fern the local timestamping service
    * @param filename the file name for the configuration file
    */
-  public TimestampNode(int referencesPerAttestation, TimestampFern fern, String filename) {
+  public TimestampNode(final int referencesPerAttestation, final TimestampFern fern, final String filename) {
     super(filename);
     this.fern = fern;
     untimestamped = newKeySet();
@@ -121,7 +119,7 @@ public class TimestampNode extends CharlotteNodeService {
    * @return any SendBlockResponses (including error messages) to be sent back over the wire to the block's sender.
    */
   @Override
-  public Iterable<SendBlocksResponse> afterBroadcastNewBlock(Block block) {
+  public Iterable<SendBlocksResponse> afterBroadcastNewBlock(final Block block) {
     boolean shouldRequestAttestation = false;
     final TimestampedReferences.Builder references = TimestampedReferences.newBuilder();
     untimestamped.add(Reference.newBuilder().setHash(sha3Hash(block)));

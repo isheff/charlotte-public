@@ -145,7 +145,7 @@ public class AgreementFernService extends FernImplBase {
    * For now, we just check that this ChainSlot actually has a block hash in it.
    * @return an error string if it's unacceptable, null if it's acceptable
    */
-  public String validPolicy(IntegrityPolicy policy) {
+  public String validPolicy(final IntegrityPolicy policy) {
     if (!policy.getFillInTheBlank().getSignedChainSlot().getChainSlot().getBlock().hasHash()) {
       return "The ChainSlot Block reference in this RequestIntegrityAttestationInput doesn't have a Hash.";
     }

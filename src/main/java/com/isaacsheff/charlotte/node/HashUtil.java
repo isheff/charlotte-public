@@ -15,9 +15,7 @@ import java.security.Security;
  * @author Isaac Sheff
  */
 public class HashUtil {
-  /**
-   * This line is required to use bouncycastle encryption libraries.
-   */
+  /** This line is required to use bouncycastle encryption libraries. */
   static {Security.addProvider(new BouncyCastleProvider());}
 
   /**

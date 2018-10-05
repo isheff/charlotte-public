@@ -135,6 +135,7 @@ public class TimestampFern extends FernImplBase {
     this.node = node;
   }
 
+  /** The default constructor should only be used by extending classes. */
   protected TimestampFern() {}
 
   /** @return The local CharlotteNodeService used to send and receive blocks */

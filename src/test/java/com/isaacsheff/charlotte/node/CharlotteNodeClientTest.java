@@ -30,11 +30,8 @@ import java.util.logging.Level;
  * @author Isaac Sheff
  */
 public class CharlotteNodeClientTest {
-  /**
-   * Use this for logging events in the class.
-   */
+  /** Use this for logging events in the class. */
   private static final Logger logger = Logger.getLogger(CharlotteNodeClientTest.class.getName());
-
 
   /** The port used on the dummy server for an individual test. */
   private int port;
@@ -52,9 +49,7 @@ public class CharlotteNodeClientTest {
   }
 
 
-  /** 
-   * launch a dummy server, send 3 blocks to it, and check to see the proper 3 blocks arrived.
-   * */
+  /**  launch a dummy server, send 3 blocks to it, and check to see the proper 3 blocks arrived. */
   @Test
   void sendSomeBlocks() throws InterruptedException {
     // calcualte what port to put this server on
