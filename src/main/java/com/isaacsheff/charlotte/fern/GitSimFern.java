@@ -288,7 +288,7 @@ public class GitSimFern extends AgreementFernService {
         final GitSimParent parent = queue.remove();
         if (parent.hasParentCommit()) {
           if (parent.getParentCommit().hasHash()) {
-            if (parent.getParentCommit().getHash() == priorCommit) {
+            if (parent.getParentCommit().getHash().equals(priorCommit)) {
               pathFound = true;
             } else {
               final Block parentBlock = getNode().getBlockMap().get(parent.getParentCommit().getHash());

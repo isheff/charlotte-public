@@ -130,6 +130,7 @@ public class GitSimTest {
   }
 
   /** Commit a second commit to the master branch. **/
+  @Test
   void secondCommit() {
     assertTrue(null != client.commit("secondCommit",
                                      "my second commit!",
@@ -139,6 +140,7 @@ public class GitSimTest {
   }
 
   /** Commit a different commit to the master branch, that doesn't follow the second. This should fail. **/
+  @Test
   void conflictingCommit() {
     final Reference initial = makeInitialCommit("conflictingCommit");
     assertTrue(null != initial);
@@ -155,6 +157,7 @@ public class GitSimTest {
   }
 
   /** Commit a different commit to a different branch. This should succeed. **/
+  @Test
   void differentBranchCommit() {
     final Reference initial = makeInitialCommit("differentBranchCommit");
     assertTrue(null != initial);
