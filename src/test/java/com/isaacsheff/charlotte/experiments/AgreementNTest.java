@@ -77,10 +77,7 @@ public class AgreementNTest {
           participants,
           100);
       final CharlotteNodeService node = new CharlotteNodeService(new Config(config, Paths.get(".")));
-      CharlotteNode charlotteNode = new CharlotteNode(node,
-        ServerBuilder.forPort(node.getConfig().getPort()).
-                      addService(new AgreementNFern(config, node)),
-        node.getConfig().getPort());
+      final CharlotteNode charlotteNode = new CharlotteNode(node, new AgreementNFern(config, node));
       nodes[i] = charlotteNode;
       (new Thread(charlotteNode)).start();
     }

@@ -28,14 +28,10 @@ import java.util.logging.Logger;
  * @author Isaac Sheff
  */
 class GenerateX509Test {
-  /**
-   * This line is required to use bouncycastle encryption libraries.
-   */
+  /** This line is required to use bouncycastle encryption libraries. */
   static {Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());}
 
-  /**
-   * Use this for logging events in the class.
-   */
+  /** Use this for logging events in the class. */
   private static final Logger logger = Logger.getLogger(GenerateX509Test.class.getName());
 
   /**

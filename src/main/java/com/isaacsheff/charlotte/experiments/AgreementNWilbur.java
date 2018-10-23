@@ -14,6 +14,14 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+/**
+ * A CharlotteNode for wilbur servers used in the AgreementNW experiment.
+ * This only differs from com.isaacsheff.charlotte.CharlotteNodeService
+ *  in that it only broadcasts this Wilbur service's attestations, and
+ *  it only logs block hashes (not whole blocks) received.
+ * This experiment uses the JsonExperimentConfig.blockSize parameter to determind block payload size.
+ * @author Isaac Sheff
+ */
 public class AgreementNWilbur extends CharlotteNodeService {
   /** for logging events in this class **/
   private static final Logger logger = Logger.getLogger(AgreementNWilbur.class.getName());
@@ -22,7 +30,7 @@ public class AgreementNWilbur extends CharlotteNodeService {
    * Constructor: make a new nodeservice.
    * @param configfile the filename of the config file
    */
-  public AgreementNWilbur(String configfile) {
+  public AgreementNWilbur(final String configfile) {
     super(configfile);
   }
 
@@ -30,12 +38,13 @@ public class AgreementNWilbur extends CharlotteNodeService {
    * Constructor: make a new nodeservice.
    * @param config the Config
    */
-  public AgreementNWilbur(Config config) {
+  public AgreementNWilbur(final Config config) {
     super(config);
   }
 
   /**
    * Only broadcasts my own attestations.
+   * Other than that, same as the superclass: broacast to everyone.
    * @param block the block to be broadcast
    */
   @Override
@@ -84,6 +93,8 @@ public class AgreementNWilbur extends CharlotteNodeService {
 
   /**
    * Run as main.
+   * Launches an AgreementNWilbur service as a ChaloteNodeService along with a Wilbur service on a CharlotteNode.
+   * @param args the config file name should be args[1]
    */
   public static void main(String[] args) throws InterruptedException {
     if (args.length < 1) {

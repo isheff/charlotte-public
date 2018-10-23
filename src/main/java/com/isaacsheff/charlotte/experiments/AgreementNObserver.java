@@ -9,6 +9,7 @@ import java.util.logging.Logger;
 /** 
  * Used by AgreementNClient to wait for responses from the Agreement servers. 
  * Literally just calls onFernResponse whenever a response comes in.
+ * @author Isaac Sheff
  */
 public class AgreementNObserver implements StreamObserver<RequestIntegrityAttestationResponse> {
   /** Use logger for logging events on this class. */
@@ -25,7 +26,8 @@ public class AgreementNObserver implements StreamObserver<RequestIntegrityAttest
    * @param agreementClient the AgreementNClient for which this exists
    * @param request The request to the Fern server we're waiting for a response from 
    */
-  public AgreementNObserver(AgreementNClient agreementClient, RequestIntegrityAttestationInput request) {
+  public AgreementNObserver(final AgreementNClient agreementClient,
+                            final RequestIntegrityAttestationInput request) {
     this.agreementClient = agreementClient;
     this.request = request;
   }
@@ -41,7 +43,7 @@ public class AgreementNObserver implements StreamObserver<RequestIntegrityAttest
    * Call getAgreementClient().onFernResponse.
    * @param input the new RequestIntegrityAttestationResponse that has just arrived on the wire.
    */
-  public void onNext(RequestIntegrityAttestationResponse response) {
+  public void onNext(final RequestIntegrityAttestationResponse response) {
     getAgreementClient().onFernResponse(response, getRequest());
   }
 
@@ -56,7 +58,7 @@ public class AgreementNObserver implements StreamObserver<RequestIntegrityAttest
    * We log it as a warning.
    * @param t the error arising from the stream.
    */
-  public void onError(Throwable t) {
+  public void onError(final Throwable t) {
     logger.log(Level.WARNING, "requestIntegrityAttestation cancelled", t);
   }
 }

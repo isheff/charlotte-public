@@ -36,9 +36,12 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * For running an experiment with Agreement Fern servers that demand N attestations before committing a block.
- * This will append blocks to the chain, waiting to broadcast and request
- *  attestations for each until the previous is committed.
+ * For running an experiment with Agreement Fern servers that demand N
+ *  attestations before committing a block.
+ * This will append blocks to the chain, waiting to broadcast and
+ *  request attestations for each until the previous is committed.
+ * This experiment uses the JsonExperimentConfig.blockSize parameter to determind block payload size.
+ * @author Isaac Sheff
  */
 public class AgreementNClient {
   /** used for logging events in this class **/
@@ -75,6 +78,7 @@ public class AgreementNClient {
   private int currentSlot;
 
   
+  /** Fills in the blocks array with boring, but distinct, blocks */
   protected void fillBlocks() {
     getBlocks()[0] = Block.newBuilder().setStr("block content 0").build();
     for (int i = 1; i < getBlocks().length; ++i) {
@@ -86,10 +90,11 @@ public class AgreementNClient {
   /**
    * Start up a new client.
    * This does not initiate the experiment.
+   * To initiate the experiment, broadcast block 0 (root).
    * @param service the local CharlotteNodeService (for sendign blocks and such)
    * @param config the experimental config.
    */
-  public AgreementNClient(CharlotteNodeService service, JsonExperimentConfig config) {
+  public AgreementNClient(final CharlotteNodeService service, final JsonExperimentConfig config) {
     this.service = service;
     this.config = config;
     doneLock = new Object();
@@ -149,7 +154,7 @@ public class AgreementNClient {
    * @param parentBuilder represents the reference to the parent block
    * @param slot the slot number of this new block
    */
-  public void broadcastRequest(Reference.Builder parentBuilder, int slot) {
+  public void broadcastRequest(final Reference.Builder parentBuilder, final int slot) {
     if (slot >= totalBlocks) {
       done(); // we've finished all the blocks, and we're done.
       return; // unreachable, I'm pretty sure
@@ -250,7 +255,8 @@ public class AgreementNClient {
     }
   }
 
-  public static String randomString(int targetStringLength) {
+  /** Creates a random alpha-numeric string of the length given. */
+  public static String randomString(final int targetStringLength) {
     int leftLimit = 97; // letter 'a'
     int rightLimit = 122; // letter 'z'
     Random random = new Random();
@@ -265,6 +271,7 @@ public class AgreementNClient {
 
   /**
    * Run the experiment.
+   * This starts up a client, and then sends block 0 (root), and then waits for the client to finish.
    * @param args command line arguments args[0] must be the config yaml file.
    */
   public static void main(String[] args) throws InterruptedException, FileNotFoundException, IOException {

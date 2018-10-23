@@ -23,26 +23,37 @@ import com.isaacsheff.charlotte.proto.Hash;
 import com.isaacsheff.charlotte.proto.IntegrityPolicy;
 import com.isaacsheff.charlotte.proto.Reference;
 
-import io.grpc.ServerBuilder;
-
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+/**
+ * A fern server which attests to the first block it sees for a given
+ *  slot, iff that block has SUFFICIENTLY MANY integrity attestations
+ *  in its parent reference.
+ * By default, agreementQuorumSize (which is the number of
+ *  attestations requried for agreement), is > 2/3 of the known fern
+ *  servers.
+ * You use these to run N out of M agreement on a blockchain.
+ * This experiment uses the JsonExperimentConfig.blockSize parameter to determind block payload size.
+ * @author Isaac Sheff
+ */
 public class AgreementNFern extends AgreementChainFernService {
   /** Use logger for logging events in this class. */
   private static final Logger logger = Logger.getLogger(AgreementNFern.class.getName());
 
   /** the experiment config file */
   private final JsonExperimentConfig config;
+
   /** the number of attestations needed to consider a block committed (default > 2/3 |ferns|) */
   private final int agreementQuorumSize;
+
   /** the set of fern servers' cryotoIds */
   private final Set<CryptoId> ferns;
 
   /**
    * Run as a main class with an arg specifying a config file name to run a Fern Agreement server.
    * creates and runs a new CharlotteNode which runs a Wilbur Service and a CharlotteNodeService, in a new thread.
-   * @param args command line args. args[0] should be the name of the config file, and args[1] is auto-shutdown time in seconds
+   * @param args command line args. args[0] should be the name of the config file, args[1] is auto-shutdown time in seconds
    */
   public static void main(String[] args) throws InterruptedException{
     if (args.length < 1) {
@@ -61,6 +72,8 @@ public class AgreementNFern extends AgreementChainFernService {
   }
 
   /**
+   * Create a CharlotteNodeService and accompanying AgreementNFern fern service.
+   * The CharlotteNodeService does not log whole blocks, just hashes.
    * @param node a CharlotteNodeService with which we'll build a AgreementChainFernService
    * @return a new CharlotteNode which runs a Fern Service and a CharlotteNodeService
    */
@@ -96,9 +109,7 @@ public class AgreementNFern extends AgreementChainFernService {
         }
         
       };
-      return new CharlotteNode(node,
-                   ServerBuilder.forPort(node.getConfig().getPort()).addService(new AgreementNFern(config, node)),
-                   node.getConfig().getPort());
+      return new CharlotteNode(node, new AgreementNFern(config, node));
     } catch (IOException e) {
       logger.log(Level.SEVERE, "could not read config", e);
     }
@@ -106,10 +117,13 @@ public class AgreementNFern extends AgreementChainFernService {
   }
 
   /**
+   * Create a new AgreementNFern fern service with the given
+   *  configuration and affiliated CharlotteNodeService (running on
+   *  the same server).
    * @param config the experiment config file
    * @param service the local CharlotteNodeService
    */
-  public AgreementNFern(JsonExperimentConfig config, CharlotteNodeService service) {
+  public AgreementNFern(final JsonExperimentConfig config, final CharlotteNodeService service) {
     super(service);
     this.config = config;
     agreementQuorumSize = 1 + (( 2 * this.config.getFernServers().size()) / 3);
@@ -120,7 +134,7 @@ public class AgreementNFern extends AgreementChainFernService {
 
   }
 
-  /** the experiment config file */
+  /** @return  the experiment config file */
   public JsonExperimentConfig getJsonConfig() {return config;}
 
   /**
@@ -130,7 +144,7 @@ public class AgreementNFern extends AgreementChainFernService {
    * @return an error string if it's unacceptable, null if it's acceptable
    */
   @Override
-  public String validPolicy(IntegrityPolicy policy) {
+  public String validPolicy(final IntegrityPolicy policy) {
     if ( policy.getFillInTheBlank().getSignedChainSlot().getChainSlot().getSlot() == 0) { // this is a root
       return null;
     }

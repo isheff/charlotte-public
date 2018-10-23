@@ -10,6 +10,10 @@ import com.isaacsheff.charlotte.yaml.JsonContact;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Encodes a bunch of values we use in our experiments.
+ * @author Isaac Sheff
+ */
 @JsonIgnoreProperties(ignoreUnknown = true) // if there are random other fields at the top level of config, just ignore them
 public class JsonExperimentConfig extends JsonConfig {
 
@@ -50,10 +54,14 @@ public class JsonExperimentConfig extends JsonConfig {
 
   /**
    * This constructor is meant to be used by Jackson when it's parsing a config file.
-   * @param agreementChainClientFernServers the set of fern servers this client should talk to
+   * @param fernServers the set of fern servers this client should talk to 
+   * @param wilburServers the set of wilbur servers this client might talk to 
+   * @param blocksPerExperiment  the number of blocks to append to the chain in the experiment 
+   * @param wilburThreshold  the number of Wilbur attestations it takes to be considered available
    * @param privatekey the filename of the private key (PEM file) relative to the config file
    * @param me which of the named contacts is this server
    * @param contacts a map fo names and contact info of other servers in the system
+   * @param blockSize the  size of blocks used in some experiments 
    */
   @JsonCreator
   public JsonExperimentConfig(

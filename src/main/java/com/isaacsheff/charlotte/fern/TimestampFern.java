@@ -20,7 +20,6 @@ import com.isaacsheff.charlotte.proto.RequestIntegrityAttestationResponse;
 import com.isaacsheff.charlotte.proto.SendBlocksResponse;
 import com.isaacsheff.charlotte.yaml.Config;
 
-import io.grpc.ServerBuilder;
 import io.grpc.stub.StreamObserver;
 
 import java.util.concurrent.TimeUnit;
@@ -86,9 +85,7 @@ public class TimestampFern extends FernImplBase {
    * @return a new CharlotteNode which runs a Fern Service and a CharlotteNodeService
    */
   public static CharlotteNode getFernNode(final TimestampFern fern) {
-    return new CharlotteNode(fern.getNode(),
-                             ServerBuilder.forPort(fern.getNode().getConfig().getPort()).addService(fern),
-                             fern.getNode().getConfig().getPort());
+    return new CharlotteNode(fern.getNode(), fern);
   }
 
   /**
@@ -138,6 +135,7 @@ public class TimestampFern extends FernImplBase {
     this.node = node;
   }
 
+  /** The default constructor should only be used by extending classes. */
   protected TimestampFern() {}
 
   /** @return The local CharlotteNodeService used to send and receive blocks */

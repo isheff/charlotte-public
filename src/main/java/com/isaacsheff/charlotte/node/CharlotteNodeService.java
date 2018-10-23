@@ -1,6 +1,7 @@
 package com.isaacsheff.charlotte.node;
 
 import static com.isaacsheff.charlotte.node.HashUtil.sha3Hash;
+import static com.isaacsheff.charlotte.node.MutualTLSContextInterceptor.SSL_SESSION_CONTEXT;
 import static java.util.Collections.emptySet;
 import static java.util.Collections.singleton;
 
@@ -109,8 +110,11 @@ public class CharlotteNodeService extends CharlotteNodeImplBase {
     return config;
   }
 
-  /** DANGER: should only be called by SendBlocksObserver */
-  public void sendBlocksCancelled(Throwable t) {
+  /**
+   * DANGER: should only be called by SendBlocksObserver.
+   * Called when sendBlocks was cancelled, so we can log that.
+   */
+  public void sendBlocksCancelled(final Throwable t) {
     ++sendBlocksCancelledCount;
     if (sendBlocksCancelledCount < 10) {
       logger.log(Level.WARNING, "sendBlocks cancelled", t);
@@ -281,19 +285,22 @@ public class CharlotteNodeService extends CharlotteNodeImplBase {
    * Otherwise, returns an empty list of response messages.
    * Logs (INFO) whenever a block is received, whether it was new or repeat.
    * @param input the newly arrived block
+   * @param observer the SendBlocksObserver that received this input. Useful for knowing who the input came from.
    * @return any SendBlocksResponse s you want to send back over the wire
    */
-  public Iterable<SendBlocksResponse> onSendBlocksInput(final SendBlocksInput input) {
+  public Iterable<SendBlocksResponse> onSendBlocksInput(final SendBlocksInput input, final SendBlocksObserver observer) {
     if (!input.hasBlock()) {
-      logger.log(Level.WARNING, "No Block in this SendBlocksInput from " + input.getOrigin());
+      logger.log(Level.WARNING, "No Block in this SendBlocksInput from " +
+                                observer.getContact().getUrl() + ":" + observer.getContact().getPort());
       return singleton(SendBlocksResponse.newBuilder().
-               setErrorMessage("No Block in this SendBlocksInput" + input.getOrigin()).build());
+               setErrorMessage("No Block in this SendBlocksInput: " + input).build());
     }
     try {
       logger.info("{ \"ReceivedBlockHash\":"+JsonFormat.printer().print(sha3Hash(input.getBlock()))+
                    ",\n\"destinationUrl\":\""+getConfig().getUrl() +"\""+
                    ",\n\"destinationPort\":"+getConfig().getPort() +
-                   ",\n\"origin\":\""+input.getOrigin()+"\"}");
+                   ",\n\"originPort\":"+observer.getContact().getPort() +
+                   ",\n\"originUrl\":\""+observer.getContact().getUrl()+"\"}");
     } catch (InvalidProtocolBufferException e) {
       logger.log(Level.SEVERE, "Invalid protocol buffer parsed as Block", e);
     }
@@ -308,6 +315,9 @@ public class CharlotteNodeService extends CharlotteNodeImplBase {
    */
   @Override
   public StreamObserver<SendBlocksInput> sendBlocks(final StreamObserver<SendBlocksResponse> responseObserver) {
-    return(new SendBlocksObserver(this, responseObserver));
+    // I don't realy understang gRPC Contexts. 
+    // It's possible that SSL_SESSION_CONTEXT.get() can be safely called anywhere, any time in the computation.
+    // However, calling it here, and then keeping the results, makes me relatively sure I'm getting what I want.
+    return(new SendBlocksObserver(this, responseObserver, SSL_SESSION_CONTEXT.get()));
   }
 }

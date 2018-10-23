@@ -30,13 +30,13 @@ import java.util.logging.Level;
  * @author Isaac Sheff
  */
 public class CharlotteNodeServiceTest {
-  /**
-   * Use this for logging events in the class.
-   */
+  /** Use this for logging events in the class. */
   private static final Logger logger = Logger.getLogger(CharlotteNodeServiceTest.class.getName());
 
-  /** The port used on the dummy server for an individual test. */
+  /** The port used on dummy server 1 for an individual test. */
   private int port0;
+
+  /** The port used on dummy server 2 for an individual test. */
   private int port1;
 
   /**

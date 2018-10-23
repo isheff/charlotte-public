@@ -12,12 +12,20 @@ import com.isaacsheff.charlotte.proto.IntegrityAttestation.ChainSlot;
 import com.isaacsheff.charlotte.proto.IntegrityPolicy;
 import com.isaacsheff.charlotte.proto.Reference;
 import com.isaacsheff.charlotte.proto.RequestIntegrityAttestationResponse;
-import io.grpc.ServerBuilder;
 import java.nio.file.Path;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
+/**
+ * A Fern Service for running an Agreement Chain.
+ * This differs from AgreementFernService in that it also checks if
+ *  this Fern Server has attested to the parent block on this chain.
+ * Of course, it still won't attest to two blocks in the same slot.
+ * This enforces that the set of blocks to which this Fern Server
+ *  attests must be a chain.
+ * @author Isaac Sheff
+ */
 public class AgreementChainFernService extends AgreementFernService {
   /** Use logger for logging events in this class. */
   private static final Logger logger = Logger.getLogger(AgreementChainFernService.class.getName());
@@ -33,7 +41,7 @@ public class AgreementChainFernService extends AgreementFernService {
 
   /**
    * Run as a main class with an arg specifying a config file name to run a Fern Agreement server.
-   * creates and runs a new CharlotteNode which runs a Wilbur Service and a CharlotteNodeService, in a new thread.
+   * creates and runs a new CharlotteNode which runs a Fern Service and a CharlotteNodeService, in a new thread.
    * @param args command line args. args[0] should be the name of the config file, and args[1] is auto-shutdown time in seconds
    */
   public static void main(String[] args) throws InterruptedException{
@@ -53,16 +61,16 @@ public class AgreementChainFernService extends AgreementFernService {
   }
 
   /**
+   * Create a CharlotteNode which features a Fern service (AgreementChainFernService).
    * @param node a CharlotteNodeService with which we'll build a AgreementChainFernService
    * @return a new CharlotteNode which runs a Fern Service and a CharlotteNodeService
    */
   public static CharlotteNode getFernNode(final CharlotteNodeService node) {
-    return new CharlotteNode(node,
-                             ServerBuilder.forPort(node.getConfig().getPort()).addService(newFern(node)),
-                             node.getConfig().getPort());
+    return new CharlotteNode(node, newFern(node));
   }
 
   /**
+   * Create a CharlotteNode which features a Fern service (AgreementChainFernService).
    * @param configFilename the name of the configuration file for this CharlotteNode
    * @return a new CharlotteNode which runs a Fern Service and a CharlotteNodeService
    */
@@ -71,6 +79,7 @@ public class AgreementChainFernService extends AgreementFernService {
   }
 
   /**
+   * Create a CharlotteNode which features a Fern service (AgreementChainFernService).
    * @param configFilename the name of the configuration file for this CharlotteNode
    * @return a new CharlotteNode which runs a Fern Service and a CharlotteNodeService
    */
@@ -92,6 +101,12 @@ public class AgreementChainFernService extends AgreementFernService {
 
   /**
    * Make a new Fern with this node and no known commitments.
+   * A Fern Service for running an Agreement Chain.
+   * This differs from AgreementFernService in that it also checks if
+   *  this Fern Server has attested to the parent block on this chain.
+   * Of course, it still won't attest to two blocks in the same slot.
+   * This enforces that the set of blocks to which this Fern Server
+   *  attests must be a chain.
    * @param node the local CharlotteNodeService used to send and receive blocks 
    */
   public AgreementChainFernService(final CharlotteNodeService node) {
@@ -105,7 +120,7 @@ public class AgreementChainFernService extends AgreementFernService {
    * @return an error string if it's unacceptable, null if it's acceptable
    */
   @Override
-  public String validPolicy(IntegrityPolicy policy) {
+  public String validPolicy(final IntegrityPolicy policy) {
     super.validPolicy(policy);
     if ( policy.getFillInTheBlank().getSignedChainSlot().getChainSlot().getSlot() == 0) { // this is a root
       return null;

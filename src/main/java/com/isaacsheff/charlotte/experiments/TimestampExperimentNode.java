@@ -15,6 +15,12 @@ import com.isaacsheff.charlotte.node.TimestampNode;
 import com.isaacsheff.charlotte.proto.Block;
 import com.isaacsheff.charlotte.yaml.Config;
 
+/**
+ * A CharlotteNodeService implementation that waits to collect enough
+ *  blocks (as set in experiment config file) before calling up its
+ *  fern service to issue a new timestamp.
+ * @author Isaac Sheff
+ */
 public class TimestampExperimentNode extends TimestampNode {
   /** used for logging stuff in this class */
   private static final Logger logger = Logger.getLogger(TimestampExperimentNode.class.getName());
@@ -29,7 +35,6 @@ public class TimestampExperimentNode extends TimestampNode {
     super(referencesPerAttestation, fern, config);
   }
 
-
   /**
    * Send this block to all known contacts IFF it's an integrity attestation.
    * Since each contact's sendBlock function is nonblocking, this will be done in parallel.
@@ -42,8 +47,11 @@ public class TimestampExperimentNode extends TimestampNode {
     }
   }
 
-
-
+  /**
+   * Start up a new server (on a new thread) using the config file (it
+   *  should be a TimestampExperimentConfig) at the given file name.
+   * @param filename the file name of the config file.
+   */
   public static TimestampExperimentNode launchServer(String filename)  throws InterruptedException, IOException {
     final TimestampExperimentConfig config =
       (new ObjectMapper(new YAMLFactory())).readValue(Paths.get(filename).toFile(), TimestampExperimentConfig.class);
@@ -58,8 +66,6 @@ public class TimestampExperimentNode extends TimestampNode {
     thread.join();
     return nodeService;
   }
-
-
 
   /**
    * Run as a main class with an arg specifying a config file name to run a Fern Timestamp server.

@@ -20,19 +20,13 @@ import io.grpc.stub.StreamObserver;
  * @author Isaac Sheff
  */
 public class WilburQueryClient {
-  /**
-   * Use logger for logging events on this class.
-   */
+  /** Use logger for logging events on this class. */
   private static final Logger logger = Logger.getLogger(WilburQueryClient.class.getName());
 
-  /**
-   * The channel through which we communicate to the server.
-   */
+  /** The channel through which we communicate to the server. */
   private final ManagedChannel channel;
 
-  /**
-   * The stub which sends messages to the WilburQuery service within the server (this is a gRPC thing).
-   */
+  /** The stub which sends messages to the WilburQuery service within the server (this is a gRPC thing). */
   private final WilburQueryStub asyncStub;
 
   /**
@@ -46,8 +40,6 @@ public class WilburQueryClient {
    * Stores the public key, url, etc.
    */
   private final Contact contact;
-
-
 
   /**
    * Make a new WilburQueryClient for a specific WilburQuery server.

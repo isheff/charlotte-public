@@ -7,9 +7,7 @@ package com.isaacsheff.charlotte.collections;
  * @author Isaac Sheff
  */
 public class ConcurrentHolder<T> {
-  /**
-   * The value which waiting processes are waiting to read.
-   */
+  /** The value which waiting processes are waiting to read. */
   private T value;
 
   /**

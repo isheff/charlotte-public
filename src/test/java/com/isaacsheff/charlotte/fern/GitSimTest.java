@@ -28,6 +28,10 @@ import com.isaacsheff.charlotte.yaml.JsonContact;
 
 
 /**
+ * TODO: Several of these tests fail. Find out why and fix it.
+ *
+ *
+ *
  * Test GitSim.
  * This Fern server runs a kind of simulation of the Git version
  *  control system.
@@ -66,9 +70,6 @@ public class GitSimTest {
   /** the client that talks to the fern server **/
   private static GitSimClient client; 
 
-  /** the initial commit block **/
-  private static Reference initialReference;
-
   /**
    * Set stuff up before running any tests in this class.
    * In this case, generate some crypto key files, and participants map for a config.
@@ -106,12 +107,13 @@ public class GitSimTest {
     TimeUnit.SECONDS.sleep(1); // wait a second for the server to start up
 
     client = new GitSimClient(clientService, clientService.getConfig().getContact("fern"));
-    initialReference = null;
 
   }
 
   /**
    *  When we're all done, shut down all the servers and client.
+   *  Presently, we actually do nothing.
+   *  For whatever reason, it's cleaner to let everything die at the end.
    */
   @AfterAll
   static void cleanup() throws InterruptedException, FileNotFoundException {
@@ -120,41 +122,62 @@ public class GitSimTest {
     // fernNode.stop();
   }
 
+
   /** Commit an initial commit to the master branch. **/
   @Test
   void initialCommit() {
-    initialReference = client.commit("master",
-                                     "my first commit!",
-                                     copyFromUtf8("repository contents"),
-                                     emptySet(),
-                                     emptySet());
-    assertTrue(null != initialReference);
+    assertTrue(null != makeInitialCommit("initialCommit"));
   }
 
   /** Commit a second commit to the master branch. **/
+  @Test
   void secondCommit() {
-    assertTrue(null != client.commit("master",
+    assertTrue(null != client.commit("secondCommit",
                                      "my second commit!",
                                      copyFromUtf8("repository contents are now slightly different."),
-                                     singleton(initialReference),
+                                     singleton(makeInitialCommit("secondCommit")),
                                      singleton(copyFromUtf8("I added the \"are now slightly different.\""))));
   }
 
   /** Commit a different commit to the master branch, that doesn't follow the second. This should fail. **/
+  @Test
   void conflictingCommit() {
-    assertEquals(null, client.commit("master",
+    final Reference initial = makeInitialCommit("conflictingCommit");
+    assertTrue(null != initial);
+    assertTrue(null != client.commit("conflictingCommit",
+                                     "my second commit!",
+                                     copyFromUtf8("repository contents are now slightly different."),
+                                     singleton(initial),
+                                     singleton(copyFromUtf8("I added the \"are now slightly different.\""))));
+    assertEquals(null, client.commit("conflictingCommit",
                                      "a conflicting second commit!",
                                      copyFromUtf8("repository contents are now even more different."),
-                                     singleton(initialReference),
+                                     singleton(initial),
                                      singleton(copyFromUtf8("I added the \"are now even more different.\""))));
   }
 
   /** Commit a different commit to a different branch. This should succeed. **/
+  @Test
   void differentBranchCommit() {
+    final Reference initial = makeInitialCommit("differentBranchCommit");
+    assertTrue(null != initial);
+    assertTrue(null != client.commit("differentBranchCommit",
+                                     "my second commit!",
+                                     copyFromUtf8("repository contents are now slightly different."),
+                                     singleton(initial),
+                                     singleton(copyFromUtf8("I added the \"are now slightly different.\""))));
     assertTrue(null != client.commit("different-branch",
                                      "a second commit that would be conflicting if it were on master branch!",
                                      copyFromUtf8("repository contents are now even more different."),
-                                     singleton(initialReference),
+                                     singleton(initial),
                                      singleton(copyFromUtf8("I added the \"are now even more different.\""))));
+  }
+
+  private Reference makeInitialCommit(String branchname) {
+    return client.commit(branchname,
+                         "my first commit! " + branchname,
+                         copyFromUtf8("repository contents " + branchname ),
+                         emptySet(),
+                         emptySet());
   }
 }
