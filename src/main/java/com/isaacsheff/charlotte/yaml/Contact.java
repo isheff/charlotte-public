@@ -165,15 +165,16 @@ public class Contact {
    * @return A ChannelBuilder for this contact's url and port
    */
   public NettyChannelBuilder getChannelBuilder(long delayInterval) {
-    try {
-      logger.log(Level.INFO, "Channel Start Delay is happening now: " + now());
-      TimeUnit.NANOSECONDS.sleep(Math.floorMod((new Random(
-          (getParentConfig().getUrl() + ":" + getParentConfig().getPort() + "\t" + getUrl() + ":" + getPort()).
-            hashCode()
-        )).nextLong(), delayInterval));
-    } catch (InterruptedException e) {
-      logger.log(Level.SEVERE, "Interrupted while trying to sleep prior to channel building", e);
-    }
+//    try {
+//      logger.log(Level.INFO, "Channel Start Delay is happening now: " + now());
+//      TimeUnit.NANOSECONDS.sleep(Math.floorMod((new Random(
+//          (getParentConfig().getUrl() + ":" + getParentConfig().getPort() + "\t" + getUrl() + ":" + getPort()).
+//            hashCode()
+//        )).nextLong(), delayInterval));
+//    } catch (InterruptedException e) {
+//      logger.log(Level.SEVERE, "Interrupted while trying to sleep prior to channel building", e);
+//    }
+    logger.info("Establishing a new channel to " + getUrl() + getPort());
     return NettyChannelBuilder.forAddress(getUrl(),getPort());
   }
 

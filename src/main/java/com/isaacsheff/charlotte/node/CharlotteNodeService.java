@@ -229,19 +229,19 @@ public class CharlotteNodeService extends CharlotteNodeImplBase {
   public boolean storeNewBlock(final Block block) {
     final Hash hash = sha3Hash(block);
     if (getBlockMap().putIfAbsent(hash, block) == null) {
-      try {
-        logger.info("{ \"NewBlockHash\":"+JsonFormat.printer().print(hash)+
-                     ",\n\"block\":"+JsonFormat.printer().print(block)+"}");
-      } catch (InvalidProtocolBufferException e) {
-        logger.log(Level.SEVERE, "Invalid protocol buffer parsed as Block", e);
-      }
+//      try {
+//        logger.info("{ \"NewBlockHash\":"+JsonFormat.printer().print(hash)+
+//                     ",\n\"block\":"+JsonFormat.printer().print(block)+"}");
+//      } catch (InvalidProtocolBufferException e) {
+//        logger.log(Level.SEVERE, "Invalid protocol buffer parsed as Block", e);
+//      }
       return true;
     }
-    try {
-      logger.info("{ \"RepeatBlockHash\":"+JsonFormat.printer().print(hash)+"}");
-    } catch (InvalidProtocolBufferException e) {
-      logger.log(Level.SEVERE, "Invalid protocol buffer parsed as Block", e);
-    }
+//    try {
+//      logger.info("{ \"RepeatBlockHash\":"+JsonFormat.printer().print(hash)+"}");
+//    } catch (InvalidProtocolBufferException e) {
+//      logger.log(Level.SEVERE, "Invalid protocol buffer parsed as Block", e);
+//    }
     return false;
   }
 
@@ -295,15 +295,15 @@ public class CharlotteNodeService extends CharlotteNodeImplBase {
       return singleton(SendBlocksResponse.newBuilder().
                setErrorMessage("No Block in this SendBlocksInput: " + input).build());
     }
-    try {
-      logger.info("{ \"ReceivedBlockHash\":"+JsonFormat.printer().print(sha3Hash(input.getBlock()))+
-                   ",\n\"destinationUrl\":\""+getConfig().getUrl() +"\""+
-                   ",\n\"destinationPort\":"+getConfig().getPort() +
-                   ",\n\"originPort\":"+observer.getContact().getPort() +
-                   ",\n\"originUrl\":\""+observer.getContact().getUrl()+"\"}");
-    } catch (InvalidProtocolBufferException e) {
-      logger.log(Level.SEVERE, "Invalid protocol buffer parsed as Block", e);
-    }
+//    try {
+//      logger.info("{ \"ReceivedBlockHash\":"+JsonFormat.printer().print(sha3Hash(input.getBlock()))+
+//                   ",\n\"destinationUrl\":\""+getConfig().getUrl() +"\""+
+//                   ",\n\"destinationPort\":"+getConfig().getPort() +
+//                   ",\n\"originPort\":"+observer.getContact().getPort() +
+//                   ",\n\"originUrl\":\""+observer.getContact().getUrl()+"\"}");
+//    } catch (InvalidProtocolBufferException e) {
+//      logger.log(Level.SEVERE, "Invalid protocol buffer parsed as Block", e);
+//    }
     return onSendBlocksInput(input.getBlock());
   }
 

@@ -105,9 +105,8 @@ public class HetconsParticipantNodeForFern extends HetconsParticipantService {
    * @return any responses, in this case just forwarded from HetconsParticipantService.onSendBlocksInput
    */
   @Override
-  public Iterable<SendBlocksResponse> onSendBlocksInput(SendBlocksInput input) {
-    if (input.hasBlock()
-        && input.getBlock().hasHetconsMessage()) {
+  public Iterable<SendBlocksResponse> onSendBlocksInput(Block block) {
+    if ( block.hasHetconsMessage()) {
 //       final Set<Block> newM2bSet = newKeySet();
 //       final Set<Block> m2bsKnownForThisHash = getReference2bsPerProposal().putIfAbsent(
 //               input.getBlock().getHetconsMessage().getM1A().getProposal(),
@@ -122,7 +121,7 @@ public class HetconsParticipantNodeForFern extends HetconsParticipantService {
 //        logger.info(input.getBlock().getHetconsMessage().toString());
 //        storeNewBlock(input.getBlock());
      }
-    return super.onSendBlocksInput(input);
+    return super.onSendBlocksInput(block);
   }
 
 }

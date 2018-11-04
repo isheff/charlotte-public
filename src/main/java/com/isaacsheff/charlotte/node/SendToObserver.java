@@ -127,13 +127,13 @@ public class SendToObserver implements Runnable {
    */
   private void send() {
     observer.onNext(getMostRecent());
-    try {
-      logger.info("{ \"SentBlock\":"+JsonFormat.printer().print(sha3Hash(getMostRecent().getBlock()))+
-                  loggingString +
-                  ",\n \"size\":" + getMostRecent().getSerializedSize() + " }");
-    } catch (InvalidProtocolBufferException e) {
-      logger.log(Level.SEVERE, "Invalid protocol buffer parsed as Block", e);
-    }
+//    try {
+//      logger.info("{ \"SentBlock\":"+JsonFormat.printer().print(sha3Hash(getMostRecent().getBlock()))+
+//                  loggingString +
+//                  ",\n \"size\":" + getMostRecent().getSerializedSize() + " }");
+//    } catch (InvalidProtocolBufferException e) {
+//      logger.log(Level.SEVERE, "Invalid protocol buffer parsed as Block", e);
+//    }
   }
 
   /**

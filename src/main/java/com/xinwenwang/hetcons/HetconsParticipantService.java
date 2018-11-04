@@ -22,20 +22,20 @@ public class HetconsParticipantService extends CharlotteNodeService {
         observers = new HashMap<>();
     }
 
-    public Iterable<SendBlocksResponse> onSendBlocksInput(SendBlocksInput input) {
-        if (!input.hasBlock()) {
-            //TODO: handle error
-            return super.onSendBlocksInput(input);
-        }
-
-        Block block = input.getBlock();
+    public Iterable<SendBlocksResponse> onSendBlocksInput(Block block) {
+//        if (!input.hasBlock()) {
+//            //TODO: handle error
+//            return super.onSendBlocksInput(input.getBlock());
+//        }
+//
+//        Block block = input.getBlock();
 
         if (this.getBlockMap().containsKey(HashUtil.sha3Hash(block)))
             return new ArrayList<>();
 
         if (!block.hasHetconsMessage()) {
             //TODO: handle error
-            return super.onSendBlocksInput(input);
+            return super.onSendBlocksInput(block);
         }
 
         HetconsMessage hetconsMessage = block.getHetconsMessage();

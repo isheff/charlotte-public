@@ -105,8 +105,7 @@ public class HetconsFern extends AgreementFernService {
    */
   public static CharlotteNode getFernNode(final HetconsFern fern) {
     return new CharlotteNode(fern.getNode(),
-                             ServerBuilder.forPort(fern.getNode().getConfig().getPort()).addService(fern),
-                             fern.getNode().getConfig().getPort());
+                             fern);
   }
 
   /**
@@ -245,7 +244,7 @@ public class HetconsFern extends AgreementFernService {
     final Block hetconsAttestation = Block.newBuilder().setIntegrityAttestation(
       IntegrityAttestation.newBuilder().setHetconsAttestation(hetconsAttestationBuilder)).build();
 
-    getHetconsNode().onSendBlocksInput(SendBlocksInput.newBuilder().setBlock(hetconsAttestation).build());
+    getHetconsNode().onSendBlocksInput(hetconsAttestation);
 
     final RequestIntegrityAttestationResponse hetconsResponse = RequestIntegrityAttestationResponse.newBuilder().
       setReference(Reference.newBuilder().setHash(sha3Hash(hetconsAttestation))).build();
@@ -307,9 +306,8 @@ public class HetconsFern extends AgreementFernService {
       
       // send the request out (this will just show up as a duplicate if the request is already out) as a 1A.
       getHetconsNode().onSendBlocksInput(
-              SendBlocksInput.newBuilder().setBlock(
               Block.newBuilder().setHetconsMessage(request.getPolicy().getHetconsPolicy().getProposal()).build()
-              ).build());
+      );
 
       // Whichever Slot reaches consensus first for this observer, return the affiliated response
       request.getPolicy().getHetconsPolicy().getProposal().getM1A().getProposal().getSlotsList().parallelStream().
