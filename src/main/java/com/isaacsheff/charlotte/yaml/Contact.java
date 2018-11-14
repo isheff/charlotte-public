@@ -174,7 +174,7 @@ public class Contact {
 //    } catch (InterruptedException e) {
 //      logger.log(Level.SEVERE, "Interrupted while trying to sleep prior to channel building", e);
 //    }
-    logger.info("Establishing a new channel to " + getUrl() + getPort());
+    logger.info("Establishing a new channel to " + getUrl() + ":" + getPort());
     return NettyChannelBuilder.forAddress(getUrl(),getPort());
   }
 

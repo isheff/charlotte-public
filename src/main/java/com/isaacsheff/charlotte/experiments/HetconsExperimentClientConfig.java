@@ -23,6 +23,9 @@ public class HetconsExperimentClientConfig extends JsonExperimentConfig {
     @JsonProperty("timeout")
     private int timeout;
 
+    @JsonProperty("startingIndex")
+    private int startingIndex;
+
     public HetconsExperimentClientConfig(
             @JsonProperty("fernservers") List<String> fernServers,
             @JsonProperty("blocksperexperiment") int blocksPerExperiment,
@@ -31,6 +34,7 @@ public class HetconsExperimentClientConfig extends JsonExperimentConfig {
             @JsonProperty("contacts") Map<String, JsonContact> contacts,
             @JsonProperty("contactServer") String contactServer,
             @JsonProperty("chainNames") List<String> chainNames,
+            @JsonProperty("startingIndex") int startingIndex,
             @JsonProperty("timeout") int timeout
 
     ) {
@@ -45,6 +49,7 @@ public class HetconsExperimentClientConfig extends JsonExperimentConfig {
         this.contactServer = contactServer;
         this.chainNames = chainNames;
         this.timeout = timeout;
+        this.startingIndex = startingIndex;
     }
 
     public String getContactServer() {
@@ -57,5 +62,9 @@ public class HetconsExperimentClientConfig extends JsonExperimentConfig {
 
     public int getTimeout() {
         return timeout;
+    }
+
+    public int getStartingIndex() {
+        return startingIndex;
     }
 }

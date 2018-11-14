@@ -1,6 +1,7 @@
 package com.xinwenwang.hetcons;
 
 
+import com.isaacsheff.charlotte.node.CharlotteNodeService;
 import com.isaacsheff.charlotte.node.HashUtil;
 import com.isaacsheff.charlotte.proto.*;
 
@@ -26,6 +27,13 @@ public class HetconsProposalStatus {
     private HetconsParticipantService service;
     private List<List<CryptoId>> members;
     private Reference observerGroupReference;
+    private Boolean hasDecided;
+    private RoundStatus roundStatus;
+    private Boolean isProposer;
+    private List<Reference> decidedQuorum;
+    private HetconsValue decidedValue;
+
+    private static final Logger logger = Logger.getLogger(CharlotteNodeService.class.getName());
 
     public HetconsProposalStatus(HetconsConsensusStage stage,
                                  HetconsProposal proposal,
@@ -42,27 +50,36 @@ public class HetconsProposalStatus {
         initQuorum(members);
         initParticipantStatues(members);
         consensusTimeout = proposal.getTimeout();
+        hasDecided = false;
+        roundStatus = new RoundStatus();
+        isProposer = false;
 
     }
 
     public HetconsProposal getCurrentProposal() {
-        if (proposals.isEmpty())
-            return null;
-        else
-            return proposals.getLast();
+        synchronized (this) {
+
+            if (proposals.isEmpty())
+                return null;
+            else
+                return proposals.getLast();
+        }
     }
 
     public void updateProposal(HetconsProposal proposal) {
-        if (getCurrentProposal().equals(proposal))
-            return;
-        System.out.printf("Old Proposal:\n" +
-                getCurrentProposal() + "\n");
-        this.proposals.add(proposal);
-        if (proposals.size() > 1) {
-            reset();
+        synchronized (this) {
+
+            if (getCurrentProposal().equals(proposal))
+                return;
+            logger.info("Old Proposal:\n" +
+                    getCurrentProposal() + "\n");
+            this.proposals.add(proposal);
+            if (proposals.size() > 1) {
+                reset();
+            }
+            logger.info("Updated Proposal:\n" +
+                    proposal + "\n");
         }
-        System.out.printf("Updated Proposal:\n" +
-                proposal + "\n");
     }
 
     /**
@@ -91,6 +108,40 @@ public class HetconsProposalStatus {
             consensuTimeout = maxTimeOut;
         }
         this.consensusTimeout = consensuTimeout;
+    }
+
+    public void setDecidedQuorum(List<Reference> decidedQuorum) {
+        if (this.decidedQuorum == null)
+            this.decidedQuorum = decidedQuorum;
+    }
+
+    public List<Reference> getDecidedQuorum() {
+        return decidedQuorum;
+    }
+
+    public void setDecidedValue(HetconsValue decidedValue) {
+        if (this.decidedQuorum == null)
+            this.decidedValue = decidedValue;
+    }
+
+    public HetconsValue getDecidedValue() {
+        return decidedValue;
+    }
+
+    public Boolean getProposer() {
+        return isProposer;
+    }
+
+    public void setProposer(Boolean proposer) {
+        isProposer = proposer;
+    }
+
+    public void setHasDecided(Boolean hasDecided) {
+        this.hasDecided = hasDecided;
+    }
+
+    public Boolean getHasDecided() {
+        return hasDecided;
     }
 
     public Timer getM1bTimer() {
@@ -145,6 +196,12 @@ public class HetconsProposalStatus {
         return observerGroupReference;
     }
 
+    public HashMap<String, ParticipantStatus> getParticipantStatuses() {
+        synchronized (this) {
+            return participantStatuses;
+        }
+    }
+
     /** -----------------------version 2 ----------------------------------*/
 
     public void initQuorum(List<List<CryptoId>> q) {
@@ -165,42 +222,64 @@ public class HetconsProposalStatus {
         }
     }
 
+    public void updateRecent1b(boolean has2A, HetconsValue value, HetconsBallot ballot) {
+        roundStatus.update1BValue(has2A, value, ballot);
+    }
+
+    public void updateRecent2b(HetconsValue value, HetconsBallot ballot) {
+        roundStatus.update2BValue(value, ballot);
+    }
+
+    public HetconsValue getRecent1b() {
+        return roundStatus.m1bValue;
+    }
+
+    public HetconsValue getRecent2b() {
+        return roundStatus.m2bValue;
+    }
+
     public List<Reference> receive1b(CryptoId id, Reference ref1b) {
-        ParticipantStatus s = participantStatuses.get(HetconsUtil.cryptoIdToString(id));
-        if (s == null)
-            return null;
-        s.addM1b(ref1b);
-        QuorumStatus q = s.check1bQuorum();
-        if (q != null) {
-            List<Reference> q1b = new ArrayList<>();
-            for (String p : q.participants) {
-                q1b.add(this.participantStatuses.get(p).m1bRef);
+        synchronized (this) {
+
+            ParticipantStatus s = participantStatuses.get(HetconsUtil.cryptoIdToString(id));
+            if (s == null)
+                return null;
+            s.addM1b(ref1b);
+            QuorumStatus q = s.check1bQuorum();
+            if (q != null) {
+                List<Reference> q1b = new ArrayList<>();
+                for (String p : q.participants) {
+                    q1b.add(this.participantStatuses.get(p).m1bRef);
+                }
+                return q1b;
             }
-            return q1b;
+            return null;
         }
-        return null;
     }
 
     public HashMap<String, Object> receive2b(CryptoId id, Reference ref2b) {
-        ParticipantStatus s = participantStatuses.get(HetconsUtil.cryptoIdToString(id));
-        if (s == null) {
+        synchronized (this) {
+
+            ParticipantStatus s = participantStatuses.get(HetconsUtil.cryptoIdToString(id));
+            if (s == null) {
+                return null;
+            }
+            s.addM2b(ref2b);
+            QuorumStatus q = s.check2bQuorum();
+            if (q != null) {
+                List<CryptoId> qp = new ArrayList<>();
+                List<Reference> q2b = new ArrayList<>();
+                for (String p : q.participants) {
+                    q2b.add(this.participantStatuses.get(p).m2bRef);
+                    qp.add(this.participantStatuses.get(p).id);
+                }
+                HashMap<String, Object> ret = new HashMap<>();
+                ret.put("references", q2b);
+                ret.put("participants", qp);
+                return ret;
+            }
             return null;
         }
-        s.addM2b(ref2b);
-        QuorumStatus q = s.check2bQuorum();
-        if (q != null) {
-            List<CryptoId> qp = new ArrayList<>();
-            List<Reference> q2b = new ArrayList<>();
-            for (String p : q.participants) {
-                q2b.add(this.participantStatuses.get(p).m2bRef);
-                qp.add(this.participantStatuses.get(p).id);
-            }
-            HashMap<String, Object> ret = new HashMap<>();
-            ret.put("references", q2b);
-            ret.put("participants", qp);
-            return ret;
-        }
-        return null;
     }
 
     class ParticipantStatus {
@@ -280,6 +359,33 @@ public class HetconsProposalStatus {
             return m2bs.size() == participants.size();
         }
 
+    }
+
+    class RoundStatus {
+
+        HetconsValue m1bValue;
+        HetconsBallot m1bBallot;
+        boolean has2A = false;
+
+        HetconsValue m2bValue;
+        HetconsBallot m2bBallot;
+
+        void update1BValue(boolean has2A, HetconsValue value, HetconsBallot ballot) {
+            if (this.has2A && !has2A)
+                return;
+
+            if (m1bBallot == null || HetconsUtil.ballotCompare(ballot, m1bBallot) >= 0) {
+                this.m1bBallot = ballot;
+                this.m1bValue = value;
+            }
+        }
+
+        void update2BValue(HetconsValue value, HetconsBallot ballot) {
+            if (m2bBallot == null || HetconsUtil.ballotCompare(ballot, m2bBallot) >= 0) {
+                this.m2bBallot = ballot;
+                this.m2bValue = value;
+            }
+        }
     }
 }
 

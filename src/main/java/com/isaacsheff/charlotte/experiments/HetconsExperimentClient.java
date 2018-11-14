@@ -136,7 +136,7 @@ public class HetconsExperimentClient {
             slots.add(slot);
 
             HetconsValue value = HetconsValue.newBuilder()
-                    .setNum(100 + i).build();
+                    .setNum(config.getStartingIndex() + i).build();
 
             HetconsBallot ballot = HetconsUtil.buildBallot(value);
 

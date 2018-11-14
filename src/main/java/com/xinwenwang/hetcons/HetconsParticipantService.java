@@ -5,21 +5,28 @@ import com.isaacsheff.charlotte.node.HashUtil;
 import com.isaacsheff.charlotte.proto.*;
 import com.isaacsheff.charlotte.yaml.Config;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
+import java.util.*;
+import java.util.logging.LogManager;
 import java.util.logging.Logger;
+import java.util.logging.SimpleFormatter;
+import java.util.logging.StreamHandler;
 
 public class HetconsParticipantService extends CharlotteNodeService {
 
-    private static final Logger logger = Logger.getLogger(HetconsParticipantService.class.getName());
+    // private static final Logger logger = Logger.getLogger(HetconsParticipantService.class.getName());
+    private static final Logger logger = Logger.getLogger(CharlotteNodeService.class.getName());
 
+    // Map from observer crypto id to observers
     private HashMap<String, HetconsObserverStatus> observers;
 
 
     public HetconsParticipantService(Config config) {
         super(config);
         observers = new HashMap<>();
+//        logger.setUseParentHandlers(false);
+//        SimpleFormatter fmt = new SimpleFormatter();
+//        StreamHandler sh = new StreamHandler(System.out, fmt);
+//        logger.addHandler(sh);
     }
 
     public Iterable<SendBlocksResponse> onSendBlocksInput(Block block) {
@@ -30,13 +37,23 @@ public class HetconsParticipantService extends CharlotteNodeService {
 //
 //        Block block = input.getBlock();
 
-        if (this.getBlockMap().containsKey(HashUtil.sha3Hash(block)))
-            return new ArrayList<>();
+        logger.info("Block arrived " + block.getHetconsMessage().getType());
+
+        synchronized (this) {
+
+            if (this.getBlockMap().containsKey(HashUtil.sha3Hash(block))) {
+                logger.info("Discard duplicated block " + block.getHetconsMessage().getType());
+                return new ArrayList<>();
+            } else {
+                storeNewBlock(block);
+            }
+        }
 
         if (!block.hasHetconsMessage()) {
             //TODO: handle error
-            return super.onSendBlocksInput(block);
+            return Collections.emptySet();
         }
+
 
         HetconsMessage hetconsMessage = block.getHetconsMessage();
 
@@ -97,14 +114,18 @@ public class HetconsParticipantService extends CharlotteNodeService {
             return;
         }
 
-        logger.info("Got 1A");
+//        logger.info("Got 1A");
 
         // FIXME: Concurrency
         // TODO: parallel receive1a
         observerGroup.getObserversList().forEach(o -> {
-            HetconsObserverStatus observerStatus = new HetconsObserverStatus(o, this);
+            String name = getConfig().getContact(o.getId()).getUrl() + ":" + getConfig().getContact(o.getId()).getPort();
+            HetconsObserverStatus observerStatus = new HetconsObserverStatus(o, this, name);
             observers.putIfAbsent(HetconsUtil.cryptoIdToString(o.getId()), observerStatus);
-            observerStatus = observers.get(HetconsUtil.cryptoIdToString(o.getId()));
+        });
+
+        observerGroup.getObserversList().forEach(o -> {
+            HetconsObserverStatus observerStatus = observers.get(HetconsUtil.cryptoIdToString(o.getId()));
             if (!observerStatus.receive1a(block))
                 return;
         });
@@ -112,7 +133,7 @@ public class HetconsParticipantService extends CharlotteNodeService {
 
     private void handle1b(HetconsMessage1b message1b, CryptoId id, Block block) {
 
-        logger.info("Got M1B:\n");
+//        logger.info("Got M1B:\n");
 
         HetconsObserverGroup observerGroup;
         try {
@@ -148,7 +169,7 @@ public class HetconsParticipantService extends CharlotteNodeService {
         observerGroup.getObserversList().forEach(o -> {
             HetconsObserverStatus observerStatus = observers.get(HetconsUtil.cryptoIdToString(o.getId()));
             if (observerStatus == null) {
-                logger.warning("Got m1b but no such observer");
+                logger.warning("Got m2b but no such observer");
                 return;
             }
             observerStatus.receive2b(block);
@@ -169,12 +190,16 @@ public class HetconsParticipantService extends CharlotteNodeService {
     }
 
     private void broadCastObserverGroupBlock(Block block) {
+        HashSet<CryptoId> participants = new HashSet<>();
         block.getHetconsMessage().getObserverGroup().getObserversList().forEach(o -> {
             o.getQuorumsList().forEach(q -> {
                 q.getMemebersList().forEach(m -> {
-                    sendBlock(m, block);
+                    participants.add(m);
                 });
             });
+        });
+        participants.forEach(m -> {
+            sendBlock(m, block);
         });
     }
 

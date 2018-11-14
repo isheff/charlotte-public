@@ -24,7 +24,7 @@ import com.xinwenwang.hetcons.config.HetconsConfig;
 public class HetconsParticipantNodeForFern extends HetconsParticipantService {
 
   /** Use logger for logging events in this class. */
-  private static final Logger logger = Logger.getLogger(HetconsParticipantNodeForFern.class.getName());
+  private static final Logger logger = Logger.getLogger(HetconsParticipantService.class.getName());
 
   /** The HetconsConfig affiliated with this consensus **/
   private final HetconsConfig hetconsConfig;
