@@ -123,7 +123,7 @@ public class HetconsExperimentClient {
                 .setHash(HashUtil.sha3Hash(observerBlock)).build();
 
 //        logger.info(String.format("Experiment part %d start", num));
-        for (int i = 0; i < config.getBlocksPerExperiment(); i++) {
+        for (int i = 1; i <= config.getBlocksPerExperiment(); i++) {
             // Build proposal
             IntegrityAttestation.ChainSlot slot = IntegrityAttestation.ChainSlot.newBuilder()
                     .setRoot(Reference.newBuilder()
@@ -168,6 +168,7 @@ public class HetconsExperimentClient {
                                     .build()
                     ).build();
             logger.info(String.format("Beginning slot for chain %s %d", cn, i));
+//            logger.info("Proposal is " + proposal.getSlotsList());
             RequestIntegrityAttestationResponse response = clientNode.requestIntegrityAttestation(input);
             logger.info(String.format("Received response for chain %s %d", cn, i));
         }

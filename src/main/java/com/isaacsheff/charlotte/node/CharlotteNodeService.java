@@ -64,6 +64,7 @@ public class CharlotteNodeService extends CharlotteNodeImplBase {
     SimpleFormatter fmt = new SimpleFormatter();
     StreamHandler sh = new StreamHandler(System.out, fmt);
     logger.addHandler(sh);
+
   }
 
   /**

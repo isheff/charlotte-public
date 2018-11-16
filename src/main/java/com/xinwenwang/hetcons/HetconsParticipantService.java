@@ -39,21 +39,20 @@ public class HetconsParticipantService extends CharlotteNodeService {
 
         logger.info("Block arrived " + block.getHetconsMessage().getType());
 
-        synchronized (this) {
+//        synchronized (this) {
 
-            if (this.getBlockMap().containsKey(HashUtil.sha3Hash(block))) {
-                logger.info("Discard duplicated block " + block.getHetconsMessage().getType());
-                return new ArrayList<>();
-            } else {
-                storeNewBlock(block);
-            }
-        }
+
+//        }
 
         if (!block.hasHetconsMessage()) {
             //TODO: handle error
             return Collections.emptySet();
         }
 
+        if (!storeNewBlock(block)) {
+            logger.info("Discard duplicated block " + block.getHetconsMessage().getType());
+            return new ArrayList<>();
+        }
 
         HetconsMessage hetconsMessage = block.getHetconsMessage();
 
@@ -150,10 +149,14 @@ public class HetconsParticipantService extends CharlotteNodeService {
                 logger.warning("Got m1b but no such observer");
                 return;
             }
-            observerStatus.receive1b(block);
+//            Thread thread = new Thread(new Runnable() {
+//                @Override
+//                public void run() {
+                    observerStatus.receive1b(block);
+//                }
+//            });
+//            thread.start();
         });
-
-
     }
 
     private void handle2b(HetconsMessage2ab message2b, CryptoId id, Block block) {
@@ -172,7 +175,13 @@ public class HetconsParticipantService extends CharlotteNodeService {
                 logger.warning("Got m2b but no such observer");
                 return;
             }
-            observerStatus.receive2b(block);
+//            Thread thread = new Thread(new Runnable() {
+//                @Override
+//                public void run() {
+                    observerStatus.receive2b(block);
+//                }
+//            });
+//            thread.start();
         });
     }
 

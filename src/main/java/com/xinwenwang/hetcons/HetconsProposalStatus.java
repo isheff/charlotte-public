@@ -17,6 +17,9 @@ public class HetconsProposalStatus {
     private static final int maxTimeOut = 10 * 1000;
     private HashMap<Integer, QuorumStatus> quorums;
     private HashMap<String, ParticipantStatus> participantStatuses;
+    private final Integer participantStatusLock = 0;
+    public final Integer proposalLock = 0;
+    public final Integer generalLock = 0;
     private List<String> chainIDs;
     private HetconsConsensusStage stage;
     private LinkedList<HetconsProposal> proposals;
@@ -57,8 +60,7 @@ public class HetconsProposalStatus {
     }
 
     public HetconsProposal getCurrentProposal() {
-        synchronized (this) {
-
+        synchronized (proposalLock) {
             if (proposals.isEmpty())
                 return null;
             else
@@ -67,8 +69,7 @@ public class HetconsProposalStatus {
     }
 
     public void updateProposal(HetconsProposal proposal) {
-        synchronized (this) {
-
+        synchronized (proposalLock) {
             if (getCurrentProposal().equals(proposal))
                 return;
             logger.info("Old Proposal:\n" +
@@ -86,7 +87,7 @@ public class HetconsProposalStatus {
      * After timeout, we reset 1b and 2bs
      */
     public void reset() {
-        synchronized (this) {
+        synchronized (participantStatusLock) {
             this.participantStatuses = new HashMap<>();
             initQuorum(members);
             initParticipantStatues(members);
@@ -197,9 +198,11 @@ public class HetconsProposalStatus {
     }
 
     public HashMap<String, ParticipantStatus> getParticipantStatuses() {
-        synchronized (this) {
             return participantStatuses;
-        }
+    }
+
+    public Integer getGeneralLock() {
+        return generalLock;
     }
 
     /** -----------------------version 2 ----------------------------------*/
@@ -239,7 +242,7 @@ public class HetconsProposalStatus {
     }
 
     public List<Reference> receive1b(CryptoId id, Reference ref1b) {
-        synchronized (this) {
+        synchronized (participantStatusLock) {
 
             ParticipantStatus s = participantStatuses.get(HetconsUtil.cryptoIdToString(id));
             if (s == null)
@@ -258,7 +261,7 @@ public class HetconsProposalStatus {
     }
 
     public HashMap<String, Object> receive2b(CryptoId id, Reference ref2b) {
-        synchronized (this) {
+        synchronized (participantStatusLock) {
 
             ParticipantStatus s = participantStatuses.get(HetconsUtil.cryptoIdToString(id));
             if (s == null) {
