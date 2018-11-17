@@ -17,8 +17,8 @@ public class HetconsProposalStatus {
     private static final int maxTimeOut = 10 * 1000;
     private HashMap<Integer, QuorumStatus> quorums;
     private HashMap<String, ParticipantStatus> participantStatuses;
-    private final Integer participantStatusLock = 0;
-    public final Integer proposalLock = 0;
+    private ReentrantReadWriteLock participantStatusLock;
+    private ReentrantReadWriteLock proposalLock;
     public final Integer generalLock = 0;
     private List<String> chainIDs;
     private HetconsConsensusStage stage;
@@ -56,20 +56,28 @@ public class HetconsProposalStatus {
         hasDecided = false;
         roundStatus = new RoundStatus();
         isProposer = false;
+        proposalLock = new ReentrantReadWriteLock();
+        participantStatusLock = new ReentrantReadWriteLock();
 
     }
 
     public HetconsProposal getCurrentProposal() {
-        synchronized (proposalLock) {
+        try {
+            proposalLock.readLock().lock();
             if (proposals.isEmpty())
                 return null;
             else
                 return proposals.getLast();
+        } finally {
+            proposalLock.readLock().unlock();
         }
+
+
     }
 
     public void updateProposal(HetconsProposal proposal) {
-        synchronized (proposalLock) {
+        try {
+            proposalLock.writeLock().lock();
             if (getCurrentProposal().equals(proposal))
                 return;
             logger.info("Old Proposal:\n" +
@@ -80,6 +88,8 @@ public class HetconsProposalStatus {
             }
             logger.info("Updated Proposal:\n" +
                     proposal + "\n");
+        } finally {
+            proposalLock.writeLock().unlock();
         }
     }
 
@@ -87,10 +97,13 @@ public class HetconsProposalStatus {
      * After timeout, we reset 1b and 2bs
      */
     public void reset() {
-        synchronized (participantStatusLock) {
+        try {
+            participantStatusLock.writeLock().lock();
             this.participantStatuses = new HashMap<>();
             initQuorum(members);
             initParticipantStatues(members);
+        } finally {
+            participantStatusLock.writeLock().unlock();
         }
 
     }
@@ -242,8 +255,8 @@ public class HetconsProposalStatus {
     }
 
     public List<Reference> receive1b(CryptoId id, Reference ref1b) {
-        synchronized (participantStatusLock) {
-
+        try{
+            participantStatusLock.readLock().lock();
             ParticipantStatus s = participantStatuses.get(HetconsUtil.cryptoIdToString(id));
             if (s == null)
                 return null;
@@ -257,12 +270,14 @@ public class HetconsProposalStatus {
                 return q1b;
             }
             return null;
+        } finally {
+            participantStatusLock.readLock().unlock();
         }
     }
 
     public HashMap<String, Object> receive2b(CryptoId id, Reference ref2b) {
-        synchronized (participantStatusLock) {
-
+        try{
+            participantStatusLock.readLock().lock();
             ParticipantStatus s = participantStatuses.get(HetconsUtil.cryptoIdToString(id));
             if (s == null) {
                 return null;
@@ -282,6 +297,8 @@ public class HetconsProposalStatus {
                 return ret;
             }
             return null;
+        } finally {
+            participantStatusLock.readLock().unlock();
         }
     }
 

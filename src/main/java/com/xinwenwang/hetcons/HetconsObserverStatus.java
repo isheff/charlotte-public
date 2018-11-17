@@ -4,8 +4,11 @@ import com.isaacsheff.charlotte.node.CharlotteNodeService;
 import com.isaacsheff.charlotte.node.HashUtil;
 import com.isaacsheff.charlotte.node.SignatureUtil;
 import com.isaacsheff.charlotte.proto.*;
+import io.netty.util.Timeout;
 
 import java.util.*;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.logging.Logger;
 
 public class HetconsObserverStatus {
@@ -72,6 +75,8 @@ public class HetconsObserverStatus {
 
             block = blockCopy;
             proposal = proposalCopy;
+            broadcastToParticipants(block);
+            return true;
         }
 
 
@@ -156,7 +161,7 @@ public class HetconsObserverStatus {
         broadcastToParticipants(block);
 
 
-        logger.info(name + ": Echo 1as" + " value is " + proposal.getValue());
+        logger.info(name + ": Echo 1as value is " + proposal.getValue());
 
         // Send 1b
         // FIXME: use reference
@@ -195,30 +200,30 @@ public class HetconsObserverStatus {
                     ex.printStackTrace();
                 }
             }
-        }
 
-        if (currentStatus.getHasDecided() || !currentStatus.getProposer())
-            return true;
+            if (currentStatus.getHasDecided() || !currentStatus.getProposer())
+                return true;
 
-        currentStatus.setM1bTimer(new Timer());
-        currentStatus.getM1bTimer().schedule(new TimerTask() {
-            @Override
-            public void run() {
-                synchronized (currentStatus.getGeneralLock()) {
-                    if (currentStatus.getHasDecided())
-                        return;
-                    if (currentStatus.getStage().equals(HetconsConsensusStage.M1BSent) ||
-                            currentStatus.getStage().equals(HetconsConsensusStage.M1ASent)) {
-                        logger.info("Timer 1: Restart consensus on " + currentStatus.getStage().toString() +
-                                " for value " + currentStatus.getCurrentProposal().getValue());
-                        currentStatus.setStage(HetconsConsensusStage.HetconsTimeout);
-                        restartProposal(proposalStatusID,
-                                currentStatus.getRecent1b());
-                        currentStatus.setM1bTimer(null);
+            currentStatus.setM1bTimer(new Timer());
+            currentStatus.getM1bTimer().schedule(new TimerTask() {
+                @Override
+                public void run() {
+                    synchronized (currentStatus.getGeneralLock()) {
+                        if (currentStatus.getHasDecided())
+                            return;
+                        if (currentStatus.getStage().equals(HetconsConsensusStage.M1BSent) ||
+                                currentStatus.getStage().equals(HetconsConsensusStage.M1ASent)) {
+                            logger.info("Timer 1: Restart consensus on " + currentStatus.getStage().toString() +
+                                    " for value " + currentStatus.getCurrentProposal().getValue());
+                            currentStatus.setStage(HetconsConsensusStage.HetconsTimeout);
+                            restartProposal(proposalStatusID,
+                                    currentStatus.getRecent1b());
+                            currentStatus.setM1bTimer(null);
+                        }
                     }
                 }
-            }
-        }, currentStatus.getConsensuTimeout());
+            }, currentStatus.getConsensuTimeout());
+        }
         return true;
     }
 
@@ -350,29 +355,27 @@ public class HetconsObserverStatus {
             if (status.getHasDecided() || !status.getProposer())
                 return;
 
-        }
-        logger.info(name + ":" + "Sent M2B value is "+ HetconsUtil.get2bValue(m2a, service));
+            logger.info(name + ":" + "Sent M2B value is "+ HetconsUtil.get2bValue(m2a, service));
 
 
-
-
-        status.setM2bTimer(new Timer());
-        status.getM2bTimer().schedule(new TimerTask() {
-            @Override
-            public void run() {
-                synchronized (status.getGeneralLock()) {
-                    if (status.getHasDecided())
-                        return;
-                    if (status.getStage().equals(HetconsConsensusStage.M2BSent)) {
-                        logger.info("Timer 2: Restart consensus on " + status.getStage().toString() + " for value "
-                                + status.getCurrentProposal().getValue());
-                        status.setStage(HetconsConsensusStage.HetconsTimeout);
-                        restartProposal(proposalID, status.getRecent2b());
-                        status.setM2bTimer(null);
+            status.setM2bTimer(new Timer());
+            status.getM2bTimer().schedule(new TimerTask() {
+                @Override
+                public void run() {
+                    synchronized (status.getGeneralLock()) {
+                        if (status.getHasDecided())
+                            return;
+                        if (status.getStage().equals(HetconsConsensusStage.M2BSent)) {
+                            logger.info("Timer 2: Restart consensus on " + status.getStage().toString() + " for value "
+                                    + status.getCurrentProposal().getValue());
+                            status.setStage(HetconsConsensusStage.HetconsTimeout);
+                            restartProposal(proposalID, status.getRecent2b());
+                            status.setM2bTimer(null);
+                        }
                     }
                 }
-            }
-        }, status.getConsensuTimeout());
+            }, status.getConsensuTimeout());
+        }
     }
 
     public void receive2b(Block block) {
@@ -387,6 +390,25 @@ public class HetconsObserverStatus {
             return;
         }
 //        if (status == null || status.getStage() == HetconsConsensusStage.ConsensusDecided)
+
+        for (Reference reference : block.getHetconsMessage().getM2B().getQuorumOf1Bs().getBlockHashesList()) {
+            service.getBlock(reference);
+//            Boolean retry = false;
+//            try {
+//                while (!service.hasBlock(reference)) {
+//                    if (retry) {
+//                        logger.info("Got 2B Discard due to failing to locate 1b blocks");
+//                        return;
+//                    } else {
+//                        TimeUnit.MILLISECONDS.sleep(500);
+//                        retry = true;
+//                    }
+//                }
+//            } catch (Exception ex) {
+//                ex.printStackTrace();
+//                return;
+//            }
+        }
 
         logger.info(name + ":"+ "Got M2B: value is " + HetconsUtil.get2bValue(block.getHetconsMessage().getM2B(), service));
         if (status.getCurrentProposal().getBallot().getBallotSequence().compareTo(
