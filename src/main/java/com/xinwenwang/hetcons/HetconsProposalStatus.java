@@ -7,6 +7,7 @@ import com.isaacsheff.charlotte.proto.*;
 
 import java.sql.Ref;
 import java.util.*;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.logging.Logger;
@@ -35,6 +36,7 @@ public class HetconsProposalStatus {
     private Boolean isProposer;
     private List<Reference> decidedQuorum;
     private HetconsValue decidedValue;
+    private ExecutorService timer;
 
     private static final Logger logger = Logger.getLogger(CharlotteNodeService.class.getName());
 
@@ -140,6 +142,14 @@ public class HetconsProposalStatus {
 
     public HetconsValue getDecidedValue() {
         return decidedValue;
+    }
+
+    public ExecutorService getTimer() {
+        return timer;
+    }
+
+    public void setTimer(ExecutorService timer) {
+        this.timer = timer;
     }
 
     public Boolean getProposer() {
