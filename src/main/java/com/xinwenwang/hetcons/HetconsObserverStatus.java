@@ -152,9 +152,7 @@ public class HetconsObserverStatus {
                 status.updateBallot(proposal.getBallot());
             }
         }
-        synchronized (currentStatus.getGeneralLock()) {
-            currentStatus.updateProposal(incomingStatus.getCurrentProposal());
-        }
+        currentStatus.updateProposal(incomingStatus.getCurrentProposal());
 
         // Save valid block
         // Echo 1a to all participants
@@ -197,12 +195,20 @@ public class HetconsObserverStatus {
             if (currentStatus.getTimer() == null)
                 currentStatus.setTimer(Executors.newSingleThreadExecutor());
 
+            if (currentStatus.getM1bTimer() != null)
+                currentStatus.getM1bTimer().cancel(true);
+
+            if (currentStatus.getM2bTimer() != null)
+                currentStatus.getM2bTimer().cancel(true);
+
             Future<?> m1bTimer = currentStatus.getTimer().submit(() -> {
                 try {
                     TimeUnit.MILLISECONDS.sleep(currentStatus.getConsensuTimeout());
                 } catch (InterruptedException ex) {
                     return;
                 }
+                if (Thread.interrupted())
+                    return;
                 synchronized (currentStatus.getGeneralLock()) {
                     if (currentStatus.getHasDecided())
                         return;
@@ -216,6 +222,7 @@ public class HetconsObserverStatus {
                     }
                 }
             });
+            currentStatus.setM1bTimer(m1bTimer);
 //            m1bTimer.cancel(true);
 
 //            if (currentStatus.getM1bTimer() != null) {
@@ -365,42 +372,44 @@ public class HetconsObserverStatus {
         /** -------------------- Timer for Restart ----------------------------- */
         // set timer for 2b, if we didn't receive enough 1bs after the timeout, we restart the consensus.
 
+        logger.info(name + ":" + "Sent M2B value is "+ HetconsUtil.get2bValue(m2a, service));
 
         synchronized (status.getGeneralLock()) {
 
+            if (status.getTimer() == null)
+                status.setTimer(Executors.newSingleThreadExecutor());
+
             if (status.getM1bTimer() != null) {
-                status.getM1bTimer().cancel();
+                status.getM1bTimer().cancel(true);
             }
 
             if (status.getM2bTimer() != null) {
-                status.getM2bTimer().cancel();
+                status.getM2bTimer().cancel(true);
             }
 
             if (status.getHasDecided() || !status.getProposer())
                 return;
 
-            logger.info(name + ":" + "Sent M2B value is "+ HetconsUtil.get2bValue(m2a, service));
-
-
-            if (status.getM2bTimer() == null)
-                status.setM2bTimer(new Timer("2bTimer"));
-            status.getM2bTimer().purge();
-            status.getM2bTimer().schedule(new TimerTask() {
-                @Override
-                public void run() {
-                    synchronized (status.getGeneralLock()) {
-                        if (status.getHasDecided())
-                            return;
-                        if (status.getStage().equals(HetconsConsensusStage.M2BSent)) {
-                            logger.info("Timer 2: Restart consensus on " + status.getStage().toString() + " for value "
-                                    + status.getCurrentProposal().getValue());
-                            status.setStage(HetconsConsensusStage.HetconsTimeout);
-                            restartProposal(proposalID, status.getRecent2b());
-                            status.setM2bTimer(null);
-                        }
+            status.setM2bTimer(status.getTimer().submit(() -> {
+                try {
+                    TimeUnit.MILLISECONDS.sleep(status.getConsensuTimeout());
+                } catch (InterruptedException ex) {
+                    return;
+                }
+                if (Thread.interrupted())
+                    return;
+                synchronized (status.getGeneralLock()) {
+                    if (status.getHasDecided())
+                        return;
+                    if (status.getStage().equals(HetconsConsensusStage.M2BSent)) {
+                        logger.info("Timer 2: Restart consensus on " + status.getStage().toString() + " for value "
+                                + status.getCurrentProposal().getValue());
+                        status.setStage(HetconsConsensusStage.HetconsTimeout);
+                        restartProposal(proposalID, status.getRecent2b());
+                        status.setM2bTimer(null);
                     }
                 }
-            }, status.getConsensuTimeout());
+            }));
         }
     }
 
@@ -480,34 +489,25 @@ public class HetconsObserverStatus {
         // Now we can decided on this 2b value for that slot.
         synchronized (status.getGeneralLock()) {
 
+            if (status.getTimer() != null)
+                status.getTimer().shutdownNow();
 
-            synchronized (numOfDecidedProposals) {
-                if (status.getM1bTimer() != null) {
-                    status.getM1bTimer().cancel();
-                    status.getM1bTimer().purge();
+            for (String slotid: status.getChainIDs()) {
+                HetconsSlotStatus slot = slotStatus.get(slotid);
+                if (slot.isDecided()) {
+                    logger.info("Slot has been decided on value ");
+                    return;
                 }
-                if (status.getM2bTimer() != null) {
-                    status.getM2bTimer().cancel();
-                    status.getM2bTimer().purge();
+                if (HetconsUtil.ballotCompare(ballot, slot.getBallot()) < 0) {
+                    logger.info("Ballot number is smaller than the one slot has");
+                    return;
                 }
-
-                for (String slotid: status.getChainIDs()) {
-                    HetconsSlotStatus slot = slotStatus.get(slotid);
-                    if (slot.isDecided()) {
-                        logger.info("Slot has been decided on value ");
-                        return;
-                    }
-                    if (HetconsUtil.ballotCompare(ballot, slot.getBallot()) < 0) {
-                        logger.info("Ballot number is smaller than the one slot has");
-                        return;
-                    }
-                }
-                for (String slotid: status.getChainIDs()) {
-                    slotStatus.get(slotid).decide(ballot, q, proposalID);
-                }
-                numOfDecidedProposals ++;
-
             }
+            for (String slotid: status.getChainIDs()) {
+                slotStatus.get(slotid).decide(ballot, q, proposalID);
+            }
+            numOfDecidedProposals ++;
+
             status.setStage(HetconsConsensusStage.ConsensusDecided);
             status.setHasDecided(true);
             status.setDecidedQuorum(q);

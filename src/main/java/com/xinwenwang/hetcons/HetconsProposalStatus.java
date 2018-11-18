@@ -8,6 +8,7 @@ import com.isaacsheff.charlotte.proto.*;
 import java.sql.Ref;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.logging.Logger;
@@ -24,8 +25,8 @@ public class HetconsProposalStatus {
     private List<String> chainIDs;
     private HetconsConsensusStage stage;
     private LinkedList<HetconsProposal> proposals;
-    private Timer m1bTimer;
-    private Timer m2bTimer;
+    private Future<?> m1bTimer;
+    private Future<?> m2bTimer;
     private long consensusTimeout;
     private String ConsensusID;
     private HetconsParticipantService service;
@@ -168,19 +169,19 @@ public class HetconsProposalStatus {
         return hasDecided;
     }
 
-    public Timer getM1bTimer() {
+    public Future<?> getM1bTimer() {
         return m1bTimer;
     }
 
-    public void setM1bTimer(Timer m1bTimer) {
+    public void setM1bTimer(Future<?> m1bTimer) {
         this.m1bTimer = m1bTimer;
     }
 
-    public Timer getM2bTimer() {
+    public Future<?> getM2bTimer() {
         return m2bTimer;
     }
 
-    public void setM2bTimer(Timer m2bTimer) {
+    public void setM2bTimer(Future<?> m2bTimer) {
         this.m2bTimer = m2bTimer;
     }
 
