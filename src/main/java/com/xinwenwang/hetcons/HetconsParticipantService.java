@@ -28,7 +28,7 @@ public class HetconsParticipantService extends CharlotteNodeService {
     public HetconsParticipantService(Config config) {
         super(config);
         observers = new HashMap<>();
-        executorService = (ThreadPoolExecutor) Executors.newFixedThreadPool(10);
+        executorService = (ThreadPoolExecutor) Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() * 3);
 //        logger.setUseParentHandlers(false);
 //        SimpleFormatter fmt = new SimpleFormatter();
 //        StreamHandler sh = new StreamHandler(System.out, fmt);
