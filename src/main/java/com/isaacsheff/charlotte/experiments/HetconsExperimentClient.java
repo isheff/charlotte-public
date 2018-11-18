@@ -96,8 +96,9 @@ public class HetconsExperimentClient {
         ChainConfig chainConfig = hetconsConfig.loadChain(cn);
         if (chainConfig == null)
             return;
-
-        Contact fernContact = new Contact(chainConfig.getObservers().get(0).getSelf(), expDir, service.getConfig());
+        JsonContact contactServer = config.getContacts().get(config.getContactServer());
+        Contact fernContact = new Contact(contactServer, expDir, service.getConfig());
+//        Contact fernContact = new Contact(config.getContactServer()   chainConfig.getObservers().get(0).getSelf(), expDir, service.getConfig());
         HetconsFernClient clientNode = new HetconsFernClient(service, fernContact);
 
         HetconsObserverGroup group = chainConfig.getObserverGroup(expDir);

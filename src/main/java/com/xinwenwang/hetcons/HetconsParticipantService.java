@@ -50,6 +50,7 @@ public class HetconsParticipantService extends CharlotteNodeService {
 
 //        }
 
+
         if (!block.hasHetconsMessage()) {
             //TODO: handle error
             return Collections.emptySet();

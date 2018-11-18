@@ -3,6 +3,7 @@ package com.isaacsheff.charlotte.node;
 import static java.util.concurrent.ConcurrentHashMap.newKeySet;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.Set;
@@ -106,7 +107,14 @@ public class HetconsParticipantNodeForFern extends HetconsParticipantService {
    */
   @Override
   public Iterable<SendBlocksResponse> onSendBlocksInput(Block block) {
-    if ( block.hasHetconsMessage()) {
+    if (block.hasIntegrityAttestation() && storeNewBlock(block) && block.getIntegrityAttestation().hasHetconsAttestation()) {
+      for (CryptoId o : block.getIntegrityAttestation().getHetconsAttestation().getObserversList()) {
+        sendBlock(o, block);
+      }
+      return Collections.emptySet();
+    } else {
+      return super.onSendBlocksInput(block);
+    }
 //       final Set<Block> newM2bSet = newKeySet();
 //       final Set<Block> m2bsKnownForThisHash = getReference2bsPerProposal().putIfAbsent(
 //               input.getBlock().getHetconsMessage().getM1A().getProposal(),
@@ -120,8 +128,6 @@ public class HetconsParticipantNodeForFern extends HetconsParticipantService {
 //       }
 //        logger.info(input.getBlock().getHetconsMessage().toString());
 //        storeNewBlock(input.getBlock());
-     }
-    return super.onSendBlocksInput(block);
   }
 
 }
