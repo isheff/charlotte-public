@@ -74,6 +74,7 @@ public class HetconsObserverStatus {
 
             block = blockCopy;
             proposal = proposalCopy;
+//            service.storeNewBlock(block);
         }
 
 
@@ -95,10 +96,10 @@ public class HetconsObserverStatus {
         if (!hasPrev) {
             currentStatus.setProposer(proposer);
             currentStatus.setConsensuTimeout(timeout);
-            if (proposer) {
-                broadcastToParticipants(block);
-                return false;
-            }
+//            if (proposer) {
+//                broadcastToParticipants(block);
+//                return false;
+//            }
         }
 
 
@@ -156,7 +157,7 @@ public class HetconsObserverStatus {
 
         // Save valid block
         // Echo 1a to all participants
-//        service.storeNewBlock(block);
+        service.storeNewBlock(block);
         broadcastToParticipants(block);
 
 
@@ -188,6 +189,8 @@ public class HetconsObserverStatus {
         logger.info("Sent 1Bs value is " + HetconsUtil.get1bValue(m1b, service) + " " + proposalStatusID);
         logger.info("ballot is " + proposal.getBallot().getBallotSequence());
 
+        if (!currentStatus.getProposer())
+            return true;
 
         // set timer for 1b, if we didn't receive enough 1bs after the timeout, we restart the consensus.
         synchronized (currentStatus.getGeneralLock()) {
@@ -202,9 +205,11 @@ public class HetconsObserverStatus {
                 currentStatus.getM2bTimer().cancel(true);
 
             Future<?> m1bTimer = currentStatus.getTimer().submit(() -> {
+                logger.info(name + ": M1B TIMER: Will sleep for " + currentStatus.getConsensuTimeout() + " milliseconds for timeout");
                 try {
                     TimeUnit.MILLISECONDS.sleep(currentStatus.getConsensuTimeout());
                 } catch (InterruptedException ex) {
+                    logger.info(name + ": M1B Timer Cancelled");
                     return;
                 }
                 if (Thread.interrupted())
@@ -223,6 +228,7 @@ public class HetconsObserverStatus {
                 }
             });
             currentStatus.setM1bTimer(m1bTimer);
+
 //            m1bTimer.cancel(true);
 
 //            if (currentStatus.getM1bTimer() != null) {
@@ -368,6 +374,8 @@ public class HetconsObserverStatus {
         broadcastToParticipants(Block.newBuilder().setHetconsMessage(m2b).build());
         status.setStage(HetconsConsensusStage.M2BSent);
 
+        if (!status.getProposer())
+            return;
 
         /** -------------------- Timer for Restart ----------------------------- */
         // set timer for 2b, if we didn't receive enough 1bs after the timeout, we restart the consensus.
@@ -391,9 +399,11 @@ public class HetconsObserverStatus {
                 return;
 
             status.setM2bTimer(status.getTimer().submit(() -> {
+                logger.info("M2B TIMER: Will sleep for " + status.getConsensuTimeout() + " milliseconds for timeout");
                 try {
                     TimeUnit.MILLISECONDS.sleep(status.getConsensuTimeout());
                 } catch (InterruptedException ex) {
+                    logger.info(name + ": M2B Timer Cancelled");
                     return;
                 }
                 if (Thread.interrupted())
@@ -489,8 +499,16 @@ public class HetconsObserverStatus {
         // Now we can decided on this 2b value for that slot.
         synchronized (status.getGeneralLock()) {
 
-            if (status.getTimer() != null)
+            if (status.getTimer() != null) {
                 status.getTimer().shutdownNow();
+                try {
+                    status.getTimer().awaitTermination(1, TimeUnit.SECONDS);
+                } catch (InterruptedException ex) {
+                    ex.printStackTrace();
+                } finally {
+                    status.setTimer(null);
+                }
+            }
 
             for (String slotid: status.getChainIDs()) {
                 HetconsSlotStatus slot = slotStatus.get(slotid);
