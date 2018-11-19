@@ -87,9 +87,6 @@ public class HetconsParticipantNodeForFern extends HetconsParticipantService {
    * Note that this may be called multiple times for the same consensus, as more 2bs arrive.
    * Calls HetconsFern.observersDecide for all the observers in quora, with value and proposal of message2b.
    * @param quora The quora satisfied by the 2b messages known.
-   * @param statis the HetconsStatus for this decision.
-   * @param message2b the actual message that triggered this decision.
-   * @param id the CryptoId of the sender of the most recent 2b.
    */
   @Override
   protected void onDecision(final HetconsObserverQuorum quora,
@@ -102,7 +99,6 @@ public class HetconsParticipantNodeForFern extends HetconsParticipantService {
   /**
    * If this is a 2B, we store it away with the associated proposal.
    * Then we pass it along (whether or not it was a 2B).
-   * @param input the SendBlocksInput received over the wire
    * @return any responses, in this case just forwarded from HetconsParticipantService.onSendBlocksInput
    */
   @Override
