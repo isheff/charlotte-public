@@ -49,33 +49,33 @@ public class HetconsObserverStatus {
     }
 
 
-    public boolean receive1a(Block block) {
+    public boolean receive1a(Block block, long timeout) {
 
         HetconsMessage1a m1a = block.getHetconsMessage().getM1A();
 
         HetconsProposal proposal = m1a.getProposal();
 
-        boolean proposer = false;
-        long timeout = proposal.getTimeout();
+//        boolean proposer = false;
+//        long timeout = proposal.getTimeout();
 
-        if (proposal.getTimeout() != 0) {
-            proposer = true;
-            HetconsProposal proposalCopy = HetconsProposal.newBuilder(proposal).setTimeout(0).build();
-
-            HetconsMessage1a message1aCopy = HetconsMessage1a.newBuilder(m1a).setProposal(proposalCopy).build();
-
-            HetconsMessage messageCopy = HetconsMessage.newBuilder(block.getHetconsMessage()).setM1A(message1aCopy)
-                    .setIdentity(service.getConfig().getCryptoId())
-                    .setSig(
-                            SignatureUtil.signBytes(service.getConfig().getKeyPair(), message1aCopy)
-                    ).build();
-
-            Block blockCopy = Block.newBuilder().setHetconsMessage(messageCopy).build();
-
-            block = blockCopy;
-            proposal = proposalCopy;
-//            service.storeNewBlock(block);
-        }
+//        if (proposal.getTimeout() != 0) {
+//            proposer = true;
+//            HetconsProposal proposalCopy = HetconsProposal.newBuilder(proposal).setTimeout(0).build();
+//
+//            HetconsMessage1a message1aCopy = HetconsMessage1a.newBuilder(m1a).setProposal(proposalCopy).build();
+//
+//            HetconsMessage messageCopy = HetconsMessage.newBuilder(block.getHetconsMessage()).setM1A(message1aCopy)
+//                    .setIdentity(service.getConfig().getCryptoId())
+//                    .setSig(
+//                            SignatureUtil.signBytes(service.getConfig().getKeyPair(), message1aCopy)
+//                    ).build();
+//
+//            Block blockCopy = Block.newBuilder().setHetconsMessage(messageCopy).build();
+//
+//            block = blockCopy;
+//            proposal = proposalCopy;
+////            service.storeNewBlock(block);
+//        }
 
 
         String proposalStatusID = HetconsUtil.buildConsensusId(proposal.getSlotsList());
@@ -94,7 +94,7 @@ public class HetconsObserverStatus {
         boolean hasPrev = null != proposalStatus.putIfAbsent(proposalStatusID, incomingStatus);
         HetconsProposalStatus currentStatus = proposalStatus.get(proposalStatusID);
         if (!hasPrev) {
-            currentStatus.setProposer(proposer);
+            currentStatus.setProposer(timeout != 0);
             currentStatus.setConsensuTimeout(timeout);
 //            if (proposer) {
 //                broadcastToParticipants(block);
@@ -462,7 +462,7 @@ public class HetconsObserverStatus {
             logger.info(name + ":" + "M2B discard because of lower ballot number value is " + HetconsUtil.get2bValue(block.getHetconsMessage().getM2B(), service));
             return;
         }
-        service.storeNewBlock(block);
+//        service.storeNewBlock(block);
         Reference refm2b = Reference.newBuilder().setHash(HashUtil.sha3Hash(block)).build();
         HashMap m = status.receive2b(block.getHetconsMessage().getIdentity(), refm2b);
         status.updateRecent2b(HetconsUtil.get2bValue(block.getHetconsMessage().getM2B(), service), message1a.getProposal().getBallot());

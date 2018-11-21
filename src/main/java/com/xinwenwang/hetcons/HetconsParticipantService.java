@@ -2,6 +2,7 @@ package com.xinwenwang.hetcons;
 
 import com.isaacsheff.charlotte.node.CharlotteNodeService;
 import com.isaacsheff.charlotte.node.HashUtil;
+import com.isaacsheff.charlotte.node.SignatureUtil;
 import com.isaacsheff.charlotte.proto.*;
 import com.isaacsheff.charlotte.yaml.Config;
 
@@ -50,7 +51,6 @@ public class HetconsParticipantService extends CharlotteNodeService {
 
 //        }
 
-
         if (!block.hasHetconsMessage()) {
             //TODO: handle error
             return Collections.emptySet();
@@ -59,11 +59,14 @@ public class HetconsParticipantService extends CharlotteNodeService {
 //        synchronized (arrivingBlockLock) {
             if (!storeNewBlock(block)) {
                 logger.info("Discard duplicated block " + block.getHetconsMessage().getType());
-                return new ArrayList<>();
+                return Collections.emptySet();
             }
 //        }
 
         HetconsMessage hetconsMessage = block.getHetconsMessage();
+
+        if (!verifySignature(hetconsMessage))
+            return Collections.emptySet();
 
         try {
             switch (hetconsMessage.getType()) {
@@ -96,10 +99,10 @@ public class HetconsParticipantService extends CharlotteNodeService {
             }
         } catch (HetconsException ex) {
             ex.printStackTrace();
-            return new ArrayList<>();
+            return Collections.emptySet();
         }
         //storeNewBlock(block);
-        return new ArrayList<>();
+        return Collections.emptySet();
     }
 
     /**
@@ -124,6 +127,25 @@ public class HetconsParticipantService extends CharlotteNodeService {
 
 //        logger.info("Got 1A");
 
+        if (proposal.getTimeout() != 0) {
+            HetconsProposal proposalCopy = HetconsProposal.newBuilder(proposal).setTimeout(0).build();
+
+            HetconsMessage1a message1aCopy = HetconsMessage1a.newBuilder(message1a).setProposal(proposalCopy).build();
+
+            HetconsMessage messageCopy = HetconsMessage.newBuilder(block.getHetconsMessage()).setM1A(message1aCopy)
+                    .setIdentity(getConfig().getCryptoId())
+                    .setSig(
+                            SignatureUtil.signBytes(getConfig().getKeyPair(), message1aCopy)
+                    ).build();
+
+            Block blockCopy = Block.newBuilder().setHetconsMessage(messageCopy).build();
+
+            block = blockCopy;
+            storeNewBlock(block);
+        }
+
+        final Block inputBlock = block;
+
         // FIXME: Concurrency
         // TODO: parallel receive1a
         observerGroup.getObserversList().forEach(o -> {
@@ -134,7 +156,7 @@ public class HetconsParticipantService extends CharlotteNodeService {
         observerGroup.getObserversList().forEach(o -> {
             HetconsObserverStatus observerStatus = observers.get(HetconsUtil.cryptoIdToString(o.getId()));
             executorService.submit(() -> {
-                observerStatus.receive1a(block);
+                observerStatus.receive1a(inputBlock, proposal.getTimeout());
                 logger.info("RETURN FROM RECEIVE1A");
                 return;
             });
@@ -223,6 +245,23 @@ public class HetconsParticipantService extends CharlotteNodeService {
         participants.forEach(m -> {
             sendBlock(m, block);
         });
+    }
+
+    private boolean verifySignature(HetconsMessage message) {
+        switch (message.getType()) {
+            case M1a:
+                return SignatureUtil.checkSignature(message.getM1A(), message.getSig());
+            case OBSERVERGROUP:
+                return SignatureUtil.checkSignature(message.getObserverGroup(), message.getSig());
+            case M1b:
+                return SignatureUtil.checkSignature(message.getM1B(), message.getSig());
+            case M2b:
+                return SignatureUtil.checkSignature(message.getM2B(), message.getSig());
+            case UNRECOGNIZED:
+                return false;
+            default:
+                return false;
+        }
     }
 
     public boolean hasBlock(Reference reference) {
