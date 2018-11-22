@@ -271,7 +271,8 @@ public class HetconsProposalStatus {
             ParticipantStatus s = participantStatuses.get(HetconsUtil.cryptoIdToString(id));
             if (s == null)
                 return null;
-            s.addM1b(ref1b);
+            if (!s.addM1b(ref1b))
+                return null;
             QuorumStatus q = s.check1bQuorum();
             if (q != null) {
                 List<Reference> q1b = new ArrayList<>();
@@ -293,7 +294,8 @@ public class HetconsProposalStatus {
             if (s == null) {
                 return null;
             }
-            s.addM2b(ref2b);
+            if(!s.addM2b(ref2b))
+                return null;
             QuorumStatus q = s.check2bQuorum();
             if (q != null) {
                 List<CryptoId> qp = new ArrayList<>();
@@ -329,18 +331,22 @@ public class HetconsProposalStatus {
             this.quorumStatuses.add(q);
         }
 
-        void addM1b(Reference m1b) {
+        boolean addM1b(Reference m1b) {
             m1bRef = m1b;
+            boolean noDuplicated = true;
             for (QuorumStatus q: quorumStatuses) {
-                q.add1b(id);
+                noDuplicated = noDuplicated && q.add1b(id);
             }
+            return noDuplicated;
         }
 
-        void addM2b(Reference m2b) {
+        boolean addM2b(Reference m2b) {
             m2bRef = m2b;
-            quorumStatuses.forEach(q -> {
-                q.add2b(id);
-            });
+            boolean noDuplicated = true;
+            for (QuorumStatus q: quorumStatuses) {
+                noDuplicated = noDuplicated && q.add2b(id);
+            }
+            return noDuplicated;
         }
 
         QuorumStatus check1bQuorum() {
@@ -374,12 +380,12 @@ public class HetconsProposalStatus {
             });
         }
 
-        void add1b(CryptoId id) {
-            m1bs.add(HetconsUtil.cryptoIdToString(id));
+        boolean add1b(CryptoId id) {
+            return m1bs.add(HetconsUtil.cryptoIdToString(id));
         }
 
-        void add2b(CryptoId id) {
-            m2bs.add(HetconsUtil.cryptoIdToString(id));
+        boolean add2b(CryptoId id) {
+            return m2bs.add(HetconsUtil.cryptoIdToString(id));
         }
 
         boolean isEnough1b() {
