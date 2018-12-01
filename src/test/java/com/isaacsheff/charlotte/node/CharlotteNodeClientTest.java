@@ -30,11 +30,8 @@ import java.util.logging.Level;
  * @author Isaac Sheff
  */
 public class CharlotteNodeClientTest {
-  /**
-   * Use this for logging events in the class.
-   */
+  /** Use this for logging events in the class. */
   private static final Logger logger = Logger.getLogger(CharlotteNodeClientTest.class.getName());
-
 
   /** The port used on the dummy server for an individual test. */
   private int port;
@@ -52,9 +49,7 @@ public class CharlotteNodeClientTest {
   }
 
 
-  /** 
-   * launch a dummy server, send 3 blocks to it, and check to see the proper 3 blocks arrived.
-   * */
+  /**  launch a dummy server, send 3 blocks to it, and check to see the proper 3 blocks arrived. */
   @Test
   void sendSomeBlocks() throws InterruptedException {
     // calcualte what port to put this server on
@@ -62,17 +57,17 @@ public class CharlotteNodeClientTest {
 
     // populate the stack of blocks we expect to receive
     final BlockingQueue<Block> receivedBlocks = new ArrayBlockingQueue<Block>(3);
-
-    // create a CharlotteNodeService that queues the blocks received
-    final CharlotteNodeService service = new CharlotteNodeService(
+    final Config config = (
         new Config(new JsonConfig("src/test/resources/private-key.pem",
                                   "localhost",
                                   singletonMap("localhost",
                                     new JsonContact("src/test/resources/server.pem", "localhost", port))
                                  ),
               Paths.get(".")
-            )
-        ) {
+            ));
+
+    // create a CharlotteNodeService that queues the blocks received
+    final CharlotteNodeService service = new CharlotteNodeService(config) {
         @Override public Iterable<SendBlocksResponse> onSendBlocksInput(Block block) {
           try {
             receivedBlocks.put(block);
@@ -91,7 +86,7 @@ public class CharlotteNodeClientTest {
 
     // create a client, and send the expected sequence of blocks
     final CharlotteNodeClient client = (new Contact(
-        new JsonContact("src/test/resources/server.pem", "localhost", port), Paths.get("."))).
+        new JsonContact("src/test/resources/server.pem", "localhost", port), Paths.get("."), config)).
       getCharlotteNodeClient();
     client.sendBlock(Block.newBuilder().setStr("block 0").build());
     client.sendBlock(Block.newBuilder().setStr("block 1").build());
@@ -107,7 +102,7 @@ public class CharlotteNodeClientTest {
 
     // check to ensure no other blocks somehow got queued
     assertTrue(receivedBlocks.isEmpty(), "no further blocks should be expected");
-    client.shutdown();
-    charlotteNode.stop();
+    // client.shutdown();
+    // charlotteNode.stop();
   }
 }

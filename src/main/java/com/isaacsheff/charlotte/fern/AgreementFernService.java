@@ -16,7 +16,6 @@ import com.isaacsheff.charlotte.proto.Reference;
 import com.isaacsheff.charlotte.proto.RequestIntegrityAttestationInput;
 import com.isaacsheff.charlotte.proto.RequestIntegrityAttestationResponse;
 
-import io.grpc.ServerBuilder;
 import io.grpc.stub.StreamObserver;
 
 import java.nio.file.Path;
@@ -26,9 +25,11 @@ import java.util.logging.Logger;
 
 /**
  * A Fern server that runs agreement.
- * That is to say: this Fern server will, when asked, commit to a block in a slot on a chain, and never contradict itself.
- * If you ask it for commitments to the same slot with different blocks, it will keep referring you to the same attestation,
- *  where it commits to one block.
+ * That is to say: this Fern server will, when asked, commit to a block
+ * in a slot on a chain, and never contradict itself.
+ * If you ask it for commitments to the same slot with different blocks,
+ * it will keep referring you to the same attestation, where it commits
+ * to one block.
  *
  * <p>
  * Can be run as a main class with: AgreementFernService configFileName.yaml
@@ -65,8 +66,10 @@ public class AgreementFernService extends FernImplBase {
   private final CharlotteNodeService node;
 
   /**
-   * Run as a main class with an arg specifying a config file name to run a Fern Agreement server.
-   * creates and runs a new CharlotteNode which runs a Wilbur Service and a CharlotteNodeService, in a new thread.
+   * Run as a main class with an arg specifying a config file name to
+   * run a Fern Agreement server.
+   * Creates and runs a new CharlotteNode which runs a Wilbur Service
+   * and a CharlotteNodeService, in a new thread.
    * @param args command line args. args[0] should be the name of the config file
    */
   public static void main(String[] args) throws InterruptedException{
@@ -94,9 +97,7 @@ public class AgreementFernService extends FernImplBase {
    * @return a new CharlotteNode which runs a Fern Service and a CharlotteNodeService
    */
   public static CharlotteNode getFernNode(final CharlotteNodeService node) {
-    return new CharlotteNode(node,
-                             ServerBuilder.forPort(node.getConfig().getPort()).addService(newFern(node)),
-                             node.getConfig().getPort());
+    return new CharlotteNode(node, newFern(node));
   }
 
   /**
@@ -144,7 +145,7 @@ public class AgreementFernService extends FernImplBase {
    * For now, we just check that this ChainSlot actually has a block hash in it.
    * @return an error string if it's unacceptable, null if it's acceptable
    */
-  public String validPolicy(IntegrityPolicy policy) {
+  public String validPolicy(final IntegrityPolicy policy) {
     if (!policy.getFillInTheBlank().getSignedChainSlot().getChainSlot().getBlock().hasHash()) {
       return "The ChainSlot Block reference in this RequestIntegrityAttestationInput doesn't have a Hash.";
     }
@@ -191,7 +192,8 @@ public class AgreementFernService extends FernImplBase {
   }
 
   /**
-   * If we've just got a new request, and have just created (and broadcast) an attestation which fulfills that request.
+   * If we've just got a new request, and have just created (and
+   * broadcast) an attestation which fulfills that request.
    * This response will be remembered, so it must not be an error.
    * We need to make a RequestIntegrityAttestationResponse to tell the client about the attestation.
    * @param block the Integrity Attestation
@@ -224,8 +226,9 @@ public class AgreementFernService extends FernImplBase {
   }
 
   /**
-   * Checks to see if all is well with this request, then checks if a conflicting request has already been answered,
-   *  and if not, makes a new Integrity Attestation.
+   * Checks to see if all is well with this request, then checks if a
+   * conflicting request has already been answered, and if not, makes a
+   * new Integrity Attestation.
    * This only handles ChainedSlot type Integrity Policies.
    * @param request details what we want attested to
    * @return RequestIntegrityAttestationResponse featues an error message or a reference to an attestation.

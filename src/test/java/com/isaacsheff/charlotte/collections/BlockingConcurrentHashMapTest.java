@@ -18,10 +18,7 @@ class BlockingConcurrentHashMapTest {
   /** An example BlockingConcurrentHashMap used in each test. */
   private BlockingMap<String, String> testMap;
 
-
-  /**
-   * Make a blank map before running each test in this class.
-   */
+  /** Make a blank map before running each test in this class. */
   @BeforeEach
   void init() {
     testMap = new BlockingConcurrentHashMap<String, String>();

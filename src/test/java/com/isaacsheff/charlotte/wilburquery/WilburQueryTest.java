@@ -142,8 +142,8 @@ public class WilburQueryTest {
    */
   @AfterAll
   static void shutdown() throws InterruptedException {
-    client.shutdown();
-    node.stop();
+    // client.shutdown();
+    // node.stop();
   }
 
   /**

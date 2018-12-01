@@ -34,19 +34,13 @@ import io.grpc.stub.StreamObserver;
  * @author Isaac Sheff
  */
 public class WilburClient {
-  /**
-   * Use logger for logging events on this class.
-   */
+  /** Use logger for logging events on this class. */
   private static final Logger logger = Logger.getLogger(WilburClient.class.getName());
 
-  /**
-   * The channel through which we communicate to the server.
-   */
+  /** The channel through which we communicate to the server. */
   private final ManagedChannel channel;
 
-  /**
-   * The stub which sends messages to the Wilbur service within the server (this is a gRPC thing).
-   */
+  /** The stub which sends messages to the Wilbur service within the server (this is a gRPC thing). */
   private final WilburStub asyncStub;
 
   /**
@@ -61,9 +55,7 @@ public class WilburClient {
    */
   private final Contact contact;
 
-  /**
-   * The local CharlotteNodeService we expect to receive blocks.
-   */
+  /** The local CharlotteNodeService we expect to receive blocks. */
   private final CharlotteNodeService localService;
 
 
@@ -177,7 +169,7 @@ public class WilburClient {
    * @return the availability attestation block if it's valid and covers all the references, null otherwise.
    */
   public Block checkAvailabilityAttestation(final Iterable<Reference> references,
-                 final RequestAvailabilityAttestationResponse response) {
+                                            final RequestAvailabilityAttestationResponse response) {
     final Block availabilityAttestationBlock = checkAvailabilityAttestation(response);
     if (availabilityAttestationBlock == null) {
       return null;
@@ -470,5 +462,4 @@ public class WilburClient {
   public RequestAvailabilityAttestationResponse requestAvailabilityAttestation(final Block request) {
     return requestAvailabilityAttestation(sha3Hash(request));
   }
-
 }

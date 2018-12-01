@@ -59,9 +59,7 @@ import com.isaacsheff.charlotte.yaml.Contact;
  * @author Isaac Sheff
  */
 public class GitSimClient extends AgreementFernClient {
-  /**
-   * Use logger for logging events on this class.
-   */
+  /** Use logger for logging events on this class. */
   private static final Logger logger = Logger.getLogger(GitSimClient.class.getName());
 
   /**
@@ -127,7 +125,8 @@ public class GitSimClient extends AgreementFernClient {
    * @param branch the branch on the fern server
    * @return the input object to be sent to the Fern server.
    */
-  public RequestIntegrityAttestationInput generateCommitToBranchRequest(final Reference commit, final String branch) {
+  public RequestIntegrityAttestationInput generateCommitToBranchRequest(final Reference commit,
+                                                                        final String branch) {
     return (
       RequestIntegrityAttestationInput.newBuilder().setPolicy(
         IntegrityPolicy.newBuilder().setFillInTheBlank(

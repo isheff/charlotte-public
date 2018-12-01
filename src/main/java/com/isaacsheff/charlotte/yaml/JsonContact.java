@@ -12,19 +12,13 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  */
 public class JsonContact {
 
-  /**
-   * The filename of the x509 certificate.
-   */
+  /** The filename of the x509 certificate. */
   @JsonProperty("x509") private final String x509;
 
-  /**
-   * Some kind of identifier for the server, maybe an IP, maybe a DNS thing, whatever.
-   */
+  /** Some kind of identifier for the server, maybe an IP, maybe a DNS thing, whatever. */
   @JsonProperty("url") private final String url;
    
-  /**
-   * The TCP port we should try and call this server on 
-   */
+  /** The TCP port we should try and call this server on */
   @JsonProperty("port") private final int port;
 
   /**
@@ -46,19 +40,12 @@ public class JsonContact {
     this.x509 = x509;
   }
 
-  /**
-   * @return the filename of the x509 certificate of this Contact, relative to the config file.
-   */
+  /** @return the filename of the x509 certificate of this Contact, relative to the config file. */
   @JsonProperty("x509") public String getX509() {return this.x509;}
 
-  /**
-   * @return the Url or ip address or whatever of this contact
-   */
+  /** @return the Url or ip address or whatever of this contact */
   @JsonProperty("url") public String getUrl() {return this.url;}
 
-  /**
-   * @return the TCP port of this contact
-   */
+  /** @return the TCP port of this contact */
   @JsonProperty("port") public int getPort() {return this.port;}
-
 }

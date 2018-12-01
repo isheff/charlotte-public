@@ -108,7 +108,7 @@ public class AgreementChainFernClient {
    *  FillInTheBlank for each Fern server.
    * @param input the RequestIntegrityAttestationInput to be sent to each Fern server.
    */
-  public void broadcast(RequestIntegrityAttestationInput input) {
+  public void broadcast(final RequestIntegrityAttestationInput input) {
     for (AgreementChainClientPerServer handle : getHandles().values()) {
       handle.queueMessage(changeCryptoId(input, handle.contact.getCryptoId()));
     }
@@ -119,7 +119,7 @@ public class AgreementChainFernClient {
    * @param destination the CryptoId of the Fern Server
    * @param input the RequestIntegrityAttestationInput to be sent to each Fern server.
    */
-  public void send(CryptoId destination, RequestIntegrityAttestationInput input) {
+  public void send(final CryptoId destination, final RequestIntegrityAttestationInput input) {
     logger.info("sending request: " + input);
     getHandles().get(destination).queueMessage(input);
   }
@@ -132,7 +132,8 @@ public class AgreementChainFernClient {
    * @param attestation the Reference to the Attestation we want to add
    * @return the Reference.Builder with the reference added to its attestations field.
    */
-  public Reference.Builder addIntegrityAttestation(Reference.Builder builder, Reference attestation) {
+  public Reference.Builder addIntegrityAttestation(final Reference.Builder builder,
+                                                   final Reference attestation) {
     for (Reference reference : builder.getIntegrityAttestationsList()) {
       if (reference.getHash().equals(attestation.getHash())) {
         return builder;
@@ -147,7 +148,7 @@ public class AgreementChainFernClient {
    * @param builder the Reference.Builder representing the reference
    * @return builder, but with all known integrity attestations added. 
    */
-  public Reference.Builder addIntegrityAttestations(Reference.Builder builder) {
+  public Reference.Builder addIntegrityAttestations(final Reference.Builder builder) {
     final Set<Hash> knownHashes = knownIntegrityAttestations.get(builder.getHash());
     if (null == knownHashes) {
       return builder;
@@ -164,7 +165,7 @@ public class AgreementChainFernClient {
    * @return builder, but with the parent reference fleshed out with all known integrity attestations.
    */
   public RequestIntegrityAttestationInput.Builder addIntegrityAttestationsParent(
-           RequestIntegrityAttestationInput.Builder builder) {
+           final RequestIntegrityAttestationInput.Builder builder) {
     addIntegrityAttestations(builder.getPolicyBuilder().getFillInTheBlankBuilder().getSignedChainSlotBuilder().
                               getChainSlotBuilder().getParentBuilder());
     return builder;
@@ -178,7 +179,7 @@ public class AgreementChainFernClient {
    * @param destination the cryptoId of the relevant Fern server
    * @param input the RequestIntegrityAttestationInput (parent reference will be changed to add attestations)
    */
-  public void sendWhenReady(CryptoId destination, RequestIntegrityAttestationInput input) {
+  public void sendWhenReady(final CryptoId destination, final RequestIntegrityAttestationInput input) {
     // if it's a root block
     if (input.getPolicy().getFillInTheBlank().getSignedChainSlot().getChainSlot().getSlot() <= 0) {
       send(destination, input);
@@ -200,8 +201,8 @@ public class AgreementChainFernClient {
    * @param cryptoid the destination cryptid
    * @return input altered to use the cryptoid.
    */
-  public static RequestIntegrityAttestationInput changeCryptoId(RequestIntegrityAttestationInput input,
-                                                                CryptoId cryptoid) {
+  public static RequestIntegrityAttestationInput changeCryptoId(final RequestIntegrityAttestationInput input,
+                                                                final CryptoId cryptoid) {
     RequestIntegrityAttestationInput.Builder builder = RequestIntegrityAttestationInput.newBuilder(input);
     builder.getPolicyBuilder().getFillInTheBlankBuilder().getSignedChainSlotBuilder().getSignatureBuilder().
             setCryptoId(cryptoid);
@@ -216,7 +217,7 @@ public class AgreementChainFernClient {
    * @param input the RequestIntegrityAttestationInput (parent reference will be changed to add
    *  attestations, and cryptoId will be changed to reflect each destination)
    */
-  public void broadcastWhenReady(RequestIntegrityAttestationInput input) {
+  public void broadcastWhenReady(final RequestIntegrityAttestationInput input) {
     for (CryptoId cryptoId : getHandles().keySet()) {
       sendWhenReady(cryptoId, changeCryptoId(input, cryptoId));
     }
@@ -229,7 +230,7 @@ public class AgreementChainFernClient {
    * @param input the RequestIntegrityAttestationInput  with possibly extraneous fields
    * @return a canonicalized form featuring only Hashes for block and root, slot number, and cryptoId.
    */
-  public static RequestIntegrityAttestationInput stripRequest(RequestIntegrityAttestationInput input) {
+  public static RequestIntegrityAttestationInput stripRequest(final RequestIntegrityAttestationInput input) {
     return RequestIntegrityAttestationInput.newBuilder().setPolicy(
              IntegrityPolicy.newBuilder().setFillInTheBlank(
                IntegrityAttestation.newBuilder().setSignedChainSlot(
@@ -313,7 +314,7 @@ public class AgreementChainFernClient {
      * @param chainClient the AgreementChain Client of which this is a part 
      * @param contact represents the server we're talking to 
      */
-    private AgreementChainClientPerServer(AgreementChainFernClient chainClient, Contact contact) {
+    private AgreementChainClientPerServer(final AgreementChainFernClient chainClient, final Contact contact) {
       this.contact = contact;
       this.chainClient = chainClient;
       client = null;
@@ -328,7 +329,7 @@ public class AgreementChainFernClient {
     private BlockingQueue<RequestIntegrityAttestationInput> getQueue() {return queue;}
 
     /** @param input the RequestIntegrityAttestationInput to be added to the queue (will be sent over the wire) */
-    public void queueMessage(RequestIntegrityAttestationInput input) {
+    public void queueMessage(final RequestIntegrityAttestationInput input) {
       try {
         getQueue().put(input);
       } catch (InterruptedException e) {
@@ -376,10 +377,8 @@ public class AgreementChainFernClient {
      * @param handle  The handle for sending to the server that originated this response 
      * @param request the request for which this is a response
      */
-    public AgreementChainClientCallBack (
-      final AgreementChainClientPerServer handle,
-      final RequestIntegrityAttestationInput request
-        ) {
+    public AgreementChainClientCallBack (final AgreementChainClientPerServer handle,
+                                         final RequestIntegrityAttestationInput request) {
       this.handle = handle;
       this.request = request;
       finishLatch = new CountDownLatch(1);
@@ -391,7 +390,7 @@ public class AgreementChainFernClient {
      * @param response the newly arrived RequestIntegrityAttestationResponse from the wire.
      */
     @Override
-    public void onNext(RequestIntegrityAttestationResponse response) {
+    public void onNext(final RequestIntegrityAttestationResponse response) {
       handle.getChainClient().onRequestIntegrityAttestationResponse(response, handle, request);
     }
 
@@ -401,7 +400,7 @@ public class AgreementChainFernClient {
      * @param t the Throwable from gRPC representing whatever went wrong.
      */
     @Override
-    public void onError(Throwable t) {
+    public void onError(final Throwable t) {
       logger.log(Level.WARNING, "RequestIntegrityAttestation Failed (will retry): ", t);
       try {
         TimeUnit.SECONDS.sleep(5); // wait 5 seconds and try again.
@@ -439,9 +438,9 @@ public class AgreementChainFernClient {
      * @param destination  the CryptoId of the destination Fern server 
      * @param input  the request to be sent 
      */
-    public SendWhenReady(AgreementChainFernClient client,
-                         CryptoId destination,
-                         RequestIntegrityAttestationInput input) {
+    public SendWhenReady(final AgreementChainFernClient client,
+                         final CryptoId destination,
+                         final RequestIntegrityAttestationInput input) {
       this.input = input;
       this.client = client;
       this.destination = destination;
