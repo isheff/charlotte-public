@@ -192,8 +192,9 @@ public class Contact {
     return getChannelBuilder(1000000000l /** 1 second */).
              withOption(ChannelOption.SO_REUSEADDR, true).
              useTransportSecurity().
-             disableRetry().
+//             disableRetry().
              sslContext(getSslContext()).
+             maxInboundMessageSize(Integer.MAX_VALUE).
              build();
   }
 
@@ -211,8 +212,9 @@ public class Contact {
     return getChannelBuilder(delayInterval).
              withOption(ChannelOption.SO_REUSEADDR, true).
              useTransportSecurity().
-             disableRetry().
+//             disableRetry().
              sslContext(getSslContext()).
+             maxInboundMessageSize(Integer.MAX_VALUE).
              build();
   }
 
