@@ -12,25 +12,49 @@ import java.util.stream.Collectors;
 
 public class QuorumConfig {
 
+    /* The name of this quorum config TODO: in the future, we might want this to be a reference to a ChainName.quorumName format */
+    @JsonProperty("name")
+    String name;
 
+    /* Whether this will be used as the main config of the quorum */
+    @JsonProperty("main")
+    boolean main;
+
+    /* Participant nodes in JsonContact format */
     @JsonProperty("participants")
     List<JsonContact> participants;
 
-    public QuorumConfig(@JsonProperty("participants") List<JsonContact> participants) {
+    @JsonProperty("specs")
+    List<HetconsObserverQuorum.Spec> specs;
+
+
+    public QuorumConfig(@JsonProperty("name") String name,
+                        @JsonProperty("main") boolean main,
+                        @JsonProperty("specs") List<HetconsObserverQuorum.Spec> specs,
+                        @JsonProperty("participants") List<JsonContact> participants) {
         this.participants = participants;
+        this.main = main;
+        this.name = name;
+        this.specs = specs;
+    }
+
+
+    /**
+     * Parse and return this config file to a HetconsObserverQuorum Object.
+     * @param owner the owner(Observer) of current quorum
+     * @param path the directory that contains the key-pairs
+     * @return a HetconsObserverQuorum that parsed from config file
+     */
+    public HetconsObserverQuorum toHetconsObserverQuorum(CryptoId owner, Path path) {
+        return HetconsObserverQuorum.newBuilder()
+                .setOwner(owner)
+                .addAllSpecs(specs)
+                .addAllMemebers(participants.stream().map(jsonContact -> new Contact(jsonContact, path, null).getCryptoId())
+                        .collect(Collectors.toList()))
+                .build();
     }
 
     public List<JsonContact> getParticipants() {
         return participants;
-    }
-
-    public HetconsObserverQuorum toHetconsObserverQuorum(CryptoId owner, Path path) {
-        return HetconsObserverQuorum.newBuilder()
-                .setOwner(owner)
-//                .setSize(participants.size())
-                .addAllMemebers(participants.stream().map(jsonContact -> {
-                    return new Contact(jsonContact, path, null).getCryptoId();
-                }).collect(Collectors.toList()))
-                .build();
     }
 }

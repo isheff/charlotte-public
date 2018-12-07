@@ -272,8 +272,17 @@ message HetconsProposal {
 
 
 message HetconsObserverQuorum {
+
+  message Spec {
+    string base = 1;
+    int32 start = 2;
+    int32 end = 3;
+    int32 size = 4;
+  }
+
   charlotte.CryptoId owner = 1;
   repeated charlotte.CryptoId memebers = 3;
+  repeated Spec specs = 4;
   // TODO: fault type?
 }
 

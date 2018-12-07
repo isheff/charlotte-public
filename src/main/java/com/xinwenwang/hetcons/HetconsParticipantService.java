@@ -15,15 +15,13 @@ import java.util.logging.StreamHandler;
 
 public class HetconsParticipantService extends CharlotteNodeService {
 
-    // private static final Logger logger = Logger.getLogger(HetconsParticipantService.class.getName());
     private static final Logger logger = Logger.getLogger(CharlotteNodeService.class.getName());
 
-    // Map from observer crypto id to observers
+   /*  Map from observer crypto id to observers */
     private HashMap<String, HetconsObserverStatus> observers;
 
+    /* the pool of threads to handle incoming blocks for each observer */
     private  ThreadPoolExecutor executorService;
-
-    private final Integer arrivingBlockLock = 0;
 
 
     public HetconsParticipantService(Config config) {
@@ -36,32 +34,24 @@ public class HetconsParticipantService extends CharlotteNodeService {
 //        logger.addHandler(sh);
     }
 
+    /**
+     * Multiplexing incoming blocks to its handler by block types
+     * @param block the newly arrived block
+     * @return a empty set if no errors. Otherwise, a collection of error messages in SendBlocksResponse
+     */
     public Iterable<SendBlocksResponse> onSendBlocksInput(Block block) {
-//        if (!input.hasBlock()) {
-//            //TODO: handle error
-//            return super.onSendBlocksInput(input.getBlock());
-//        }
-//
-//        Block block = input.getBlock();
 
         logger.info("Block arrived " + block.getHetconsMessage().getType());
-
-//        synchronized (this) {
-
-
-//        }
 
         if (!block.hasHetconsMessage()) {
             //TODO: handle error
             return Collections.emptySet();
         }
 
-//        synchronized (arrivingBlockLock) {
-            if (!storeNewBlock(block)) {
-                logger.info("Discard duplicated block " + block.getHetconsMessage().getType());
-                return Collections.emptySet();
-            }
-//        }
+        if (!storeNewBlock(block)) {
+            logger.info("Discard duplicated block " + block.getHetconsMessage().getType());
+            return Collections.emptySet();
+        }
 
         HetconsMessage hetconsMessage = block.getHetconsMessage();
 
@@ -156,9 +146,8 @@ public class HetconsParticipantService extends CharlotteNodeService {
         observerGroup.getObserversList().forEach(o -> {
             HetconsObserverStatus observerStatus = observers.get(HetconsUtil.cryptoIdToString(o.getId()));
             executorService.submit(() -> {
-                observerStatus.receive1a(inputBlock, proposal.getTimeout());
+                observerStatus.receive1a(inputBlock, proposal.getTimeout(), o.getQuorumsList());
                 logger.info("RETURN FROM RECEIVE1A");
-                return;
             });
         });
         logger.info("# of threads in pool is " + executorService.getActiveCount() + "/" + executorService.getCompletedTaskCount());
