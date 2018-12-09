@@ -15,6 +15,7 @@ import com.isaacsheff.charlotte.proto.*;
 import com.isaacsheff.charlotte.yaml.Config;
 
 import com.xinwenwang.hetcons.HetconsParticipantService;
+import com.xinwenwang.hetcons.HetconsUtil;
 import com.xinwenwang.hetcons.config.HetconsConfig;
 
 /**
@@ -91,8 +92,8 @@ public class HetconsParticipantNodeForFern extends HetconsParticipantService {
   @Override
   protected void onDecision(final HetconsObserverQuorum quora,
                             final Collection<Reference> quorum2b) {
-
-    logger.info("Consensus Decided");
+    HetconsValue value = HetconsUtil.get2bValue(getBlock(quorum2b.iterator().next()).getHetconsMessage().getM2B(), this);
+    logger.info("Consensus Decided on value " + value.getNum());
     getFern().observersDecide(quora, quorum2b);
   }
 
