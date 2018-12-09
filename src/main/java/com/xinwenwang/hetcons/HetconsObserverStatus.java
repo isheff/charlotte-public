@@ -68,7 +68,8 @@ public class HetconsObserverStatus {
         HetconsProposalStatus incomingStatus = new HetconsProposalStatus(HetconsConsensusStage.Proposed,
                 proposal,
                 quorums.get(chainName),
-                block.getHetconsMessage().getObserverGroupReferecne());
+                block.getHetconsMessage().getObserverGroupReferecne(),
+                quorums);
         incomingStatus.setChainIDs(chainIDs);
         boolean hasPrev = null != proposalStatus.putIfAbsent(proposalStatusID, incomingStatus);
         HetconsProposalStatus currentStatus = proposalStatus.get(proposalStatusID);

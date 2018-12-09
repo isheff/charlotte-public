@@ -49,11 +49,13 @@ public class HetconsProposalStatus {
     public HetconsProposalStatus(HetconsConsensusStage stage,
                                  HetconsProposal proposal,
                                  HetconsQuorumStatus quorumStatus,
-                                 Reference observerGroupReference) {
+                                 Reference observerGroupReference,
+                                 Map<String, HetconsQuorumStatus> globalStatus) {
         this.stage = stage;
         this.proposals = new LinkedList<HetconsProposal>();
         this.quorums = new HashMap<>();
         this.participantStatuses = new HashMap<>();
+        this.globalStatus = globalStatus;
         if (proposal != null)
             proposals.add(proposal);
         this.currentQuorum = quorumStatus;
@@ -408,8 +410,8 @@ public class HetconsProposalStatus {
                 }
             } else {
                 for (HetconsObserverQuorum.Spec spec : q.getSpecsList()) {
-                    String chainName = spec.getBase().split(".")[0];
-                    String quorumName = spec.getBase().split(".")[1];
+                    String chainName = spec.getBase().split("\\.")[0];
+                    String quorumName = spec.getBase().split("\\.")[1];
                     if (chainName.length() == 0)
                         chainName = currentQuorum.getChainName();
                     subQuorumStatus.add(new QuorumStatus(globalStatus.get(chainName).getSubQuorum(quorumName)));
@@ -420,8 +422,10 @@ public class HetconsProposalStatus {
         boolean add1b(ParticipantStatus p) {
             if (!duplicateCheck.add("m1b" +HetconsUtil.cryptoIdToString(p.id)))
                 return false;
-            if (subQuorumStatus.size() == 1 && !participants.isEmpty())
-                m1bs.add(p);
+            if (subQuorumStatus.size() == 1 && !participants.isEmpty()) {
+                if (participants.contains(p.id))
+                    m1bs.add(p);
+            }
             else
                 subQuorumStatus.forEach(s -> s.add1b(p));
             return true;
@@ -430,8 +434,10 @@ public class HetconsProposalStatus {
         boolean add2b(ParticipantStatus p) {
             if (!duplicateCheck.add("m2b" +HetconsUtil.cryptoIdToString(p.id)))
                 return false;
-            if (subQuorumStatus.size() == 1 && !participants.isEmpty())
-                m2bs.add(p);
+            if (subQuorumStatus.size() == 1 && !participants.isEmpty()) {
+                if (participants.contains(p.id))
+                    m2bs.add(p);
+            }
             else
                 subQuorumStatus.forEach(s -> s.add2b(p));
             return true;
@@ -461,7 +467,7 @@ public class HetconsProposalStatus {
 
         Set<CryptoId> getAllParticipants() {
            if (subQuorumStatus.size() == 1 && !participants.isEmpty()) {
-               return participants;
+               return new HashSet<>(participants);
            } else {
                return subQuorumStatus.stream().map(QuorumStatus::getAllParticipants).reduce((a, e) -> {
                  a.addAll(e);
@@ -472,7 +478,7 @@ public class HetconsProposalStatus {
 
         public Set<ParticipantStatus> getQuorumM1bs() {
             if (!participants.isEmpty() && subQuorumStatus.size() == 1)
-                return m1bs;
+                return new HashSet<>(m1bs);
             else
                 return subQuorumStatus.stream().map(QuorumStatus::getQuorumM1bs).reduce((a, e) -> {
                     a.addAll(e);
@@ -482,7 +488,7 @@ public class HetconsProposalStatus {
 
         public Set<ParticipantStatus> getQuorumM2bs() {
             if (!participants.isEmpty() && subQuorumStatus.size() == 1)
-                return m2bs;
+                return new HashSet<>(m2bs);
             else
                 return subQuorumStatus.stream().map(QuorumStatus::getQuorumM2bs).reduce((a, e) -> {
                     a.addAll(e);

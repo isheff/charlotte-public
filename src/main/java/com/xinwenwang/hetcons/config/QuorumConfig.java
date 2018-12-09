@@ -7,6 +7,7 @@ import com.isaacsheff.charlotte.yaml.Contact;
 import com.isaacsheff.charlotte.yaml.JsonContact;
 
 import java.nio.file.Path;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -52,6 +53,7 @@ public class QuorumConfig {
      * @return a HetconsObserverQuorum that parsed from config file
      */
     public HetconsObserverQuorum toHetconsObserverQuorum(CryptoId owner, Path path) {
+        participants = participants == null ? Collections.emptyList() : participants;
         return HetconsObserverQuorum.newBuilder()
                 .setOwner(owner)
                 .addAllSpecs(specs.stream().map(QuorumConfig::apply).collect(Collectors.toList()))
