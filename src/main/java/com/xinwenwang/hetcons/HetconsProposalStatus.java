@@ -50,7 +50,8 @@ public class HetconsProposalStatus {
                                  HetconsProposal proposal,
                                  HetconsQuorumStatus quorumStatus,
                                  Reference observerGroupReference,
-                                 Map<String, HetconsQuorumStatus> globalStatus) {
+                                 Map<String, HetconsQuorumStatus> globalStatus,
+                                 HetconsParticipantService service) {
         this.stage = stage;
         this.proposals = new LinkedList<HetconsProposal>();
         this.quorums = new HashMap<>();
@@ -68,6 +69,7 @@ public class HetconsProposalStatus {
         isProposer = false;
         proposalLock = new ReentrantReadWriteLock();
         participantStatusLock = new ReentrantReadWriteLock();
+        this.service = service;
 
     }
 
@@ -327,6 +329,16 @@ public class HetconsProposalStatus {
 
     public Set<CryptoId> getParticipants() {
         return allParticipants;
+    }
+
+    public boolean verify2b(HetconsMessage2ab message2ab) {
+        QuorumStatus quorumStatus = new QuorumStatus(currentQuorum.getMainQuorum());
+        message2ab.getQuorumOf1Bs().getBlockHashesList().forEach(e -> {
+            ParticipantStatus s = new ParticipantStatus(service.getBlock(e).getHetconsMessage().getSig().getCryptoId());
+            s.quorumStatuses.add(quorumStatus);
+            s.addM1b(e);
+        });
+        return quorumStatus.isEnough1b();
     }
 
     class ParticipantStatus {

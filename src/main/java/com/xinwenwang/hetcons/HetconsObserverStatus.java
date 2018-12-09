@@ -69,7 +69,8 @@ public class HetconsObserverStatus {
                 proposal,
                 quorums.get(chainName),
                 block.getHetconsMessage().getObserverGroupReferecne(),
-                quorums);
+                quorums,
+                service);
         incomingStatus.setChainIDs(chainIDs);
         boolean hasPrev = null != proposalStatus.putIfAbsent(proposalStatusID, incomingStatus);
         HetconsProposalStatus currentStatus = proposalStatus.get(proposalStatusID);
@@ -383,11 +384,15 @@ public class HetconsObserverStatus {
         if (status == null) {
             return;
         }
+
 //        if (status == null || status.getStage() == HetconsConsensusStage.ConsensusDecided)
 
         for (Reference reference : block.getHetconsMessage().getM2B().getQuorumOf1Bs().getBlockHashesList()) {
             service.getBlock(reference);
         }
+
+        if (!status.verify2b(block.getHetconsMessage().getM2B()))
+            return;
 
         logger.info(name + ":"+ "Got M2B: value is " + HetconsUtil.get2bValue(block.getHetconsMessage().getM2B(), service));
         if (status.getCurrentProposal().getBallot().getBallotSequence().compareTo(
