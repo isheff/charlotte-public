@@ -8,16 +8,19 @@ import com.isaacsheff.charlotte.proto.*;
 import java.sql.Ref;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
+
 import java.util.concurrent.Future;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 public class HetconsProposalStatus {
 
 
     private static final int maxTimeOut = 10 * 1000;
     private HashMap<Integer, QuorumStatus> quorums;
+    private QuorumStatus activeQuorum;
     private HashMap<String, ParticipantStatus> participantStatuses;
     private ReentrantReadWriteLock participantStatusLock;
     private ReentrantReadWriteLock proposalLock;
@@ -30,7 +33,8 @@ public class HetconsProposalStatus {
     private long consensusTimeout;
     private String ConsensusID;
     private HetconsParticipantService service;
-    private List<List<CryptoId>> members;
+    private HetconsQuorumStatus currentQuorum;
+    private Map<String, HetconsQuorumStatus> globalStatus;
     private Reference observerGroupReference;
     private Boolean hasDecided;
     private RoundStatus roundStatus;
@@ -38,12 +42,13 @@ public class HetconsProposalStatus {
     private List<Reference> decidedQuorum;
     private HetconsValue decidedValue;
     private ExecutorService timer;
+    private Set<CryptoId> allParticipants;
 
     private static final Logger logger = Logger.getLogger(CharlotteNodeService.class.getName());
 
     public HetconsProposalStatus(HetconsConsensusStage stage,
                                  HetconsProposal proposal,
-                                 List<List<CryptoId>> members,
+                                 HetconsQuorumStatus quorumStatus,
                                  Reference observerGroupReference) {
         this.stage = stage;
         this.proposals = new LinkedList<HetconsProposal>();
@@ -51,10 +56,10 @@ public class HetconsProposalStatus {
         this.participantStatuses = new HashMap<>();
         if (proposal != null)
             proposals.add(proposal);
-        this.members = members;
+        this.currentQuorum = quorumStatus;
         this.observerGroupReference = observerGroupReference;
-        initQuorum(members);
-        initParticipantStatues(members);
+        initQuorum(currentQuorum);
+        initParticipantStatues(activeQuorum);
         consensusTimeout = proposal.getTimeout();
         hasDecided = false;
         roundStatus = new RoundStatus();
@@ -103,8 +108,8 @@ public class HetconsProposalStatus {
         try {
             participantStatusLock.writeLock().lock();
             this.participantStatuses = new HashMap<>();
-            initQuorum(members);
-            initParticipantStatues(members);
+            initQuorum(currentQuorum);
+            initParticipantStatues(activeQuorum);
         } finally {
             participantStatusLock.writeLock().unlock();
         }
@@ -231,22 +236,19 @@ public class HetconsProposalStatus {
 
     /** -----------------------version 2 ----------------------------------*/
 
-    public void initQuorum(List<List<CryptoId>> q) {
-
-        for (int i = 0; i < q.size(); i++) {
-            quorums.put(i, new QuorumStatus(q.get(i)));
-        }
+    public void initQuorum(HetconsQuorumStatus q) {
+        activeQuorum = new QuorumStatus(q.getMainQuorum());
+        allParticipants = activeQuorum.getAllParticipants();
     }
 
-    public void initParticipantStatues(List<List<CryptoId>> qs) {
-        for (int i = 0; i < qs.size(); i++) {
-            for (CryptoId m : qs.get(i)) {
-                participantStatuses.putIfAbsent(HetconsUtil.cryptoIdToString(m),
-                        new ParticipantStatus(m));
-                ParticipantStatus s = participantStatuses.get(HetconsUtil.cryptoIdToString(m));
-                s.addQuorum(quorums.get(i));
-            }
-        }
+    public void initParticipantStatues(QuorumStatus qs) {
+        qs.getAllParticipants().forEach( m -> {
+            participantStatuses.putIfAbsent(HetconsUtil.cryptoIdToString(m),
+                    new ParticipantStatus(m));
+            ParticipantStatus s = participantStatuses.get(HetconsUtil.cryptoIdToString(m));
+            s.addQuorum(qs);
+                }
+        );
     }
 
     public void updateRecent1b(boolean has2A, HetconsValue value, HetconsBallot ballot) {
@@ -267,17 +269,20 @@ public class HetconsProposalStatus {
 
     public List<Reference> receive1b(CryptoId id, Reference ref1b) {
         try{
+            QuorumStatus q;
             participantStatusLock.readLock().lock();
             ParticipantStatus s = participantStatuses.get(HetconsUtil.cryptoIdToString(id));
             if (s == null)
                 return null;
-            if (!s.addM1b(ref1b))
-                return null;
-            QuorumStatus q = s.check1bQuorum();
+            synchronized (activeQuorum.m1bs) {
+                if (!s.addM1b(ref1b))
+                    return null;
+                q = s.check1bQuorum();
+            }
             if (q != null) {
                 List<Reference> q1b = new ArrayList<>();
-                for (String p : q.participants) {
-                    q1b.add(this.participantStatuses.get(p).m1bRef);
+                for (ParticipantStatus p : q.getQuorumM1bs()) {
+                    q1b.add(p.m1bRef);
                 }
                 return q1b;
             }
@@ -289,20 +294,23 @@ public class HetconsProposalStatus {
 
     public HashMap<String, Object> receive2b(CryptoId id, Reference ref2b) {
         try{
+            QuorumStatus q;
             participantStatusLock.readLock().lock();
             ParticipantStatus s = participantStatuses.get(HetconsUtil.cryptoIdToString(id));
             if (s == null) {
                 return null;
             }
-            if(!s.addM2b(ref2b))
-                return null;
-            QuorumStatus q = s.check2bQuorum();
+            synchronized (activeQuorum.m2bs) {
+                if(!s.addM2b(ref2b))
+                    return null;
+                q = s.check2bQuorum();
+            }
             if (q != null) {
                 List<CryptoId> qp = new ArrayList<>();
                 List<Reference> q2b = new ArrayList<>();
-                for (String p : q.participants) {
-                    q2b.add(this.participantStatuses.get(p).m2bRef);
-                    qp.add(this.participantStatuses.get(p).id);
+                for (ParticipantStatus p : q.getQuorumM2bs()) {
+                    q2b.add(p.m2bRef);
+                    qp.add(p.id);
                 }
                 HashMap<String, Object> ret = new HashMap<>();
                 ret.put("references", q2b);
@@ -313,6 +321,10 @@ public class HetconsProposalStatus {
         } finally {
             participantStatusLock.readLock().unlock();
         }
+    }
+
+    public Set<CryptoId> getParticipants() {
+        return allParticipants;
     }
 
     class ParticipantStatus {
@@ -335,7 +347,7 @@ public class HetconsProposalStatus {
             m1bRef = m1b;
             boolean noDuplicated = true;
             for (QuorumStatus q: quorumStatuses) {
-                noDuplicated = noDuplicated && q.add1b(id);
+                noDuplicated = noDuplicated && q.add1b(this);
             }
             return noDuplicated;
         }
@@ -344,7 +356,7 @@ public class HetconsProposalStatus {
             m2bRef = m2b;
             boolean noDuplicated = true;
             for (QuorumStatus q: quorumStatuses) {
-                noDuplicated = noDuplicated && q.add2b(id);
+                noDuplicated = noDuplicated && q.add2b(this);
             }
             return noDuplicated;
         }
@@ -366,36 +378,117 @@ public class HetconsProposalStatus {
 
     class QuorumStatus {
 
-        Set<String> participants;
-        Set<String> m1bs;
-        Set<String> m2bs;
+        Set<CryptoId> participants;
+        Set<String> duplicateCheck;
+        Set<ParticipantStatus> m1bs;
+        Set<ParticipantStatus> m2bs;
 
-        QuorumStatus(List<CryptoId> ids) {
+        List<QuorumStatus> subQuorumStatus;
+        int size;
+
+
+        QuorumStatus(HetconsObserverQuorum q) {
+
+            subQuorumStatus = new ArrayList<>();
             participants = new HashSet<>();
             m1bs = new HashSet<>();
             m2bs = new HashSet<>();
+            duplicateCheck = new HashSet<>();
 
-            ids.forEach(id -> {
-                participants.add(HetconsUtil.cryptoIdToString(id));
-            });
+            if (q.getSpecsCount() == 1) {
+                HetconsObserverQuorum.Spec spec = q.getSpecsList().get(0);
+                String chainName = spec.getBase().split("\\.")[0];
+                String quorumName = spec.getBase().split("\\.")[1];
+                if (quorumName.equals(q.getName())) {
+                    participants.addAll(q.getMembersList());
+                    subQuorumStatus.add(this);
+                    this.size = q.getSpecs(0).getSize();
+                } else {
+                    subQuorumStatus.add(new QuorumStatus(globalStatus.get(chainName).getSubQuorum(quorumName)));
+                }
+            } else {
+                for (HetconsObserverQuorum.Spec spec : q.getSpecsList()) {
+                    String chainName = spec.getBase().split(".")[0];
+                    String quorumName = spec.getBase().split(".")[1];
+                    if (chainName.length() == 0)
+                        chainName = currentQuorum.getChainName();
+                    subQuorumStatus.add(new QuorumStatus(globalStatus.get(chainName).getSubQuorum(quorumName)));
+                }
+            }
         }
 
-        boolean add1b(CryptoId id) {
-            return m1bs.add(HetconsUtil.cryptoIdToString(id));
+        boolean add1b(ParticipantStatus p) {
+            if (!duplicateCheck.add("m1b" +HetconsUtil.cryptoIdToString(p.id)))
+                return false;
+            if (subQuorumStatus.size() == 1 && !participants.isEmpty())
+                m1bs.add(p);
+            else
+                subQuorumStatus.forEach(s -> s.add1b(p));
+            return true;
         }
 
-        boolean add2b(CryptoId id) {
-            return m2bs.add(HetconsUtil.cryptoIdToString(id));
+        boolean add2b(ParticipantStatus p) {
+            if (!duplicateCheck.add("m2b" +HetconsUtil.cryptoIdToString(p.id)))
+                return false;
+            if (subQuorumStatus.size() == 1 && !participants.isEmpty())
+                m2bs.add(p);
+            else
+                subQuorumStatus.forEach(s -> s.add2b(p));
+            return true;
         }
 
+        /**
+         * Recursive check if there is enough 1bs
+         * @return
+         */
         boolean isEnough1b() {
-            return m1bs.size() == participants.size();
+            if (subQuorumStatus.size() == 1 && !participants.isEmpty())
+                return m1bs.size() >= size;
+            else
+                return subQuorumStatus.stream().map(QuorumStatus::isEnough1b).reduce((a, b) -> a && b).get();
         }
 
+        /**
+         * Recursive check if there is enough 2bs
+         * @return
+         */
         boolean isEnough2b() {
-            return m2bs.size() == participants.size();
+            if (subQuorumStatus.size() == 1 && !participants.isEmpty())
+                return m2bs.size() >= size;
+            else
+                return subQuorumStatus.stream().map(QuorumStatus::isEnough2b).reduce((a, b) -> a && b).get();
         }
 
+        Set<CryptoId> getAllParticipants() {
+           if (subQuorumStatus.size() == 1 && !participants.isEmpty()) {
+               return participants;
+           } else {
+               return subQuorumStatus.stream().map(QuorumStatus::getAllParticipants).reduce((a, e) -> {
+                 a.addAll(e);
+                 return a;
+               }).get();
+           }
+        }
+
+        public Set<ParticipantStatus> getQuorumM1bs() {
+            if (!participants.isEmpty() && subQuorumStatus.size() == 1)
+                return m1bs;
+            else
+                return subQuorumStatus.stream().map(QuorumStatus::getQuorumM1bs).reduce((a, e) -> {
+                    a.addAll(e);
+                    return a;
+                }).get();
+        }
+
+        public Set<ParticipantStatus> getQuorumM2bs() {
+            if (!participants.isEmpty() && subQuorumStatus.size() == 1)
+                return m2bs;
+            else
+                return subQuorumStatus.stream().map(QuorumStatus::getQuorumM2bs).reduce((a, e) -> {
+                    a.addAll(e);
+                    return a;
+                }).get();
+        }
     }
 
     class RoundStatus {

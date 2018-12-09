@@ -93,6 +93,10 @@ public class HetconsUtil {
         return String.format("%s%d", slot.getRoot().getHash().getSha3().toStringUtf8(), slot.getSlot());
     }
 
+    public static String buildChainID(List<String> chainNames) {
+        return chainNames.stream().sorted().reduce((a, n) -> a.concat(n)).get();
+    }
+
     public static int ballotCompare(HetconsBallot b1, HetconsBallot b2) {
         return b1.getBallotSequence().compareTo(b2.getBallotSequence());
     }

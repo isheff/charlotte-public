@@ -34,6 +34,7 @@ public class ChainConfig {
 
     public HetconsObserverGroup getObserverGroup(Path dir) {
         return HetconsObserverGroup.newBuilder()
+                .addAllRoots(roots)
                 .addAllObservers(observers.stream().map(observerConfig -> {
                   return observerConfig.toHetconsObserver(dir);
                 }).collect(Collectors.toList()))

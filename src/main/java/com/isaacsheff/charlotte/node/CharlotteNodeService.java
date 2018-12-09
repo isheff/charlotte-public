@@ -58,15 +58,15 @@ public class CharlotteNodeService extends CharlotteNodeImplBase {
     this.blockMap = blockMap;
     this.config = config;
     logger.setUseParentHandlers(false);
-//    SimpleFormatter fmt = new SimpleFormatter();
-//    StreamHandler sh = new StreamHandler(System.out, fmt) {
-//      @Override
-//      public synchronized void publish(final LogRecord record) {
-//        super.publish(record);
-//        flush();
-//      }
-//    };
-//    logger.addHandler(sh);
+    SimpleFormatter fmt = new SimpleFormatter();
+    StreamHandler sh = new StreamHandler(System.out, fmt) {
+      @Override
+      public synchronized void publish(final LogRecord record) {
+        super.publish(record);
+        flush();
+      }
+    };
+    logger.addHandler(sh);
 
   }
 

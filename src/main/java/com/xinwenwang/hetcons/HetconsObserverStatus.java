@@ -12,26 +12,29 @@ import java.util.logging.Logger;
 
 public class HetconsObserverStatus {
 
-    // for which this observer
+    /*for which this observer */
     private HetconsObserver observer;
 
-    // map from proposal's consensus id to HetconsProposalStatus object. If a set of proposals are conflicting, then they should point to the same status
+    /* map from proposal's consensus id to HetconsProposalStatus object. If a set of proposals are conflicting, then they should point to the same status */
     private HashMap<String, HetconsProposalStatus> proposalStatus;
 
-    // Map from a chain slot to a status object which is shared by all proposals related to that slot.
+    /* map from a chain slot to a status object which is shared by all proposals related to that slot. */
     private HashMap<String, HetconsSlotStatus> slotStatus;
 
-    // What quorum this observer listens to.
-
+    /* The service used to send and receive blocks */
     private HetconsParticipantService service;
 
+    /* The number of decided proposals for logging purposes */
     private Integer numOfDecidedProposals = 0;
+
+    /* this stores the quorum configuration for chains, the key is the name of the chain */
+    private Map<String, HetconsQuorumStatus> quorums;
+
+    /* Observer's name */
+    private String name;
 
     private static final Logger logger = Logger.getLogger(CharlotteNodeService.class.getName());
 
-    private String name;
-
-    private Random rnd;
 
     public HetconsObserverStatus(HetconsObserver observer, HetconsParticipantService service, String name) {
         this.name = name;
@@ -39,14 +42,14 @@ public class HetconsObserverStatus {
         this.service = service;
         proposalStatus = new HashMap<>();
         slotStatus = new HashMap<>();
-        for (HetconsObserverQuorum q : observer.getQuorumsList()) {
-            quorum.add(q.getMemebersList());
-        }
-        rnd = new Random();
+        quorums = new HashMap<>();
     }
 
 
-    public boolean receive1a(Block block, long timeout, List<HetconsObserverQuorum> observerQuorums) {
+    public boolean receive1a(Block block,
+                             long timeout,
+                             List<HetconsObserverQuorum> observerQuorums,
+                             String chainName) {
 
         HetconsMessage1a m1a = block.getHetconsMessage().getM1A();
 
@@ -60,9 +63,11 @@ public class HetconsObserverStatus {
             chainIDs.add(HetconsUtil.buildChainSlotID(slot));
         }
 
+        quorums.put(chainName, new HetconsQuorumStatus(observerQuorums, chainName));
+
         HetconsProposalStatus incomingStatus = new HetconsProposalStatus(HetconsConsensusStage.Proposed,
                 proposal,
-                quorum,
+                quorums.get(chainName),
                 block.getHetconsMessage().getObserverGroupReferecne());
         incomingStatus.setChainIDs(chainIDs);
         boolean hasPrev = null != proposalStatus.putIfAbsent(proposalStatusID, incomingStatus);
@@ -127,7 +132,7 @@ public class HetconsObserverStatus {
         // Save valid block
         // Echo 1a to all participants
         service.storeNewBlock(block);
-        broadcastToParticipants(block);
+        broadcastToParticipants(block, currentStatus.getParticipants());
 
 
         logger.info(name + ": Echo 1as value is " + proposal.getValue());
@@ -152,7 +157,7 @@ public class HetconsObserverStatus {
                         SignatureUtil.signBytes(service.getConfig().getKeyPair(), m1b)
                 ).build();
 
-        broadcastToParticipants(Block.newBuilder().setHetconsMessage(m).build());
+        broadcastToParticipants(Block.newBuilder().setHetconsMessage(m).build(), currentStatus.getParticipants());
         currentStatus.setStage(HetconsConsensusStage.M1BSent);
 
         logger.info("Sent 1Bs value is " + HetconsUtil.get1bValue(m1b, service) + " " + proposalStatusID);
@@ -211,8 +216,10 @@ public class HetconsObserverStatus {
         String proposalID = HetconsUtil.buildConsensusId(proposal.getSlotsList());
         HetconsProposalStatus status = proposalStatus.get(proposalID);
 
-        if (status == null)
+        if (status == null) {
+            logger.info("No proposal status available for proposalID: "+proposalID);
             return;
+        }
 
         if (status.getCurrentProposal().getBallot().getBallotSequence().compareTo(
                 proposal.getBallot().getBallotSequence()
@@ -227,8 +234,10 @@ public class HetconsObserverStatus {
 
         logger.info(name + ":" + "M1B value is " + HetconsUtil.get1bValue(block.getHetconsMessage().getM1B(), service));
 
-        if (q == null)
+        if (q == null) {
+            logger.info("M1B: No quorum is satisfied");
             return;
+        }
 
         HetconsBallot ballot = null;
         HetconsValue value = null;
@@ -310,7 +319,7 @@ public class HetconsObserverStatus {
                 .setIdentity(service.getConfig().getCryptoId())
                 .build();
 
-        broadcastToParticipants(Block.newBuilder().setHetconsMessage(m2b).build());
+        broadcastToParticipants(Block.newBuilder().setHetconsMessage(m2b).build(), status.getParticipants());
         status.setStage(HetconsConsensusStage.M2BSent);
 
         if (!status.getProposer())
@@ -464,14 +473,14 @@ public class HetconsObserverStatus {
 
 
         HetconsObserverQuorum observerQuorum = HetconsObserverQuorum.newBuilder().setOwner(observer.getId())
-                .addAllMemebers(p)
+                .addAllMembers(p)
                 .build();
         service.onDecision(observerQuorum, q);
     }
 
     public List<CryptoId> getParticipants() {
         ArrayList<CryptoId> participants = new ArrayList<>();
-        this.quorum.forEach(participants::addAll);
+//        this.quorum.forEach(participants::addAll);
         return participants;
     }
 
@@ -559,13 +568,13 @@ public class HetconsObserverStatus {
                 .build();
 
         Block block = Block.newBuilder().setHetconsMessage(message).build();
-        broadcastToParticipants(block);
+        broadcastToParticipants(block, status.getParticipants());
 //        status.setStage(HetconsConsensusStage.M1ASent);
 
     }
 
-    private void broadcastToParticipants(Block block) {
-        new HashSet<>(getParticipants()).forEach(p -> {
+    private void broadcastToParticipants(Block block, Set<CryptoId> participants) {
+        new HashSet<>(participants).forEach(p -> {
             service.sendBlock(p, block);
             logger.info("Sent " + block.getHetconsMessage().getType() + " to " + HetconsUtil.cryptoIdToString(p));
         });
@@ -578,10 +587,6 @@ public class HetconsObserverStatus {
 
     public HashMap<String, HetconsProposalStatus> getProposalStatus() {
         return proposalStatus;
-    }
-
-    public List<List<CryptoId>> getQuorum() {
-        return quorum;
     }
 
     private String formatConsensus(List<Reference> m2bs) {

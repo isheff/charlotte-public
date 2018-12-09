@@ -27,7 +27,8 @@ public class HetconsParticipantService extends CharlotteNodeService {
     public HetconsParticipantService(Config config) {
         super(config);
         observers = new HashMap<>();
-        executorService = (ThreadPoolExecutor) Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() * 3);
+//        executorService = (ThreadPoolExecutor) Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() * 3);
+        executorService = (ThreadPoolExecutor) Executors.newFixedThreadPool(3);
 //        logger.setUseParentHandlers(false);
 //        SimpleFormatter fmt = new SimpleFormatter();
 //        StreamHandler sh = new StreamHandler(System.out, fmt);
@@ -82,6 +83,7 @@ public class HetconsParticipantService extends CharlotteNodeService {
 //                    logger.info(String.format("Receive Observer group block %s", block.getHetconsMessage()));
                     logger.info("Receive Observer group block");
                     storeNewBlock(block);
+//                    broadcastBlock(block);
                     broadCastObserverGroupBlock(block);
                     break;
                 case UNRECOGNIZED:
@@ -146,7 +148,7 @@ public class HetconsParticipantService extends CharlotteNodeService {
         observerGroup.getObserversList().forEach(o -> {
             HetconsObserverStatus observerStatus = observers.get(HetconsUtil.cryptoIdToString(o.getId()));
             executorService.submit(() -> {
-                observerStatus.receive1a(inputBlock, proposal.getTimeout(), o.getQuorumsList());
+                observerStatus.receive1a(inputBlock, proposal.getTimeout(), o.getQuorumsList(), HetconsUtil.buildChainID(observerGroup.getRootsList()));
                 logger.info("RETURN FROM RECEIVE1A");
             });
         });
@@ -210,26 +212,11 @@ public class HetconsParticipantService extends CharlotteNodeService {
     }
 
 
-    private String formatConsensus(ArrayList<HetconsObserverQuorum> quorum) {
-        StringBuilder stringBuilder = new StringBuilder();
-        for (int i = 0; i < quorum.size(); i++) {
-            HetconsObserverQuorum q = quorum.get(i);
-            stringBuilder.append(String.format("Quorum %d has receive message from %d members\n", i, q.getMemebersCount()));
-            q.getMemebersList().forEach(m -> {
-                stringBuilder.append(String.format("\t%s\n", HetconsUtil.cryptoIdToString(m)));
-            });
-        }
-        return stringBuilder.toString();
-    }
-
     private void broadCastObserverGroupBlock(Block block) {
         HashSet<CryptoId> participants = new HashSet<>();
+        String chainName = HetconsUtil.buildChainID(block.getHetconsMessage().getObserverGroup().getRootsList());
         block.getHetconsMessage().getObserverGroup().getObserversList().forEach(o -> {
-            o.getQuorumsList().forEach(q -> {
-                q.getMemebersList().forEach(m -> {
-                    participants.add(m);
-                });
-            });
+            participants.addAll(new HetconsQuorumStatus(o.getQuorumsList(), chainName).getParticipants());
         });
         participants.forEach(m -> {
             sendBlock(m, block);
