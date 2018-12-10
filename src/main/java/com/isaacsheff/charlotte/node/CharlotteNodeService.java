@@ -58,15 +58,15 @@ public class CharlotteNodeService extends CharlotteNodeImplBase {
     this.blockMap = blockMap;
     this.config = config;
     logger.setUseParentHandlers(false);
-    SimpleFormatter fmt = new SimpleFormatter();
-    StreamHandler sh = new StreamHandler(System.out, fmt) {
-      @Override
-      public synchronized void publish(final LogRecord record) {
-        super.publish(record);
-        flush();
-      }
-    };
-    logger.addHandler(sh);
+//    SimpleFormatter fmt = new SimpleFormatter();
+//    StreamHandler sh = new StreamHandler(System.out, fmt) {
+//      @Override
+//      public synchronized void publish(final LogRecord record) {
+//        super.publish(record);
+//        flush();
+//      }
+//    };
+//    logger.addHandler(sh);
 
   }
 
@@ -305,16 +305,16 @@ public class CharlotteNodeService extends CharlotteNodeImplBase {
       return singleton(SendBlocksResponse.newBuilder().
                setErrorMessage("No Block in this SendBlocksInput: " + input).build());
     }
-    try {
-      Logger.getLogger(SendToObserver.class.getName()).info("{ \"ReceivedBlockHash\":"+JsonFormat.printer().print(sha3Hash(input.getBlock()))+
-                  "\nmessage type: " + (input.getBlock().getHetconsBlock().hasHetconsMessage() ? input.getBlock().getHetconsBlock().getHetconsMessage().getType() : "Not available") +
-                   ",\n\"destinationUrl\":\""+getConfig().getUrl() +"\""+
-                   ",\n\"destinationPort\":"+getConfig().getPort() +
-                   ",\n\"originPort\":"+observer.getContact().getPort() +
-                   ",\n\"originUrl\":\""+observer.getContact().getUrl()+"\"}");
-    } catch (InvalidProtocolBufferException e) {
-      logger.log(Level.SEVERE, "Invalid protocol buffer parsed as Block", e);
-    }
+//    try {
+//      Logger.getLogger(SendToObserver.class.getName()).info("{ \"ReceivedBlockHash\":"+JsonFormat.printer().print(sha3Hash(input.getBlock()))+
+//                  "\nmessage type: " + (input.getBlock().getHetconsBlock().hasHetconsMessage() ? input.getBlock().getHetconsBlock().getHetconsMessage().getType() : "Not available") +
+//                   ",\n\"destinationUrl\":\""+getConfig().getUrl() +"\""+
+//                   ",\n\"destinationPort\":"+getConfig().getPort() +
+//                   ",\n\"originPort\":"+observer.getContact().getPort() +
+//                   ",\n\"originUrl\":\""+observer.getContact().getUrl()+"\"}");
+//    } catch (InvalidProtocolBufferException e) {
+//      logger.log(Level.SEVERE, "Invalid protocol buffer parsed as Block", e);
+//    }
     return onSendBlocksInput(input.getBlock());
   }
 

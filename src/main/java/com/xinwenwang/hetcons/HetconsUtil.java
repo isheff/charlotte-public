@@ -7,6 +7,7 @@ import com.isaacsheff.charlotte.node.HashUtil;
 import com.isaacsheff.charlotte.node.SignatureUtil;
 import com.isaacsheff.charlotte.proto.*;
 
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 public class HetconsUtil {
@@ -54,16 +55,17 @@ public class HetconsUtil {
         } else if (id.hasPublicKey()) {
             ret = id.getPublicKey().getEllipticCurveP256().getByteString().toStringUtf8();
         }
-//        return ret;
-        return bytes2Hex(ret.getBytes());
+        return ret;
+//        return bytes2Hex(ret.getBytes());
     }
 
     public static String bytes2Hex(byte[] bytes) {
-        StringBuilder sb = new StringBuilder();
-        for (byte b : bytes) {
-            sb.append(String.format("%x", b));
-        }
-        return sb.toString();
+        return new String(bytes, StandardCharsets.UTF_8);
+//        StringBuilder sb = new StringBuilder();
+//        for (byte b : bytes) {
+//            sb.append(String.format("%x", b));
+//        }
+//        return sb.toString();
     }
 
 
