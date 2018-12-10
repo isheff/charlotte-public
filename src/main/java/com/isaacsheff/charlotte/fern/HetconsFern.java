@@ -14,6 +14,7 @@ import com.isaacsheff.charlotte.collections.ConcurrentHolder;
 import com.isaacsheff.charlotte.experiments.HetconsExperimentFernNode;
 import com.isaacsheff.charlotte.node.CharlotteNode;
 import com.isaacsheff.charlotte.node.HetconsParticipantNodeForFern;
+import com.isaacsheff.charlotte.node.SignatureUtil;
 import com.isaacsheff.charlotte.proto.*;
 import com.isaacsheff.charlotte.proto.IntegrityAttestation.ChainSlot;
 import com.isaacsheff.charlotte.proto.IntegrityAttestation.HetconsAttestation;
@@ -226,7 +227,7 @@ public class HetconsFern extends AgreementFernService {
 
     for (Reference r: quorum2b) {
       Block b2b = getNode().getBlock(r);
-      HetconsMessage2ab m2b = b2b.getHetconsMessage().getM2B();
+      HetconsMessage2ab m2b = b2b.getHetconsBlock().getHetconsMessage().getM2B();
       HetconsValue temp = HetconsUtil.get2bValue(m2b, getNode());
       message1a = HetconsUtil.getM1aFromReference(m2b.getM1ARef(), getNode());
       if (ballot == null && value == null) {
@@ -305,8 +306,12 @@ public class HetconsFern extends AgreementFernService {
                && request.getPolicy().getHetconsPolicy().getProposal().getM1A().hasProposal() ) {
       
       // send the request out (this will just show up as a duplicate if the request is already out) as a 1A.
+      HetconsBlock requestBlock = HetconsBlock.newBuilder()
+              .setHetconsMessage(request.getPolicy().getHetconsPolicy().getProposal())
+              .setSig(SignatureUtil.signBytes(getHetconsNode().getConfig().getKeyPair(), request.getPolicy().getHetconsPolicy().getProposal()))
+              .build();
       getHetconsNode().onSendBlocksInput(
-              Block.newBuilder().setHetconsMessage(request.getPolicy().getHetconsPolicy().getProposal()).build()
+              Block.newBuilder().setHetconsBlock(requestBlock).build()
       );
 
       // Whichever Slot reaches consensus first for this observer, return the affiliated response

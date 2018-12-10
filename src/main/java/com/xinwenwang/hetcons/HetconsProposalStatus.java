@@ -18,7 +18,7 @@ import java.util.stream.Collectors;
 public class HetconsProposalStatus {
 
 
-    private static final int maxTimeOut = 10 * 1000;
+    private static final int maxTimeOut = 10 * 100000;
     private HashMap<Integer, QuorumStatus> quorums;
     private QuorumStatus activeQuorum;
     private HashMap<String, ParticipantStatus> participantStatuses;
@@ -43,6 +43,8 @@ public class HetconsProposalStatus {
     private HetconsValue decidedValue;
     private ExecutorService timer;
     private Set<CryptoId> allParticipants;
+    private String proposalID;
+    private HetconsRestartStatus restartStatus;
 
     private static final Logger logger = Logger.getLogger(CharlotteNodeService.class.getName());
 
@@ -52,6 +54,9 @@ public class HetconsProposalStatus {
                                  Reference observerGroupReference,
                                  Map<String, HetconsQuorumStatus> globalStatus,
                                  HetconsParticipantService service) {
+        proposalID = HetconsUtil.buildConsensusId(proposal.getSlotsList());
+        service.getRestartTimers().putIfAbsent(proposalID, new HetconsRestartStatus());
+        restartStatus = service.getRestartTimers().get(proposalID);
         this.stage = stage;
         this.proposals = new LinkedList<HetconsProposal>();
         this.quorums = new HashMap<>();
@@ -63,7 +68,7 @@ public class HetconsProposalStatus {
         this.observerGroupReference = observerGroupReference;
         initQuorum(currentQuorum);
         initParticipantStatues(activeQuorum);
-        consensusTimeout = proposal.getTimeout();
+        consensusTimeout = 0;
         hasDecided = false;
         roundStatus = new RoundStatus();
         isProposer = false;
@@ -92,13 +97,14 @@ public class HetconsProposalStatus {
             proposalLock.writeLock().lock();
             if (getCurrentProposal().equals(proposal))
                 return;
-            logger.info("Old Proposal:\n" +
-                    getCurrentProposal() + "\n");
+            HetconsProposal old = getCurrentProposal();
             this.proposals.add(proposal);
             if (proposals.size() > 1) {
                 reset();
             }
-            logger.info("Updated Proposal:\n" +
+            logger.info("Old Proposal:\n" +
+                    old + "\n" +
+                    "Updated Proposal:\n" +
                     proposal + "\n");
         } finally {
             proposalLock.writeLock().unlock();
@@ -114,6 +120,7 @@ public class HetconsProposalStatus {
             this.participantStatuses = new HashMap<>();
             initQuorum(currentQuorum);
             initParticipantStatues(activeQuorum);
+            roundStatus.resetRoundStatus();
         } finally {
             participantStatusLock.writeLock().unlock();
         }
@@ -129,11 +136,13 @@ public class HetconsProposalStatus {
     }
 
     public void setConsensuTimeout(long consensuTimeout) {
-        if (consensuTimeout > maxTimeOut) {
-            Logger.getGlobal().warning("consensus specified timeout value is greater than the max value. Therefore, we use the max value instead.");
-            consensuTimeout = maxTimeOut;
+        if (consensuTimeout > 0) {
+            if (consensuTimeout > maxTimeOut) {
+                Logger.getGlobal().warning("consensus specified timeout value is greater than the max value. Therefore, we use the max value instead.");
+                consensuTimeout = maxTimeOut;
+            }
+            this.consensusTimeout = consensuTimeout;
         }
-        this.consensusTimeout = consensuTimeout;
     }
 
     public void setDecidedQuorum(List<Reference> decidedQuorum) {
@@ -155,7 +164,7 @@ public class HetconsProposalStatus {
     }
 
     public ExecutorService getTimer() {
-        return timer;
+        return restartStatus.getService();
     }
 
     public void setTimer(ExecutorService timer) {
@@ -167,7 +176,8 @@ public class HetconsProposalStatus {
     }
 
     public void setProposer(Boolean proposer) {
-        isProposer = proposer;
+        if (proposer)
+            isProposer = proposer;
     }
 
     public void setHasDecided(Boolean hasDecided) {
@@ -179,19 +189,23 @@ public class HetconsProposalStatus {
     }
 
     public Future<?> getM1bTimer() {
-        return m1bTimer;
+        return restartStatus.getM1bTimer();
     }
 
     public void setM1bTimer(Future<?> m1bTimer) {
-        this.m1bTimer = m1bTimer;
+        restartStatus.setM1bTimer(m1bTimer);
     }
 
     public Future<?> getM2bTimer() {
-        return m2bTimer;
+        return restartStatus.getM2bTimer();
     }
 
     public void setM2bTimer(Future<?> m2bTimer) {
-        this.m2bTimer = m2bTimer;
+        restartStatus.setM2bTimer(m2bTimer);
+    }
+
+    public HetconsRestartStatus getRestartStatus() {
+        return restartStatus;
     }
 
     public HetconsParticipantService getService() {
@@ -264,11 +278,15 @@ public class HetconsProposalStatus {
     }
 
     public HetconsValue getRecent1b() {
-        return roundStatus.m1bValue;
+        return roundStatus.get1bValue();
     }
 
     public HetconsValue getRecent2b() {
-        return roundStatus.m2bValue;
+        return roundStatus.get2bValue();
+    }
+
+    public void setRoundStatusM2a(HetconsValue m2aVal) {
+        roundStatus.m2a = m2aVal;
     }
 
     public List<Reference> receive1b(CryptoId id, Reference ref1b) {
@@ -334,7 +352,7 @@ public class HetconsProposalStatus {
     public boolean verify2b(HetconsMessage2ab message2ab) {
         QuorumStatus quorumStatus = new QuorumStatus(currentQuorum.getMainQuorum());
         message2ab.getQuorumOf1Bs().getBlockHashesList().forEach(e -> {
-            ParticipantStatus s = new ParticipantStatus(service.getBlock(e).getHetconsMessage().getSig().getCryptoId());
+            ParticipantStatus s = new ParticipantStatus(service.getBlock(e).getHetconsBlock().getHetconsMessage().getIdentity());
             s.quorumStatuses.add(quorumStatus);
             s.addM1b(e);
         });
@@ -511,29 +529,60 @@ public class HetconsProposalStatus {
 
     class RoundStatus {
 
-        HetconsValue m1bValue;
+        List<HetconsValue> m1bValue;
         HetconsBallot m1bBallot;
         boolean has2A = false;
+        HetconsValue m2a;
 
-        HetconsValue m2bValue;
+        List<HetconsValue> m2bValue;
         HetconsBallot m2bBallot;
 
+        RoundStatus() {
+            resetRoundStatus();
+            m2a = null;
+        }
+
+        void resetRoundStatus() {
+            m1bValue = new ArrayList<>();
+            m2bValue = new ArrayList<>();
+        }
+
+
         void update1BValue(boolean has2A, HetconsValue value, HetconsBallot ballot) {
-            if (this.has2A && !has2A)
-                return;
+//            if (this.has2A && !has2A)
+//                return;
 
             if (m1bBallot == null || HetconsUtil.ballotCompare(ballot, m1bBallot) >= 0) {
                 this.m1bBallot = ballot;
-                this.m1bValue = value;
+                this.m1bValue.add(value);
             }
         }
 
         void update2BValue(HetconsValue value, HetconsBallot ballot) {
             if (m2bBallot == null || HetconsUtil.ballotCompare(ballot, m2bBallot) >= 0) {
                 this.m2bBallot = ballot;
-                this.m2bValue = value;
+                this.m2bValue.add(value);
             }
         }
+
+        HetconsValue get1bValue() {
+            if (m2a != null) {
+                logger.info("Has 2a " + m2a);
+                return m2a;
+            }
+            else
+                return m1bValue.get(new Random().nextInt(m1bValue.size()));
+        }
+
+        HetconsValue get2bValue() {
+            if (m2a != null) {
+                logger.info("Has 2a " + m2a);
+                return m2a;
+            }
+            else
+                return m2bValue.get(new Random().nextInt(m2bValue.size()));
+        }
+
     }
 }
 

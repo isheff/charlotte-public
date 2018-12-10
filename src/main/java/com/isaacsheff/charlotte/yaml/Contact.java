@@ -193,6 +193,7 @@ public class Contact {
              withOption(ChannelOption.SO_REUSEADDR, true).
              useTransportSecurity().
 //             disableRetry().
+             enableRetry().
              sslContext(getSslContext()).
              maxInboundMessageSize(Integer.MAX_VALUE).
              build();
@@ -213,6 +214,7 @@ public class Contact {
              withOption(ChannelOption.SO_REUSEADDR, true).
              useTransportSecurity().
 //             disableRetry().
+             enableRetry().
              sslContext(getSslContext()).
              maxInboundMessageSize(Integer.MAX_VALUE).
              build();

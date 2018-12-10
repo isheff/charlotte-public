@@ -133,7 +133,7 @@ message Block {
     AvailabilityAttestation availabilityAttestation = 1;
     IntegrityAttestation integrityAttestation = 2;
     string str = 3; // why not?
-    HetconsMessage hetconsMessage = 4;
+    HetconsBlock hetconsBlock = 4;
     SignedGitSimCommit signedGitSimCommit= 5;
     // This is probably the best place for an Any type, but for now, keep it minimum
   }
@@ -306,6 +306,11 @@ enum HetconsMessageType {
   OBSERVERGROUP = 4;
 }
 
+message HetconsBlock {
+  HetconsMessage hetcons_message = 1;
+  charlotte.Signature sig = 2;
+}
+
 message HetconsMessage {
   HetconsMessageType type = 4;
   oneof hetconsMessageType_oneof {
@@ -315,9 +320,21 @@ message HetconsMessage {
     HetconsObserverGroup observerGroup = 5;
   }
   Reference observerGroupReferecne = 10;
-  charlotte.Signature sig = 7;
   charlotte.CryptoId identity = 8;
 }
+
+//message HetconsMessage {
+//  HetconsMessageType type = 4;
+//  oneof hetconsMessageType_oneof {
+//    HetconsMessage1a m1a = 1;
+//    HetconsMessage1b m1b = 2;
+//    HetconsMessage2ab m2b = 3;
+//    HetconsObserverGroup observerGroup = 5;
+//  }
+//  Reference observerGroupReferecne = 10;
+//  charlotte.Signature sig = 7;
+//  charlotte.CryptoId identity = 8;
+//}
 
 // Leader Propose the new value with a new bollot number
 message HetconsMessage1a {

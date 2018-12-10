@@ -306,8 +306,8 @@ public class CharlotteNodeService extends CharlotteNodeImplBase {
                setErrorMessage("No Block in this SendBlocksInput: " + input).build());
     }
     try {
-      logger.info("{ \"ReceivedBlockHash\":"+JsonFormat.printer().print(sha3Hash(input.getBlock()))+
-                  "\nmessage type: " + (input.getBlock().hasHetconsMessage() ? input.getBlock().getHetconsMessage().getType() : "Not available") +
+      Logger.getLogger(SendToObserver.class.getName()).info("{ \"ReceivedBlockHash\":"+JsonFormat.printer().print(sha3Hash(input.getBlock()))+
+                  "\nmessage type: " + (input.getBlock().getHetconsBlock().hasHetconsMessage() ? input.getBlock().getHetconsBlock().getHetconsMessage().getType() : "Not available") +
                    ",\n\"destinationUrl\":\""+getConfig().getUrl() +"\""+
                    ",\n\"destinationPort\":"+getConfig().getPort() +
                    ",\n\"originPort\":"+observer.getContact().getPort() +

@@ -35,7 +35,7 @@ public class HetconsUtil {
     }
 
     public static String buildBallotString(HetconsValue value) {
-        return Long.toString(new Date().getTime()) + bytes2Hex(HashUtil.sha3(value));
+        return Long.toString(new Date().toInstant().toEpochMilli()) + bytes2Hex(HashUtil.sha3(value));
     }
 
     public static HetconsBallot buildBallot(HetconsValue value) {
@@ -54,8 +54,8 @@ public class HetconsUtil {
         } else if (id.hasPublicKey()) {
             ret = id.getPublicKey().getEllipticCurveP256().getByteString().toStringUtf8();
         }
-        return ret;
-//        return bytes2Hex(ret.getBytes());
+//        return ret;
+        return bytes2Hex(ret.getBytes());
     }
 
     public static String bytes2Hex(byte[] bytes) {
@@ -102,14 +102,14 @@ public class HetconsUtil {
     }
 
     public static HetconsValue get1bValue(HetconsMessage1b m1b, CharlotteNodeService service) {
-        return m1b.hasM2A() ? getM1aFromReference(m1b.getM2A().getM1ARef(), service).getProposal().getValue() : getM1aFromReference(m1b.getM1ARef(), service).getProposal().getValue();
+        return m1b.hasM2A() ? get2bValue(m1b.getM2A(), service) : getM1aFromReference(m1b.getM1ARef(), service).getProposal().getValue();
     }
 
     public static HetconsValue get2bValue(HetconsMessage2ab m2b, CharlotteNodeService service) {
         for (Reference r : m2b.getQuorumOf1Bs().getBlockHashesList()) {
             Block b2b = service.getBlock(r);
             if (b2b != null)
-                return get1bValue(b2b.getHetconsMessage().getM1B(), service);
+                return get1bValue(b2b.getHetconsBlock().getHetconsMessage().getM1B(), service);
         }
         return null;
     }
@@ -117,7 +117,7 @@ public class HetconsUtil {
     public static HetconsMessage1a getM1aFromReference(Reference m1aRef, CharlotteNodeService service) {
         try {
             Block block = service.getBlock(m1aRef);
-            return block.getHetconsMessage().getM1A();
+            return block.getHetconsBlock().getHetconsMessage().getM1A();
         } catch (Exception ex) {
             ex.printStackTrace();
             return null;

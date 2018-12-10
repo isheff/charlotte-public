@@ -4,8 +4,7 @@ import static java.util.concurrent.ConcurrentHashMap.newKeySet;
 
 import java.util.Collection;
 import java.util.Collections;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import java.util.logging.*;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -52,6 +51,16 @@ public class HetconsParticipantNodeForFern extends HetconsParticipantService {
     this.hetconsConfig = hetconsConfig;
     this.fern = fern;
     this.reference2bsPerProposal = new ConcurrentHashMap<HetconsProposal, Set<Block>>();
+    logger.setUseParentHandlers(false);
+    SimpleFormatter fmt = new SimpleFormatter();
+    StreamHandler sh = new StreamHandler(System.out, fmt) {
+      @Override
+      public synchronized void publish(final LogRecord record) {
+        super.publish(record);
+        flush();
+      }
+    };
+    logger.addHandler(sh);
   }
 
   /**
@@ -92,8 +101,11 @@ public class HetconsParticipantNodeForFern extends HetconsParticipantService {
   @Override
   protected void onDecision(final HetconsObserverQuorum quora,
                             final Collection<Reference> quorum2b) {
-    HetconsValue value = HetconsUtil.get2bValue(getBlock(quorum2b.iterator().next()).getHetconsMessage().getM2B(), this);
-    logger.info("Consensus Decided on value " + value.getNum());
+    HetconsValue value = HetconsUtil.get2bValue(getBlock(quorum2b.iterator().next()).getHetconsBlock().getHetconsMessage().getM2B(), this);
+    String loggerString = "";
+    for (CryptoId id : quora.getMembersList())
+      loggerString += HetconsUtil.cryptoIdToString(id) + "\n";
+    logger.info("Consensus Decided on value " + value.getNum() + "\n" + loggerString + "\n");
     getFern().observersDecide(quora, quorum2b);
   }
 

@@ -28,12 +28,15 @@ public class HetconsClientNode extends CharlotteNodeClient {
 
         HetconsMessage message = HetconsMessage.newBuilder()
                 .setM1A(message1a).setType(HetconsMessageType.M1a)
-                .setSig(SignatureUtil.signBytes(this.config.getKeyPair(), message1a.toByteString()))
                 .setObserverGroupReferecne(Reference.newBuilder().setHash(blockhash).build())
                 .build();
 
+        HetconsBlock block = HetconsBlock.newBuilder()
+                .setHetconsMessage(message)
+                .setSig(SignatureUtil.signBytes(this.config.getKeyPair(), message))
+                .build();
         sendBlock(SendBlocksInput.newBuilder().setBlock(Block.newBuilder()
-                .setHetconsMessage(message).build())
+                .setHetconsBlock(block).build())
                 .build()
         );
     }
@@ -42,9 +45,12 @@ public class HetconsClientNode extends CharlotteNodeClient {
         HetconsMessage message = HetconsMessage.newBuilder()
                 .setObserverGroup(observerGroup)
                 .setType(HetconsMessageType.OBSERVERGROUP)
-                .setSig(SignatureUtil.signBytes(this.config.getKeyPair(), observerGroup.toByteString()))
                 .build();
-        Block block = Block.newBuilder().setHetconsMessage(message).build();
+        HetconsBlock hetconsBlock = HetconsBlock.newBuilder()
+                .setHetconsMessage(message)
+                .setSig(SignatureUtil.signBytes(this.config.getKeyPair(), message))
+                .build();
+        Block block = Block.newBuilder().setHetconsBlock(hetconsBlock).build();
         sendBlock(block);
         return HashUtil.sha3Hash(block);
     }

@@ -22,13 +22,24 @@ public class HetconsParticipantService extends CharlotteNodeService {
 
     /* the pool of threads to handle incoming blocks for each observer */
     private  ThreadPoolExecutor executorService;
+    private  ThreadPoolExecutor executorService1b;
+    private  ThreadPoolExecutor executorService2b;
 
+    private Map<String, HetconsRestartStatus> restartTimers;
+
+    private Map<CryptoId, Set<HetconsMessage>> sentBlocSet;
+    private Map<HetconsMessage, Block> sentBlocks;
 
     public HetconsParticipantService(Config config) {
         super(config);
         observers = new HashMap<>();
+        sentBlocSet = new ConcurrentHashMap<>();
+        sentBlocks = new ConcurrentHashMap<>();
 //        executorService = (ThreadPoolExecutor) Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() * 3);
-        executorService = (ThreadPoolExecutor) Executors.newFixedThreadPool(3);
+        executorService = (ThreadPoolExecutor) Executors.newFixedThreadPool(4);
+        executorService1b = (ThreadPoolExecutor) Executors.newFixedThreadPool(4);
+        executorService2b = (ThreadPoolExecutor) Executors.newFixedThreadPool(4);
+        restartTimers = new ConcurrentHashMap<>();
 //        logger.setUseParentHandlers(false);
 //        SimpleFormatter fmt = new SimpleFormatter();
 //        StreamHandler sh = new StreamHandler(System.out, fmt);
@@ -42,21 +53,21 @@ public class HetconsParticipantService extends CharlotteNodeService {
      */
     public Iterable<SendBlocksResponse> onSendBlocksInput(Block block) {
 
-        logger.info("Block arrived " + block.getHetconsMessage().getType());
+        logger.info("Block arrived " + block.getHetconsBlock().getHetconsMessage().getType());
 
-        if (!block.hasHetconsMessage()) {
+        if (!block.hasHetconsBlock()) {
             //TODO: handle error
             return Collections.emptySet();
         }
 
         if (!storeNewBlock(block)) {
-            logger.info("Discard duplicated block " + block.getHetconsMessage().getType());
+            logger.info("Discard duplicated block " + block.getHetconsBlock().getHetconsMessage().getType());
             return Collections.emptySet();
         }
 
-        HetconsMessage hetconsMessage = block.getHetconsMessage();
+        HetconsMessage hetconsMessage = block.getHetconsBlock().getHetconsMessage();
 
-        if (!verifySignature(hetconsMessage))
+        if (!verifySignature(block.getHetconsBlock()))
             return Collections.emptySet();
 
         try {
@@ -110,8 +121,8 @@ public class HetconsParticipantService extends CharlotteNodeService {
         HetconsProposal proposal = message1a.getProposal();
         HetconsObserverGroup observerGroup;
         try {
-            observerGroup = this.getBlock(block.getHetconsMessage().getObserverGroupReferecne())
-                    .getHetconsMessage().getObserverGroup();
+            observerGroup = this.getBlock(block.getHetconsBlock().getHetconsMessage().getObserverGroupReferecne())
+                    .getHetconsBlock().getHetconsMessage().getObserverGroup();
         } catch (Exception ex) {
             ex.printStackTrace();
             return;
@@ -124,13 +135,16 @@ public class HetconsParticipantService extends CharlotteNodeService {
 
             HetconsMessage1a message1aCopy = HetconsMessage1a.newBuilder(message1a).setProposal(proposalCopy).build();
 
-            HetconsMessage messageCopy = HetconsMessage.newBuilder(block.getHetconsMessage()).setM1A(message1aCopy)
+            HetconsMessage messageCopy = HetconsMessage.newBuilder(block.getHetconsBlock().getHetconsMessage()).setM1A(message1aCopy)
                     .setIdentity(getConfig().getCryptoId())
+                    .build();
+
+            HetconsBlock hetconsBlockCopy = HetconsBlock.newBuilder().setHetconsMessage(messageCopy)
                     .setSig(
-                            SignatureUtil.signBytes(getConfig().getKeyPair(), message1aCopy)
+                            SignatureUtil.signBytes(getConfig().getKeyPair(), messageCopy)
                     ).build();
 
-            Block blockCopy = Block.newBuilder().setHetconsMessage(messageCopy).build();
+            Block blockCopy = Block.newBuilder().setHetconsBlock(hetconsBlockCopy).build();
 
             block = blockCopy;
             storeNewBlock(block);
@@ -148,11 +162,14 @@ public class HetconsParticipantService extends CharlotteNodeService {
         observerGroup.getObserversList().forEach(o -> {
             HetconsObserverStatus observerStatus = observers.get(HetconsUtil.cryptoIdToString(o.getId()));
             executorService.submit(() -> {
-                observerStatus.receive1a(inputBlock, proposal.getTimeout(), o.getQuorumsList(), HetconsUtil.buildChainID(observerGroup.getRootsList()));
+                observerStatus.receive1a(inputBlock,
+                        proposal.getTimeout(),
+                        o.getQuorumsList(),
+                        HetconsUtil.buildChainID(observerGroup.getRootsList()));
                 logger.info("RETURN FROM RECEIVE1A");
             });
         });
-        logger.info("# of threads in pool is " + executorService.getActiveCount() + "/" + executorService.getCompletedTaskCount());
+        logger.info("# of threads in pool 1a is " + executorService.getActiveCount() + "/" + executorService.getCompletedTaskCount());
     }
 
     private void handle1b(HetconsMessage1b message1b, CryptoId id, Block block) {
@@ -161,8 +178,8 @@ public class HetconsParticipantService extends CharlotteNodeService {
 
         HetconsObserverGroup observerGroup;
         try {
-            observerGroup = this.getBlock(block.getHetconsMessage().getObserverGroupReferecne())
-                    .getHetconsMessage().getObserverGroup();
+            observerGroup = this.getBlock(block.getHetconsBlock().getHetconsMessage().getObserverGroupReferecne())
+                    .getHetconsBlock().getHetconsMessage().getObserverGroup();
         } catch (Exception ex) {
             ex.printStackTrace();
             return;
@@ -174,14 +191,14 @@ public class HetconsParticipantService extends CharlotteNodeService {
                 logger.warning("Got m1b but no such observer");
                 return;
             }
-            executorService.submit(() -> {
+            executorService1b.submit(() -> {
                 observerStatus.receive1b(block);
                 logger.info("RETURN FROM RECEIVE1B");
                 return;
             });
         });
-        logger.info("# of threads in pool is " + executorService.getActiveCount() + "/" + executorService.getCompletedTaskCount());
-        if (executorService.getActiveCount() > 100) {
+        logger.info("# of threads in pool 1b is " + executorService1b.getActiveCount() + "/" + executorService1b.getCompletedTaskCount());
+        if (executorService1b.getActiveCount() > 100) {
             logger.info("larger than 100");
         }
     }
@@ -189,8 +206,8 @@ public class HetconsParticipantService extends CharlotteNodeService {
     private void handle2b(HetconsMessage2ab message2b, CryptoId id, Block block) {
         HetconsObserverGroup observerGroup;
         try {
-            observerGroup = this.getBlock(block.getHetconsMessage().getObserverGroupReferecne())
-                    .getHetconsMessage().getObserverGroup();
+            observerGroup = this.getBlock(block.getHetconsBlock().getHetconsMessage().getObserverGroupReferecne())
+                    .getHetconsBlock().getHetconsMessage().getObserverGroup();
         } catch (Exception ex) {
             ex.printStackTrace();
             return;
@@ -202,20 +219,20 @@ public class HetconsParticipantService extends CharlotteNodeService {
                 logger.warning("Got m2b but no such observer");
                 return;
             }
-            executorService.submit(() -> {
+            executorService2b.submit(() -> {
                 observerStatus.receive2b(block);
                 logger.info("RETURN FROM RECEIVE2B");
                 return;
             });
         });
-        logger.info("# of threads in pool is " + executorService.getActiveCount() + "/" + executorService.getCompletedTaskCount());
+        logger.info("# of threads in pool 2b is " + executorService2b.getActiveCount() + "/" + executorService2b.getCompletedTaskCount());
     }
 
 
     private void broadCastObserverGroupBlock(Block block) {
         HashSet<CryptoId> participants = new HashSet<>();
-        String chainName = HetconsUtil.buildChainID(block.getHetconsMessage().getObserverGroup().getRootsList());
-        block.getHetconsMessage().getObserverGroup().getObserversList().forEach(o -> {
+        String chainName = HetconsUtil.buildChainID(block.getHetconsBlock().getHetconsMessage().getObserverGroup().getRootsList());
+        block.getHetconsBlock().getHetconsMessage().getObserverGroup().getObserversList().forEach(o -> {
             participants.addAll(new HetconsQuorumStatus(o.getQuorumsList(), chainName).getParticipants());
         });
         participants.forEach(m -> {
@@ -223,26 +240,66 @@ public class HetconsParticipantService extends CharlotteNodeService {
         });
     }
 
-    private boolean verifySignature(HetconsMessage message) {
-        switch (message.getType()) {
-            case M1a:
-                return SignatureUtil.checkSignature(message.getM1A(), message.getSig());
-            case OBSERVERGROUP:
-                return SignatureUtil.checkSignature(message.getObserverGroup(), message.getSig());
-            case M1b:
-                return SignatureUtil.checkSignature(message.getM1B(), message.getSig());
-            case M2b:
-                return SignatureUtil.checkSignature(message.getM2B(), message.getSig());
-            case UNRECOGNIZED:
-                return false;
-            default:
-                return false;
+    private boolean verifySignature(HetconsBlock block) {
+        return SignatureUtil.checkSignature(block.getHetconsMessage(), block.getSig());
+//        switch (message.getType()) {
+//            case M1a:
+//                return SignatureUtil.checkSignature(message.getM1A(), message.getSig());
+//            case OBSERVERGROUP:
+//                return SignatureUtil.checkSignature(message.getObserverGroup(), message.getSig());
+//            case M1b:
+//                return SignatureUtil.checkSignature(message.getM1B(), message.getSig());
+//            case M2b:
+//                return SignatureUtil.checkSignature(message.getM2B(), message.getSig());
+//            case UNRECOGNIZED:
+//                return false;
+//            default:
+//                return false;
+//        }
+    }
+
+    /**
+     * Only send block with same hetcons messages at most once
+     * @param cryptoid identifies the server we want to send to
+     * @param block the block we want to send
+     * @return
+     */
+    @Override
+    public synchronized boolean sendBlock(CryptoId cryptoid, Block block) {
+        if (!sentBlocSet.containsKey(cryptoid))
+            sentBlocSet.put(cryptoid, new HashSet<>());
+        if (sentBlocSet.get(cryptoid).add(block.getHetconsBlock().getHetconsMessage())) {
+            HetconsMessage message = block.getHetconsBlock().getHetconsMessage();
+            if (message.getType() != HetconsMessageType.OBSERVERGROUP && message.getType() != HetconsMessageType.M1a) {
+                if (sentBlocks.containsKey(message))
+                    block = sentBlocks.get(message);
+                else {
+                    HetconsBlock uniqueBlock = HetconsBlock.newBuilder()
+                            .setHetconsMessage(message)
+                            .setSig(SignatureUtil.signBytes(getConfig().getKeyPair(), message))
+                            .build();
+                    block = Block.newBuilder().setHetconsBlock(uniqueBlock).build();
+                    sentBlocks.put(message, block);
+                }
+            }
+            return super.sendBlock(cryptoid, block);
         }
+//        logger.info("Duplicated block " + block.getHetconsBlock().getHetconsMessage().getType());
+        return true;
     }
 
     public boolean hasBlock(Reference reference) {
         return this.getBlockMap().get(reference) != null;
     }
+
+    public Map<String, HetconsRestartStatus> getRestartTimers() {
+        return restartTimers;
+    }
+
+    public ThreadPoolExecutor getExecutorService() {
+        return executorService;
+    }
+
     /**
      * Invoked whenever an observer reaches a decision.
      * Extending classes may find it useful to Override this.

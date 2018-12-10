@@ -107,11 +107,15 @@ public class HetconsExperimentClient {
                 .setType(HetconsMessageType.OBSERVERGROUP)
                 .setObserverGroup(group)
                 .setIdentity(clientNode.getLocalService().getConfig().getCryptoId())
-                .setSig(SignatureUtil.signBytes(clientNode.getLocalService().getConfig().getKeyPair(),
-                        group))
                 .build();
 
-        Block observerBlock = Block.newBuilder().setHetconsMessage(observerMessage).build();
+        HetconsBlock observerHetconsBlock = HetconsBlock.newBuilder()
+                .setHetconsMessage(observerMessage)
+                .setSig(SignatureUtil.signBytes(clientNode.getLocalService().getConfig().getKeyPair(),
+                        observerMessage))
+                .build();
+
+        Block observerBlock = Block.newBuilder().setHetconsBlock(observerHetconsBlock).build();
         clientNode.getLocalService().sendBlock(clientNode.getContact().getCryptoId(), observerBlock);
 
         try {
@@ -152,9 +156,6 @@ public class HetconsExperimentClient {
                     .setM1A(message1a)
                     .setIdentity(clientNode.getLocalService().getConfig().getCryptoId())
                     .setObserverGroupReferecne(obsblkRef)
-                    .setSig(SignatureUtil.signBytes(
-                            clientNode.getLocalService().getConfig().getKeyPair(),
-                            message1a))
                     .build();
 
             RequestIntegrityAttestationInput input = RequestIntegrityAttestationInput.newBuilder()
