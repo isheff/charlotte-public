@@ -436,6 +436,8 @@ public class HetconsProposalStatus {
                     subQuorumStatus.add(this);
                     this.size = q.getSpecs(0).getSize();
                 } else {
+                    if (chainName.length() == 0)
+                        chainName = currentQuorum.getChainName();
                     subQuorumStatus.add(new QuorumStatus(globalStatus.get(chainName).getSubQuorum(quorumName)));
                 }
             } else {
