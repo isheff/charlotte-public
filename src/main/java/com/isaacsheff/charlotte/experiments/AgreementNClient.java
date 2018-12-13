@@ -257,14 +257,14 @@ public class AgreementNClient {
 
   /** Creates a random alpha-numeric string of the length given. */
   public static String randomString(final int targetStringLength) {
-    int leftLimit = 97; // letter 'a'
-    int rightLimit = 122; // letter 'z'
-    Random random = new Random();
-    StringBuilder buffer = new StringBuilder(targetStringLength);
+    final int leftLimit = 97; // letter 'a'
+    // final int rightLimit = 122; // letter 'z'
+    // final int modulus = (rightLimit - leftLimit + 1);
+    final int modulus = 26;
+    final Random random = new Random();
+    final StringBuilder buffer = new StringBuilder(targetStringLength);
     for (int i = 0; i < targetStringLength; i++) {
-        int randomLimitedInt = leftLimit + (int) 
-          (random.nextFloat() * (rightLimit - leftLimit + 1));
-        buffer.append((char) randomLimitedInt);
+        buffer.append((char) (leftLimit + (int) (random.nextFloat() * modulus)));
     }
     return(buffer.toString());
   }
