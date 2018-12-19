@@ -9,8 +9,11 @@ import com.isaacsheff.charlotte.proto.*;
 
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class HetconsUtil {
+
+    static ConcurrentHashMap<CryptoId, String> cryptoString = new ConcurrentHashMap<>();
 
     public static HetconsProposal buildProposal(List<IntegrityAttestation.ChainSlot> slots,
                                                 HetconsValue value,
@@ -49,12 +52,16 @@ public class HetconsUtil {
 
     // TODO: move following methods to HetconsUtil class
     public static String cryptoIdToString(CryptoId id) {
+        if (cryptoString.containsKey(id))
+            return cryptoString.get(id);
+
         String ret = id.toString();
         if (id.hasHash()) {
             ret = id.getHash().getSha3().toStringUtf8();
         } else if (id.hasPublicKey()) {
             ret = id.getPublicKey().getEllipticCurveP256().getByteString().toStringUtf8();
         }
+        cryptoString.put(id, ret);
         return ret;
 //        return bytes2Hex(ret.getBytes());
     }

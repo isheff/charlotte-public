@@ -173,9 +173,10 @@ public class HetconsObserverStatus {
 
         HetconsBlock b = HetconsBlock.newBuilder()
                 .setHetconsMessage(m)
-                .setSig(
-                        SignatureUtil.signBytes(service.getConfig().getKeyPair(), m)
-                ).build();
+//                .setSig(
+//                        SignatureUtil.signBytes(service.getConfig().getKeyPair(), m)
+//                )
+                .build();
 
         broadcastToParticipants(Block.newBuilder().setHetconsBlock(b).build(), currentStatus.getParticipants());
         currentStatus.setStage(HetconsConsensusStage.M1BSent);
@@ -366,7 +367,7 @@ public class HetconsObserverStatus {
                 .setIdentity(service.getConfig().getCryptoId())
                 .build();
         HetconsBlock m2bBlock = HetconsBlock.newBuilder().setHetconsMessage(m2b)
-                .setSig(SignatureUtil.signBytes(service.getConfig().getKeyPair(), m2b))
+//                .setSig(SignatureUtil.signBytes(service.getConfig().getKeyPair(), m2b))
                 .build();
 
         broadcastToParticipants(Block.newBuilder().setHetconsBlock(m2bBlock).build(), status.getParticipants());
@@ -499,6 +500,7 @@ public class HetconsObserverStatus {
                 logger.info(name + "("+proposalID+"): Shutdown timers");
                 status.getTimer().shutdownNow();
                 try {
+                    /* TODO: Eliminate waiting */
                     status.getTimer().awaitTermination(1, TimeUnit.SECONDS);
                 } catch (InterruptedException ex) {
                     ex.printStackTrace();
