@@ -30,6 +30,7 @@ public class HetconsProposalStatus {
     private LinkedList<HetconsProposal> proposals;
     private Future<?> m1bTimer;
     private Future<?> m2bTimer;
+    private Future<?> restartTimer;
     private long consensusTimeout;
     private String ConsensusID;
     private HetconsParticipantService service;
@@ -202,6 +203,14 @@ public class HetconsProposalStatus {
 
     public void setM2bTimer(Future<?> m2bTimer) {
         restartStatus.setM2bTimer(m2bTimer);
+    }
+
+    public void setRestartTimer(Future<?> restartTimer) {
+        restartStatus.setRestartTimer(restartTimer);
+    }
+
+    public Future<?> getRestartTimer() {
+        return restartStatus.getRestartTimer();
     }
 
     public HetconsRestartStatus getRestartStatus() {

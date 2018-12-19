@@ -8,6 +8,7 @@ public class HetconsRestartStatus {
 
     private Future<?> m1bTimer;
     private Future<?> m2bTimer;
+    private Future<?> restartTimer;
 
     private ExecutorService service;
 
@@ -23,6 +24,10 @@ public class HetconsRestartStatus {
 
     public Future<?> getM2bTimer() {
         return m2bTimer;
+    }
+
+    public Future<?> getRestartTimer() {
+        return restartTimer;
     }
 
     public void cancelTimers() {
@@ -46,5 +51,9 @@ public class HetconsRestartStatus {
 
     public void setM2bTimer(Future<?> m2bTimer) {
         this.m2bTimer = m2bTimer;
+    }
+
+    public void setRestartTimer(Future<?> restartTimer) {
+        this.restartTimer = restartTimer;
     }
 }

@@ -62,8 +62,8 @@ public class HetconsUtil {
             ret = id.getPublicKey().getEllipticCurveP256().getByteString().toStringUtf8();
         }
         cryptoString.put(id, ret);
-        return ret;
-//        return bytes2Hex(ret.getBytes());
+//        return ret;
+        return bytes2Hex(ret.getBytes());
     }
 
     public static String bytes2Hex(byte[] bytes) {

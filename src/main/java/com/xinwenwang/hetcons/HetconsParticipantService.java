@@ -36,9 +36,9 @@ public class HetconsParticipantService extends CharlotteNodeService {
         sentBlocSet = new ConcurrentHashMap<>();
         sentBlocks = new ConcurrentHashMap<>();
 //        executorService = (ThreadPoolExecutor) Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() * 3);
-        executorService = (ThreadPoolExecutor) Executors.newFixedThreadPool(4);
-        executorService1b = (ThreadPoolExecutor) Executors.newFixedThreadPool(4);
-        executorService2b = (ThreadPoolExecutor) Executors.newFixedThreadPool(4);
+        executorService = (ThreadPoolExecutor) Executors.newFixedThreadPool(2);
+        executorService1b = (ThreadPoolExecutor) Executors.newFixedThreadPool(2);
+        executorService2b = (ThreadPoolExecutor) Executors.newFixedThreadPool(2);
         restartTimers = new ConcurrentHashMap<>();
 //        logger.setUseParentHandlers(false);
 //        SimpleFormatter fmt = new SimpleFormatter();

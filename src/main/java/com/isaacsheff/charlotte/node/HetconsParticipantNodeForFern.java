@@ -103,8 +103,8 @@ public class HetconsParticipantNodeForFern extends HetconsParticipantService {
                             final Collection<Reference> quorum2b) {
     HetconsValue value = HetconsUtil.get2bValue(getBlock(quorum2b.iterator().next()).getHetconsBlock().getHetconsMessage().getM2B(), this);
     String loggerString = "";
-//    for (CryptoId id : quora.getMembersList())
-//      loggerString += HetconsUtil.cryptoIdToString(id) + "\n";
+    for (CryptoId id : quora.getMembersList())
+      loggerString += HetconsUtil.cryptoIdToString(id) + "\n";
     logger.info("Consensus Decided on value " + value.getNum() + "\n" + loggerString + "\n");
     getFern().observersDecide(quora, quorum2b);
   }
