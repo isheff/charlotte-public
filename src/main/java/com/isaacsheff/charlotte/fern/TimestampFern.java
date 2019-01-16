@@ -144,10 +144,9 @@ public class TimestampFern extends FernImplBase {
 
   /**
    * Called whenever a requestIntegrityAttestation comes in over the wire.
-   * This checks whether the incoming request is for a timestamp, waits
-   *  for all referenced blocks to arrtive, and then creates a
-   *  timestamp for those blocks, and returns a reference to that
-   *  attestation.
+   * This checks whether the incoming request is for a timestamp, and
+   *  then creates a timestamp for those blocks, and returns a
+   *  reference to that attestation.
    * @param request the request that came in over the wire
    * @return the RequestIntegrityAttestationResponse to be sent back over the wire.
    */
@@ -173,7 +172,6 @@ public class TimestampFern extends FernImplBase {
       if (!reference.hasHash()) {
         return builder.setErrorMessage("Reference with no Hash").build();
       }
-      getNode().getBlock(reference); // wait until we have such a block
       referencesBuilder.addBlock(Reference.newBuilder().setHash(reference.getHash()));
     }
 

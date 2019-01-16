@@ -5,6 +5,7 @@ import static java.lang.Integer.parseInt;
 
 import java.io.IOException;
 import java.nio.file.Paths;
+import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
@@ -14,6 +15,7 @@ import com.isaacsheff.charlotte.fern.TimestampFern;
 import com.isaacsheff.charlotte.node.TimestampNode;
 import com.isaacsheff.charlotte.proto.Block;
 import com.isaacsheff.charlotte.yaml.Config;
+import com.isaacsheff.charlotte.yaml.Contact;
 
 /**
  * A CharlotteNodeService implementation that waits to collect enough
@@ -25,14 +27,20 @@ public class TimestampExperimentNode extends TimestampNode {
   /** used for logging stuff in this class */
   private static final Logger logger = Logger.getLogger(TimestampExperimentNode.class.getName());
 
+  private final JsonExperimentConfig jsonConfig;
+
   /**
    * Create a new service with an empty map of blocks and an empty map of addresses.
    * @param referencesPerAttestation the number of blocks we want per timestamp we auto-request
    * @param fern the local timestamping service
    * @param config the Configuration settings for this Service
    */
-  public TimestampExperimentNode(int referencesPerAttestation, TimestampFern fern, Config config) {
+  public TimestampExperimentNode(final JsonExperimentConfig jsonConfig,
+                                 final int referencesPerAttestation,
+                                 final TimestampFern fern,
+                                 final Config config) {
     super(referencesPerAttestation, fern, config);
+    this.jsonConfig = jsonConfig;
   }
 
   /**
@@ -41,9 +49,22 @@ public class TimestampExperimentNode extends TimestampNode {
    * @param block the block to send
    */
   @Override
-  public void broadcastBlock(Block block) {
+  public void broadcastBlock(final Block block) {
     if (block.hasIntegrityAttestation()) {
+      // If this block is a signed timestamp deal with MULTIPLE REFERENCES, broadcast it.
+      if (block.getIntegrityAttestation().hasSignedTimestampedReferences()
+       && block.getIntegrityAttestation().getSignedTimestampedReferences().hasTimestampedReferences()
+       && block.getIntegrityAttestation().getSignedTimestampedReferences().getTimestampedReferences().getBlockCount()>1){
       super.broadcastBlock(block);
+      } else {
+        // send it to people who are not Fern or Wilbur servers
+        for (Entry<String, Contact> entry : getConfig().getContacts().entrySet()) {
+          if (   (!jsonConfig.getFernServers().contains(entry.getKey()))
+              && (!jsonConfig.getWilburServers().contains(entry.getKey()))) {
+            entry.getValue().getCharlotteNodeClient().sendBlock(block);
+          }
+        }
+      }
     }
   }
 
@@ -56,8 +77,11 @@ public class TimestampExperimentNode extends TimestampNode {
     final TimestampExperimentConfig config =
       (new ObjectMapper(new YAMLFactory())).readValue(Paths.get(filename).toFile(), TimestampExperimentConfig.class);
     final TimestampExperimentFern fern = new TimestampExperimentFern();
-    final TimestampExperimentNode nodeService = new TimestampExperimentNode(config.getTimestampReferencesPerAttestation(),
-        fern, new Config(config, Paths.get(filename).getParent()));
+    final TimestampExperimentNode nodeService = new TimestampExperimentNode(
+                                                      config,
+                                                      config.getTimestampReferencesPerAttestation(),
+                                                      fern,
+                                                      new Config(config, Paths.get(filename).getParent()));
     fern.setNode(nodeService);
     
     final Thread thread = new Thread(getFernNode(fern));

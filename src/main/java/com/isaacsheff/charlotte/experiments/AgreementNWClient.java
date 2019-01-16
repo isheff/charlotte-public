@@ -274,7 +274,7 @@ public class AgreementNWClient extends AgreementNClient {
 
   /**
    * Run the experiment.
-   * Thi ssets up the AgreementNWclient, broacasts the root block, and waits until it's done.
+   * This sets up the AgreementNWclient, broacasts the root block, and waits until it's done.
    * @param args command line arguments args[0] must be the config yaml file.
    */
   public static void main(String[] args) throws InterruptedException, FileNotFoundException, IOException {

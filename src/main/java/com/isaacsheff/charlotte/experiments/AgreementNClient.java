@@ -124,7 +124,9 @@ public class AgreementNClient {
             logger.log(Level.SEVERE, "Interrupted while trying to send to Fern", e);
           }
         }
-      })).start();
+      },
+      "RequestIntegrityAttestationInput_" + fern
+      )).start();
       requestQueues.put(contact.getCryptoId(), queue);
     }
   }
