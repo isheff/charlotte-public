@@ -6,10 +6,13 @@ import static java.lang.System.currentTimeMillis;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.util.JsonFormat;
 import com.isaacsheff.charlotte.node.CharlotteNode;
 import com.isaacsheff.charlotte.node.CharlotteNodeService;
 import com.isaacsheff.charlotte.proto.Block;
 import com.isaacsheff.charlotte.proto.CryptoId;
+import com.isaacsheff.charlotte.proto.Hash;
 import com.isaacsheff.charlotte.proto.IntegrityAttestation;
 import com.isaacsheff.charlotte.proto.IntegrityAttestation.SignedTimestampedReferences;
 import com.isaacsheff.charlotte.proto.IntegrityAttestation.TimestampedReferences;
@@ -67,6 +70,12 @@ public class TimestampExperimentClient extends AgreementNClient {
                                        final CryptoId fernCryptoId,
                                        final Block block)
     throws InterruptedException {
+    final Hash hash = sha3Hash(block);
+    try {
+      logger.info("{ \"requestAttestationForBlock\":" + JsonFormat.printer().print(hash)+" }");
+    } catch (InvalidProtocolBufferException e) {
+      logger.log(Level.SEVERE, "invalid prototocol buffer formed while hashing a block somehow", e);
+    }
     client.getRequestQueues().get(fernCryptoId).put(
         RequestIntegrityAttestationInput.newBuilder().setPolicy(
           IntegrityPolicy.newBuilder().setFillInTheBlank(
@@ -75,7 +84,7 @@ public class TimestampExperimentClient extends AgreementNClient {
                 setSignature(
                   Signature.newBuilder().setCryptoId(fernCryptoId)). // signed by me
                 setTimestampedReferences(
-                  TimestampedReferences.newBuilder().addBlock(Reference.newBuilder().setHash(sha3Hash(block))).
+                  TimestampedReferences.newBuilder().addBlock(Reference.newBuilder().setHash(hash)).
                     setTimestamp(fromMillis(currentTimeMillis()))
               )))).build());
   }
