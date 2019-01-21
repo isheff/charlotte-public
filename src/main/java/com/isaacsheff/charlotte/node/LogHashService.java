@@ -6,6 +6,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.util.JsonFormat;
 import com.isaacsheff.charlotte.proto.Block;
 import com.isaacsheff.charlotte.proto.Hash;
+import com.isaacsheff.charlotte.yaml.Config;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -27,11 +28,19 @@ public class LogHashService extends CharlotteNodeService {
   private static final Logger logger = Logger.getLogger(LogHashService.class.getName());
 
   /**
+   * Create a new service with an empty map of blocks and an empty map of addresses.
+   * @param config the Configuration settings for this Service
+   */
+  public LogHashService(final Config config) {
+    super(config);
+  }
+
+  /**
    * Create a new service with an empty map of blocks and an empty map of addresses, parse configuration.
    * @param filename the file name for the configuration file
    */
   public LogHashService(final String filename) {
-    super(filename);
+    this(new Config(filename));
   }
   
   /**

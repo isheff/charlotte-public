@@ -62,13 +62,10 @@ public class TimestampExperimentClient extends AgreementNClient {
    * Request a timestamp from a fern server for a single block (referenced).
    * This will be queued to be sent asynchronously. 
    * Expect onFernResponse to be called when a Fern server responds.
-   * @param client the TimestampExperimentClient making this request
    * @param fernCryptoId the Crypto Id of the fern server you'd like to request from
    * @param block the block you want timestamped.
    */
-  private static void requestTimestamp(final TimestampExperimentClient client,
-                                       final CryptoId fernCryptoId,
-                                       final Block block)
+  public void requestTimestamp(final CryptoId fernCryptoId, final Block block)
     throws InterruptedException {
     final Hash hash = sha3Hash(block);
     try {
@@ -76,7 +73,7 @@ public class TimestampExperimentClient extends AgreementNClient {
     } catch (InvalidProtocolBufferException e) {
       logger.log(Level.SEVERE, "invalid prototocol buffer formed while hashing a block somehow", e);
     }
-    client.getRequestQueues().get(fernCryptoId).put(
+    getRequestQueues().get(fernCryptoId).put(
         RequestIntegrityAttestationInput.newBuilder().setPolicy(
           IntegrityPolicy.newBuilder().setFillInTheBlank(
             IntegrityAttestation.newBuilder().setSignedTimestampedReferences(
@@ -118,17 +115,17 @@ public class TimestampExperimentClient extends AgreementNClient {
     logger.info("Begin Experiment");
     final int fernCount = config.getFernServers().size();
     for (int i = 0; i < config.getBlocksPerExperiment(); ++i) {
-      requestTimestamp(client,
-                       client.getService().getConfig().getContact(config.getFernServers().get(i % fernCount)).getCryptoId(),
-                       blocks[i]);
+      client.requestTimestamp(
+        client.getService().getConfig().getContact(config.getFernServers().get(i % fernCount)).getCryptoId(),
+        blocks[i]);
     }
 
     TimeUnit.SECONDS.sleep(30); // wait a second for the servers to warm up
     logger.info("SECOND ROUND");
     for (int i = config.getBlocksPerExperiment(); i < (config.getBlocksPerExperiment() * 2); ++i) {
-      requestTimestamp(client,
-                       client.getService().getConfig().getContact(config.getFernServers().get(i % fernCount)).getCryptoId(),
-                       blocks[i]);
+      client.requestTimestamp(
+        client.getService().getConfig().getContact(config.getFernServers().get(i % fernCount)).getCryptoId(),
+        blocks[i]);
     }
     logger.info("All blocks sent");
 
