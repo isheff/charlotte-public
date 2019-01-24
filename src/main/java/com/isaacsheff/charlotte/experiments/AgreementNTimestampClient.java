@@ -22,12 +22,21 @@ import com.isaacsheff.charlotte.proto.Reference;
 import com.isaacsheff.charlotte.yaml.Config;
 import com.isaacsheff.charlotte.yaml.JsonContact;
 
+/**
+ * Experimental client which runs both AgreementN and Timestamping.
+ * This needs to be run with two config files, one for each experiment.
+ * The client node (me) needs to be the same in both.
+ *
+ * @author Isaac Sheff
+ */
 public class AgreementNTimestampClient {
   /** used for logging events in this class **/
   private static final Logger logger = Logger.getLogger(AgreementNTimestampClient.class.getName());
 
   /**
    * Run the experiment.
+   * This needs to be run with two config files, one for each experiment.
+   * The client node (me) needs to be the same in both.
    * @param args command line arguments. args[0] must be the config yaml file for the Agreement Chain.
    *                                     args[1] must be the config yaml file for the Timestamping.
    */
@@ -59,6 +68,11 @@ public class AgreementNTimestampClient {
       );
 
     final CharlotteNodeService service = new LogHashService(new Config(combinedConfig, Paths.get(args[0]).getParent())) {
+      /**
+       * Send this block to all known contacts from the AgreementN config file.
+       * Since each contact's sendBlock function is nonblocking, this will be done in parallel.
+       * @param block the block to send
+       */
       @Override
       public void broadcastBlock(final Block block) {
         // Broadcast the block IFF it's not a timestamp
@@ -76,6 +90,13 @@ public class AgreementNTimestampClient {
     final TimestampExperimentClient timestampClient = new TimestampExperimentClient(service, timestampConfig);
 
     final AgreementNClient agreementClient = new AgreementNClient(service, agreementConfig) {
+      /** 
+       * Send a request to all the clients (and so to all the fern servers) for Agreement and for Timestamping.
+       * This will broadcast the block from blocks[slot] (to Agreement servers),
+       *  and then enqueue requests built for each fern.
+       * @param parentBuilder represents the reference to the parent block
+       * @param slot the slot number of this new block
+       */
       @Override
       public void broadcastRequest(final Reference.Builder parentBuilder, final int slot) {
         try {
@@ -95,7 +116,7 @@ public class AgreementNTimestampClient {
     };
 
 
-    (new Thread(new CharlotteNode(service))).start();
+    (new Thread(new CharlotteNode(service))).start(); // start the Local service that sends / receives blocks
 
     TimeUnit.SECONDS.sleep(1); // wait for servers to start up
     agreementClient.broadcastRequest(Reference.newBuilder(), 0); // send out the root block
