@@ -79,6 +79,9 @@ public class AgreementNTimestampClient {
       @Override
       public void broadcastRequest(final Reference.Builder parentBuilder, final int slot) {
         try {
+          if (slot == timestampConfig.getBlocksPerExperiment()) {
+            logger.info("SECOND ROUND"); // used in the timestamping experiment to denote when we're done warming up.
+          }
           timestampClient.requestTimestamp(
             service.getConfig().getContact(
                 timestampConfig.getFernServers().get(slot % timestampConfig.getFernServers().size())
@@ -97,6 +100,7 @@ public class AgreementNTimestampClient {
     TimeUnit.SECONDS.sleep(1); // wait for servers to start up
     agreementClient.broadcastRequest(Reference.newBuilder(), 0); // send out the root block
     agreementClient.waitUntilDone();
+    logger.info("All blocks sent"); // used in timestamping experiment
     System.exit(0);
   }
 }

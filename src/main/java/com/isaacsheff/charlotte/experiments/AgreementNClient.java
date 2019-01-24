@@ -196,13 +196,15 @@ public class AgreementNClient {
 
   /**  Wait until the experiment is done */
   public void waitUntilDone() {
-    try {
-      synchronized(doneLock) {
-        doneLock.wait();
+    while (true) {
+      try {
+        synchronized(doneLock) {
+          doneLock.wait();
+          return;
+        }
+      } catch (InterruptedException e) {
+        logger.log(Level.SEVERE, "Interrupted while waiting to finish experiment", e);
       }
-    } catch (InterruptedException e) {
-      logger.log(Level.SEVERE, "Interrupted while waiting to finish experiment", e);
-      waitUntilDone();
     }
   }
 

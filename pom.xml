@@ -698,6 +698,41 @@
         </plugins>
       </build>
     </profile>
+
+    <profile>
+      <id>agreement-timestamp-client</id>
+      <build>
+        <plugins>
+          <!-- For executable jars with dependencies included https://mvnrepository.com/artifact/org.apache.maven.plugins/maven-assembly-plugin -->
+          <plugin>
+            <artifactId>maven-assembly-plugin</artifactId>
+            <configuration>
+              <appendAssemblyId>false</appendAssemblyId>
+            </configuration>
+            <executions>
+              <execution>
+                <id>agreement-timestamp-client</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>single</goal>
+                </goals>
+                <configuration>
+                  <archive>
+                    <manifest>
+                      <mainClass>com.isaacsheff.charlotte.experiments.AgreementNTimestampClient</mainClass>
+                    </manifest>
+                  </archive>
+                  <descriptorRefs>
+                    <descriptorRef>jar-with-dependencies</descriptorRef>
+                  </descriptorRefs>
+                  <finalName>agreement_timestamp_client</finalName>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
   </profiles>
 
 
