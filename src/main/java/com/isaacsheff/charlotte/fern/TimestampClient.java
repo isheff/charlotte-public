@@ -12,13 +12,12 @@ import com.isaacsheff.charlotte.proto.RequestIntegrityAttestationResponse;
 import com.isaacsheff.charlotte.yaml.Contact;
 
 /**
+ * A Client for a TimestampFern.
  * This client needs a local CharlotteNodeService to get blocks for it.
  * @author Isaac Sheff
  */
 public class TimestampClient extends AgreementFernClient {
-  /**
-   * Use logger for logging events on this class.
-   */
+  /** Use logger for logging events on this class. */
   private static final Logger logger = Logger.getLogger(TimestampClient.class.getName());
 
   /**
@@ -68,8 +67,6 @@ public class TimestampClient extends AgreementFernClient {
     }
     return attestation;
   }
-
-
 
   /**
    * Check whether this Response references a valid IntegrityAttestation matching the request.

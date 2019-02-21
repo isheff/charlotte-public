@@ -28,7 +28,7 @@ public class QuorumConfig {
                 .setOwner(owner)
 //                .setSize(participants.size())
                 .addAllMemebers(participants.stream().map(jsonContact -> {
-                    return new Contact(jsonContact, HetconsConfig.configFileDirectory.toPath()).getCryptoId();
+                    return new Contact(jsonContact, HetconsConfig.configFileDirectory.toPath(), null).getCryptoId();
                 }).collect(Collectors.toList()))
                 .build();
     }

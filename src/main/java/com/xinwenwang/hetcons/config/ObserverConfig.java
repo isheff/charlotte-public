@@ -35,7 +35,7 @@ public class ObserverConfig {
 
     public HetconsObserver toHetconsObserver() {
 
-        Contact contact = new Contact(self, HetconsConfig.configFileDirectory.toPath());
+        Contact contact = new Contact(self, HetconsConfig.configFileDirectory.toPath(), null);
 
         return HetconsObserver.newBuilder().setId(contact.getCryptoId())
                 .addAllQuorums(quorums.stream().map(quorumConfig -> {

@@ -109,9 +109,7 @@ public class HetconsFern extends AgreementFernService {
    * @return a new CharlotteNode which runs a Fern Service and a CharlotteNodeService
    */
   public static CharlotteNode getFernNode(final HetconsFern fern) {
-    return new CharlotteNode(fern.getNode(),
-                             ServerBuilder.forPort(fern.getNode().getConfig().getPort()).addService(fern),
-                             fern.getNode().getConfig().getPort());
+    return new CharlotteNode(fern.getNode());
   }
 
   /**

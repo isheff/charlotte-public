@@ -49,14 +49,10 @@ import org.bouncycastle.util.io.pem.PemObject;
  * @author Isaac Sheff
  */
 public class GenerateX509 {
-  /**
-   * This line is required to use bouncycastle encryption libraries.
-   */
+  /** This line is required to use bouncycastle encryption libraries. */
   static {Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());}
 
-  /**
-   * Use logger for logging events in GenerateX509's utility functions.
-   */
+  /** Use logger for logging events in GenerateX509's utility functions. */
   private static final Logger logger = Logger.getLogger(GenerateX509.class.getName());
 
   /**
@@ -137,9 +133,6 @@ public class GenerateX509 {
       logger.log(Level.SEVERE, "Exception while trying to close file " + path, t);
     }
   }
-
-
-
 
   /**
    * Make a default key pair.

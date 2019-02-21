@@ -35,16 +35,10 @@ public class HetconsParticipantService extends CharlotteNodeService {
     }
 
     @Override
-    public Iterable<SendBlocksResponse> onSendBlocksInput(SendBlocksInput input) {
-        if (!input.hasBlock()) {
-            //TODO: handle error
-            return super.onSendBlocksInput(input);
-        }
-
-        Block block = input.getBlock();
+    public Iterable<SendBlocksResponse> onSendBlocksInput(final Block block) {
         if (!block.hasHetconsMessage()) {
             //TODO: handle error
-            return super.onSendBlocksInput(input);
+            return super.onSendBlocksInput(block);
         }
 
         HetconsMessage hetconsMessage = block.getHetconsMessage();

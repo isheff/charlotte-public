@@ -19,7 +19,6 @@ import com.isaacsheff.charlotte.proto.Reference;
 import com.isaacsheff.charlotte.proto.RequestAvailabilityAttestationInput;
 import com.isaacsheff.charlotte.proto.RequestAvailabilityAttestationResponse;
 
-import io.grpc.ServerBuilder;
 import io.grpc.stub.StreamObserver;
 
 /**
@@ -32,14 +31,10 @@ import io.grpc.stub.StreamObserver;
  * @author Isaac Sheff
  */
 public class WilburService extends WilburGrpc.WilburImplBase {
-  /**
-   * Use logger for logging events on a WilburService.
-   */
+  /** Use logger for logging events on a WilburService. */
   private static final Logger logger = Logger.getLogger(WilburService.class.getName());
 
-  /** 
-   * The CharlotteNodeService running on the same server as this Wilbur service (there must be one).
-   */
+  /** The CharlotteNodeService running on the same server as this Wilbur service (there must be one). */
   private final CharlotteNodeService node;
 
   /**
@@ -66,9 +61,7 @@ public class WilburService extends WilburGrpc.WilburImplBase {
    * @return a new CharlotteNode which runs a Wilbur Service and a CharlotteNodeService
    */
   public static CharlotteNode getWilburNode(final CharlotteNodeService node) {
-    return new CharlotteNode(node,
-                             ServerBuilder.forPort(node.getConfig().getPort()).addService(new WilburService(node)),
-                             node.getConfig().getPort());
+    return new CharlotteNode(node, new WilburService(node));
   }
 
   /**
@@ -95,9 +88,7 @@ public class WilburService extends WilburGrpc.WilburImplBase {
     this.node = node;
   }
 
-  /**
-   * @return The CharlotteNodeService running on the same server as this Wilbur service (there must be one).
-   */
+  /** @return The CharlotteNodeService running on the same server as this Wilbur service (there must be one). */
   public CharlotteNodeService getNode() { return node; }
 
   /**

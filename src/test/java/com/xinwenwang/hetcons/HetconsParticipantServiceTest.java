@@ -85,11 +85,11 @@ public class HetconsParticipantServiceTest extends HetconsTest {
         }
 
         Config clientConfig = new Config(clientJsonConfig, Paths.get(testDirectory));
-        Contact serverContact = new Contact(contactServer, Paths.get(testDirectory));
+        Contact serverContact = new Contact(contactServer, Paths.get(testDirectory), clientConfig);
 
         ArrayList<CryptoId> quorumMembers = new ArrayList<>();
         for (int i = 2; i < 9; i ++) {
-            quorumMembers.add(new Contact(testContacts.get(i), Paths.get(testDirectory)).getCryptoId());
+            quorumMembers.add(new Contact(testContacts.get(i), Paths.get(testDirectory), clientConfig).getCryptoId());
         }
         HetconsClientNode client = new HetconsClientNode(serverContact, clientConfig);
 
@@ -148,7 +148,7 @@ public class HetconsParticipantServiceTest extends HetconsTest {
         client.propose(slots, value1, ballot1, observerGroup, 1000);
 
         try {
-            TimeUnit.SECONDS.sleep(1000);
+            TimeUnit.SECONDS.sleep(10);
         } catch (InterruptedException ex) {
             logger.log(Level.SEVERE, "Interrupt got");
             return;

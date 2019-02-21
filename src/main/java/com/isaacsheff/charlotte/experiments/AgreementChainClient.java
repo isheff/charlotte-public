@@ -28,13 +28,23 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+/**
+ * Runs an experiment using the Agreement Chain Fern servers.
+ * That is to say, Fern servers that issue SignedChainSlot
+ *  attestations for the first block of each slot they see, iff it
+ *  references a parent block they've also signed.
+ * This client just issues the same set of blocks to all servers, as
+ *  fast as it can.
+ * @author Isaac Sheff
+ */
 public class AgreementChainClient {
   /** used for logging events in this class **/
   private static final Logger logger = Logger.getLogger(AgreementChainClient.class.getName());
 
   /**
    * Run the experiment.
-   * This attempts to append 3 blocks to an agreement chain, and checks at last that it has done so.
+   * This attempts to append config.blocksPerExperiment blocks to an
+   *  agreement chain, and checks at last that it has done so.
    * @param args command line arguments args[0] must be the config yaml file.
    */
   public static void main(String[] args) throws InterruptedException, FileNotFoundException, IOException {

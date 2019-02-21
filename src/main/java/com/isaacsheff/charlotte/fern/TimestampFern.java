@@ -20,7 +20,6 @@ import com.isaacsheff.charlotte.proto.RequestIntegrityAttestationResponse;
 import com.isaacsheff.charlotte.proto.SendBlocksResponse;
 import com.isaacsheff.charlotte.yaml.Config;
 
-import io.grpc.ServerBuilder;
 import io.grpc.stub.StreamObserver;
 
 import java.util.concurrent.TimeUnit;
@@ -86,9 +85,7 @@ public class TimestampFern extends FernImplBase {
    * @return a new CharlotteNode which runs a Fern Service and a CharlotteNodeService
    */
   public static CharlotteNode getFernNode(final TimestampFern fern) {
-    return new CharlotteNode(fern.getNode(),
-                             ServerBuilder.forPort(fern.getNode().getConfig().getPort()).addService(fern),
-                             fern.getNode().getConfig().getPort());
+    return new CharlotteNode(fern.getNode(), fern);
   }
 
   /**
@@ -138,6 +135,7 @@ public class TimestampFern extends FernImplBase {
     this.node = node;
   }
 
+  /** The default constructor should only be used by extending classes. */
   protected TimestampFern() {}
 
   /** @return The local CharlotteNodeService used to send and receive blocks */
@@ -146,10 +144,9 @@ public class TimestampFern extends FernImplBase {
 
   /**
    * Called whenever a requestIntegrityAttestation comes in over the wire.
-   * This checks whether the incoming request is for a timestamp, waits
-   *  for all referenced blocks to arrtive, and then creates a
-   *  timestamp for those blocks, and returns a reference to that
-   *  attestation.
+   * This checks whether the incoming request is for a timestamp, and
+   *  then creates a timestamp for those blocks, and returns a
+   *  reference to that attestation.
    * @param request the request that came in over the wire
    * @return the RequestIntegrityAttestationResponse to be sent back over the wire.
    */
@@ -175,7 +172,6 @@ public class TimestampFern extends FernImplBase {
       if (!reference.hasHash()) {
         return builder.setErrorMessage("Reference with no Hash").build();
       }
-      getNode().getBlock(reference); // wait until we have such a block
       referencesBuilder.addBlock(Reference.newBuilder().setHash(reference.getHash()));
     }
 

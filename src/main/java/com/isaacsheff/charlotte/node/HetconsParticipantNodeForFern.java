@@ -118,24 +118,23 @@ public class HetconsParticipantNodeForFern extends HetconsParticipantService {
    * @return any responses, in this case just forwarded from HetconsParticipantService.onSendBlocksInput
    */
   @Override
-  public Iterable<SendBlocksResponse> onSendBlocksInput(SendBlocksInput input) {
-    if (input.hasBlock()
-        && input.getBlock().hasHetconsMessage()
-        && input.getBlock().getHetconsMessage().hasM2B()
-        && input.getBlock().getHetconsMessage().getM2B().hasProposal()) {
+  public Iterable<SendBlocksResponse> onSendBlocksInput(final Block block) {
+    if (block.hasHetconsMessage()
+        && block.getHetconsMessage().hasM2B()
+        && block.getHetconsMessage().getM2B().hasProposal()) {
        final Set<Block> newM2bSet = newKeySet();
        final Set<Block> m2bsKnownForThisHash = getReference2bsPerProposal().putIfAbsent(
-               input.getBlock().getHetconsMessage().getM1A().getProposal(),
+               block.getHetconsMessage().getM1A().getProposal(),
                newM2bSet);
        // If there was already a set in the map, we use the old one.
        // Otherwise, newM2bSet WAS ADDED, so we should use that.
        if (m2bsKnownForThisHash == null) {
-         newM2bSet.add(input.getBlock());
+         newM2bSet.add(block);
        } else {
-         m2bsKnownForThisHash.add(input.getBlock());
+         m2bsKnownForThisHash.add(block);
        }
      }
-    return super.onSendBlocksInput(input);
+    return super.onSendBlocksInput(block);
   }
 
 }

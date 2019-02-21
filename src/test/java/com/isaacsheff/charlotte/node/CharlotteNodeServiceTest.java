@@ -30,13 +30,13 @@ import java.util.logging.Level;
  * @author Isaac Sheff
  */
 public class CharlotteNodeServiceTest {
-  /**
-   * Use this for logging events in the class.
-   */
+  /** Use this for logging events in the class. */
   private static final Logger logger = Logger.getLogger(CharlotteNodeServiceTest.class.getName());
 
-  /** The port used on the dummy server for an individual test. */
+  /** The port used on dummy server 1 for an individual test. */
   private int port0;
+
+  /** The port used on dummy server 2 for an individual test. */
   private int port1;
 
   /**
@@ -70,14 +70,14 @@ public class CharlotteNodeServiceTest {
     // populate the stack of blocks we expect to receive
     final BlockingQueue<Block> receivedBlocks0 = new ArrayBlockingQueue<Block>(3);
     // create a CharlotteNodeService that queues the blocks received
-    final CharlotteNode node0 = new CharlotteNode(new CharlotteNodeService(
+    final Config config0 = 
         new Config(new JsonConfig("src/test/resources/private-key.pem",
                                   "node0",
                                   contacts
                                  ),
               Paths.get(".")
-            )
-        ) {
+            );
+    final CharlotteNode node0 = new CharlotteNode(new CharlotteNodeService(config0) {
         @Override public Iterable<SendBlocksResponse> afterBroadcastNewBlock(Block block) {
           try {
             receivedBlocks0.put(block);
@@ -94,14 +94,14 @@ public class CharlotteNodeServiceTest {
     // populate the stack of blocks we expect to receive
     final BlockingQueue<Block> receivedBlocks1 = new ArrayBlockingQueue<Block>(3);
     // create a CharlotteNodeService that queues the blocks received
-    final CharlotteNode node1 = new CharlotteNode(new CharlotteNodeService(
+    final Config config1 =
         new Config(new JsonConfig("src/test/resources/private-key2.pem",
                                   "node1",
                                   contacts
                                  ),
               Paths.get(".")
-            )
-        ) {
+            );
+    final CharlotteNode node1 = new CharlotteNode(new CharlotteNodeService(config1) {
         @Override public Iterable<SendBlocksResponse> afterBroadcastNewBlock(Block block) {
           try {
             receivedBlocks1.put(block);
@@ -117,7 +117,7 @@ public class CharlotteNodeServiceTest {
 
     // create a client, and send the expected sequence of blocks
     final CharlotteNodeClient client = (new Contact(
-        new JsonContact("src/test/resources/server.pem", "localhost", port0), Paths.get("."))).
+        new JsonContact("src/test/resources/server.pem", "localhost", port0), Paths.get("."), config1)).
       getCharlotteNodeClient();
 
     TimeUnit.SECONDS.sleep(1); // wait a second for the server to start up
@@ -151,8 +151,8 @@ public class CharlotteNodeServiceTest {
     //       This isn't really a problem, as the servers' shutdown behaviour doesn't really matter.
     //       However, it bugs me.
     //       This should be fixed.
-    client.shutdown();
-    node0.stop();
-    node1.stop();
+    // client.shutdown();
+    // node0.stop();
+    // node1.stop();
   }
 }

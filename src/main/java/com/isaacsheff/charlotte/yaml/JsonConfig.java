@@ -16,19 +16,13 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 @JsonIgnoreProperties(ignoreUnknown = true) // if there are random other fields at the top level of config, just ignore them
 public class JsonConfig {
 
-  /**
-   * filename of this server's private key (a PEM file), relative to the config file
-   */
+  /** filename of this server's private key (a PEM file), relative to the config file */
   @JsonProperty("privatekey") private final String privatekey;
 
-  /**
-   * which of the contacts corresponds to this server (public key, url, etc)?
-   */
+  /** which of the contacts corresponds to this server (public key, url, etc)? */
   @JsonProperty("me") private final String me;
 
-  /**
-   * A map of String "names" of known other servers to contact information for each.
-   */
+  /** A map of String "names" of known other servers to contact information for each. */
   @JsonProperty("contacts") private final Map<String, JsonContact> contacts;
 
   /**
@@ -39,27 +33,21 @@ public class JsonConfig {
    */
   @JsonCreator
   public JsonConfig(
-      @JsonProperty("privatekey") String privatekey,
-      @JsonProperty("me") String me,
-      @JsonProperty("contacts") Map<String, JsonContact> contacts
+      @JsonProperty("privatekey") final String privatekey,
+      @JsonProperty("me") final String me,
+      @JsonProperty("contacts") final Map<String, JsonContact> contacts
       ) {
     this.privatekey = privatekey;
     this.me = me;
     this.contacts = contacts;
   }
 
-  /**
-   * @return filename of this server's private key (a PEM file), relative to the config file
-   */
+  /** @return filename of this server's private key (a PEM file), relative to the config file */
   @JsonProperty("privatekey") public String getPrivateKey() {return this.privatekey;}
 
-  /**
-   * @return which of the contacts corresponds to this server (public key, url, etc)?
-   */
+  /** @return which of the contacts corresponds to this server (public key, url, etc)? */
   @JsonProperty("me") public String getMe() {return this.me;}
 
-  /**
-   * @return A map of String "names" of known other servers to contact information for each.
-   */
+  /** return A map of String "names" of known other servers to contact information for each. */
   @JsonProperty("contacts") public Map<String, JsonContact> getContacts() {return this.contacts;}
 }

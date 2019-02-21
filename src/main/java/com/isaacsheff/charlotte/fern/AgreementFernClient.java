@@ -19,23 +19,18 @@ import io.grpc.ManagedChannel;
 import io.grpc.stub.StreamObserver;
 
 /**
+ * A Client for Agreement Fern (for one Fern Server).
  * This client needs a local CharlotteNodeService to get blocks for it.
  * @author Isaac Sheff
  */
 public class AgreementFernClient {
-  /**
-   * Use logger for logging events on this class.
-   */
+  /** Use logger for logging events on this class. */
   private static final Logger logger = Logger.getLogger(AgreementFernClient.class.getName());
 
-  /**
-   * The channel through which we communicate to the server.
-   */
+  /** The channel through which we communicate to the server. */
   private final ManagedChannel channel;
 
-  /**
-   * The stub which sends messages to the Fern service within the server (this is a gRPC thing).
-   */
+  /** The stub which sends messages to the Fern service within the server (this is a gRPC thing). */
   private final FernStub asyncStub;
 
   /**
@@ -50,11 +45,8 @@ public class AgreementFernClient {
    */
   private final Contact contact;
 
-  /**
-   * The local CharlotteNodeService we expect to receive blocks.
-   */
+  /** The local CharlotteNodeService we expect to receive blocks. */
   private final CharlotteNodeService localService;
-
 
   /**
    * Make a new AgreementFernClient for a specific AgreementFern server.

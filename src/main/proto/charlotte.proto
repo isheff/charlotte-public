@@ -8,15 +8,32 @@ option objc_class_prefix = "CHARLOTTE";
 package charlotte;
 
 import "google/protobuf/timestamp.proto";
-// To use Any: import "google/protobuf/any.proto";
+import "google/protobuf/any.proto";
 // To use Empty: import "google/protobuf/empty.proto";
+
+
+// ANY_WITH_REFERENCE
+
+// While Any provides a URL field that allows the user to specify a
+//  location for the .proto type description, it is conventient in
+//  Charlotte to also be able to specify a block, and References are
+//  not inherently Strings (although I suppose you coudl marshal a
+//  Reference into a String).
+message AnyWithReference {
+  google.protobuf.Any any = 1; // the datum
+  Reference typeBlock = 2; // a reference to a block describing the datum
+}
 
 
 // BASIC CRYPTO PRIMITIVES
 
 message Hash {
   oneof hashalgorithm_oneof {
-    bytes sha3 = 1;
+    AnyWithReference any = 1; // Fill in your own Hash type
+
+    // Technically, we can do everything safely with the above.
+    // However, it is super convenient to have a few built-in types.
+    bytes sha3 = 2;
   }
 }
 
@@ -25,14 +42,22 @@ message PublicKey {
     bytes byteString = 1;
   }
   oneof keyalgorithm_oneof {    
-    EllipticCurveP256 ellipticCurveP256 = 1;
+    AnyWithReference any = 1; // Fill in your own key type
+
+    // Technically, we can do everything safely with the above.
+    // However, it is super convenient to have a few built-in types.
+    EllipticCurveP256 ellipticCurveP256 = 2;
   }
 }
 
 message CryptoId { // distinct from PublicKeys, because it might be a hash of a public key, I guess
   oneof idtype_oneof {
-    PublicKey publicKey = 1;
-    Hash hash = 2;
+    AnyWithReference any = 1; // Fill in your own Id type
+
+    // Technically, we can do everything safely with the above.
+    // However, it is super convenient to have a few built-in types.
+    PublicKey publicKey = 2;
+    Hash hash = 3;
   }
 }
 
@@ -42,7 +67,11 @@ message Signature {
   }
   CryptoId cryptoId = 1;
   oneof signaturealgorithm_oneof {
-    SignatureAlgorithmSHA256WithECDSA sha256WithEcdsa = 2;
+    AnyWithReference any = 2; // Fill in your own Signature type
+
+    // Technically, we can do everything safely with the above.
+    // However, it is super convenient to have a few built-in types.
+    SignatureAlgorithmSHA256WithECDSA sha256WithEcdsa = 3;
   }
 }
 
@@ -88,10 +117,14 @@ message IntegrityAttestation {
     repeated Reference message2b = 2;
   }
   oneof integrityattestationtype_oneof {
-    SignedChainSlot signedChainSlot = 1;
-    SignedTimestampedReferences signedTimestampedReferences = 2;
-    SignedGitSimBranch signedGitSimBranch = 3;
-    HetconsAttestation hetconsAttestation = 4;
+    AnyWithReference any = 1; // Fill in your own Integrity policy type
+
+    // Technically, we can do everything safely with the above.
+    // However, it is super convenient to have a few built-in types.
+    SignedChainSlot signedChainSlot = 2;
+    SignedTimestampedReferences signedTimestampedReferences = 3;
+    SignedGitSimBranch signedGitSimBranch = 4;
+    HetconsAttestation hetconsAttestation = 5;
   }
 }
 
@@ -104,7 +137,11 @@ message AvailabilityAttestation {
     Signature signature = 2;
   }
   oneof availabilityattestationtype_oneof {
-    SignedStoreForever signedStoreForever = 1;
+    AnyWithReference any = 1; // Fill in your own Availability Attestation type
+
+    // Technically, we can do everything safely with the above.
+    // However, it is super convenient to have a few built-in types.
+    SignedStoreForever signedStoreForever = 2;
   }
 }
 
@@ -130,12 +167,16 @@ message SignedGitSimCommit {
 
 message Block {
   oneof blocktype_oneof {
-    AvailabilityAttestation availabilityAttestation = 1;
-    IntegrityAttestation integrityAttestation = 2;
+    AnyWithReference any = 1; // You can store anything as a block.
+    string protobuf = 2; // If you want to store a type as a block
+
+    // Technically, we can do everything safely with the above. 
+    // However, it is super convenient to have a few built-in types.
     string str = 3; // why not?
-    HetconsMessage hetconsMessage = 4;
-    SignedGitSimCommit signedGitSimCommit= 5;
-    // This is probably the best place for an Any type, but for now, keep it minimum
+    AvailabilityAttestation availabilityAttestation = 4;
+    IntegrityAttestation integrityAttestation = 5;
+    SignedGitSimCommit signedGitSimCommit= 6;
+    HetconsMessage hetconsMessage = 7;
   }
 }
 
@@ -161,7 +202,11 @@ service CharlotteNode {
 
 message AvailabilityPolicy {
   oneof availabilitypolicytype_oneof {
-    AvailabilityAttestation fillInTheBlank = 1;
+    AnyWithReference any = 1; // Fill in your own Availability policy type
+
+    // Technically, we can do everything safely with the above.
+    // However, it is super convenient to have a few built-in types.
+    AvailabilityAttestation fillInTheBlank = 2;
   }
 }
 // just wrappers for the rpc input and output
@@ -204,8 +249,13 @@ message IntegrityPolicy {
     CryptoId observer = 2;
   }
   oneof integritypolicytype_oneof {
-    IntegrityAttestation fillInTheBlank = 1;
-    HetconsPolicy hetconsPolicy = 2;
+    AnyWithReference any = 1; // Fill in your own Integrity policy type
+
+    // Technically, we can do everything safely with the above.
+    // However, it is super convenient to have a few built-in types.
+    IntegrityAttestation fillInTheBlank = 2;
+    HetconsPolicy hetconsPolicy = 3;
+    // Eventually, I suppose, some kind of consensus request goes in here.
   }
 }
 // just wrappers for the RPC input and output
