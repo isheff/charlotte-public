@@ -24,6 +24,7 @@ public class HetconsParticipantService extends CharlotteNodeService {
     private  ThreadPoolExecutor executorService;
     private  ThreadPoolExecutor executorService1b;
     private  ThreadPoolExecutor executorService2b;
+    private  ThreadPoolExecutor executorServiceRestart;
 
     private Map<String, HetconsRestartStatus> restartTimers;
 
@@ -36,9 +37,12 @@ public class HetconsParticipantService extends CharlotteNodeService {
         sentBlocSet = new ConcurrentHashMap<>();
         sentBlocks = new ConcurrentHashMap<>();
 //        executorService = (ThreadPoolExecutor) Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() * 3);
-        executorService = (ThreadPoolExecutor) Executors.newFixedThreadPool(2);
-        executorService1b = (ThreadPoolExecutor) Executors.newFixedThreadPool(2);
-        executorService2b = (ThreadPoolExecutor) Executors.newFixedThreadPool(2);
+        executorService = (ThreadPoolExecutor) Executors.newFixedThreadPool(4);
+        executorService1b = (ThreadPoolExecutor) Executors.newFixedThreadPool(4);
+        executorService2b = (ThreadPoolExecutor) Executors.newFixedThreadPool(4);
+        executorServiceRestart = (ThreadPoolExecutor) Executors.newFixedThreadPool(2);
+//        executorService1b = executorService;
+//        executorService2b = executorService1b;
         restartTimers = new ConcurrentHashMap<>();
 //        logger.setUseParentHandlers(false);
 //        SimpleFormatter fmt = new SimpleFormatter();
@@ -151,14 +155,17 @@ public class HetconsParticipantService extends CharlotteNodeService {
         }
 
         final Block inputBlock = block;
-
+        List<CryptoId> observerIDs = new ArrayList<>();
         // FIXME: Concurrency
         // TODO: parallel receive1a
         observerGroup.getObserversList().forEach(o -> {
             String name = getConfig().getContact(o.getId()).getUrl() + ":" + getConfig().getContact(o.getId()).getPort();
             HetconsObserverStatus observerStatus = new HetconsObserverStatus(o, this, name);
             observers.putIfAbsent(HetconsUtil.cryptoIdToString(o.getId()), observerStatus);
+            observerIDs.add(o.getId());
         });
+        restartTimers.putIfAbsent(HetconsUtil.buildConsensusId(proposal.getSlotsList()), new HetconsRestartStatus(observerIDs));
+//            executorService.submit(() -> {
         observerGroup.getObserversList().forEach(o -> {
             HetconsObserverStatus observerStatus = observers.get(HetconsUtil.cryptoIdToString(o.getId()));
             executorService.submit(() -> {
@@ -167,8 +174,9 @@ public class HetconsParticipantService extends CharlotteNodeService {
                         o.getQuorumsList(),
                         HetconsUtil.buildChainID(observerGroup.getRootsList()));
                 logger.info("RETURN FROM RECEIVE1A");
-            });
+//            });
         });
+            });
         logger.info("# of threads in pool 1a is " + executorService.getActiveCount() + "/" + executorService.getCompletedTaskCount());
     }
 
@@ -185,6 +193,7 @@ public class HetconsParticipantService extends CharlotteNodeService {
             return;
         }
 
+//            executorService1b.submit(() -> {
         observerGroup.getObserversList().forEach(o -> {
             HetconsObserverStatus observerStatus = observers.get(HetconsUtil.cryptoIdToString(o.getId()));
             if (observerStatus == null) {
@@ -194,9 +203,10 @@ public class HetconsParticipantService extends CharlotteNodeService {
             executorService1b.submit(() -> {
                 observerStatus.receive1b(block);
                 logger.info("RETURN FROM RECEIVE1B");
-                return;
-            });
+//                return;
+//            });
         });
+            });
         logger.info("# of threads in pool 1b is " + executorService1b.getActiveCount() + "/" + executorService1b.getCompletedTaskCount());
         if (executorService1b.getActiveCount() > 100) {
             logger.info("larger than 100");
@@ -213,6 +223,7 @@ public class HetconsParticipantService extends CharlotteNodeService {
             return;
         }
 
+//            executorService2b.submit(() -> {
         observerGroup.getObserversList().forEach(o -> {
             HetconsObserverStatus observerStatus = observers.get(HetconsUtil.cryptoIdToString(o.getId()));
             if (observerStatus == null) {
@@ -222,10 +233,11 @@ public class HetconsParticipantService extends CharlotteNodeService {
             executorService2b.submit(() -> {
                 observerStatus.receive2b(block);
                 logger.info("RETURN FROM RECEIVE2B");
-                return;
-            });
+//                return;
+//            });
         });
         logger.info("# of threads in pool 2b is " + executorService2b.getActiveCount() + "/" + executorService2b.getCompletedTaskCount());
+            });
     }
 
 
@@ -282,6 +294,9 @@ public class HetconsParticipantService extends CharlotteNodeService {
                     sentBlocks.put(message, block);
                 }
             }
+//            Logger.getLogger(getClass().getName()).info("send " +
+//                    block.getHetconsBlock().getHetconsMessage().getType() +
+//                    " to " + getConfig().getContact(cryptoid).getPort());
             return super.sendBlock(cryptoid, block);
         }
 //        logger.info("Duplicated block " + block.getHetconsBlock().getHetconsMessage().getType());
@@ -298,6 +313,10 @@ public class HetconsParticipantService extends CharlotteNodeService {
 
     public ThreadPoolExecutor getExecutorService() {
         return executorService;
+    }
+
+    public ThreadPoolExecutor getExecutorServiceRestart() {
+        return executorServiceRestart;
     }
 
     /**

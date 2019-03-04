@@ -47,6 +47,8 @@ public class HetconsProposalStatus {
     private String proposalID;
     private HetconsRestartStatus restartStatus;
 
+    private Random rnd;
+
     private static final Logger logger = Logger.getLogger(CharlotteNodeService.class.getName());
 
     public HetconsProposalStatus(HetconsConsensusStage stage,
@@ -56,8 +58,11 @@ public class HetconsProposalStatus {
                                  Map<String, HetconsQuorumStatus> globalStatus,
                                  HetconsParticipantService service) {
         proposalID = HetconsUtil.buildConsensusId(proposal.getSlotsList());
-        service.getRestartTimers().putIfAbsent(proposalID, new HetconsRestartStatus());
+//        Block observers = service.getBlock(observerGroupReference);
+//        List<CryptoId> observerlist = observers.getHetconsBlock().getHetconsMessage().getObserverGroup().getObserversList().stream().map(o -> o.getId()).collect(Collectors.toList());
+//        service.getRestartTimers().putIfAbsent(proposalID, new HetconsRestartStatus(observerlist));
         restartStatus = service.getRestartTimers().get(proposalID);
+//        restartStatus = new HetconsRestartStatus();
         this.stage = stage;
         this.proposals = new LinkedList<HetconsProposal>();
         this.quorums = new HashMap<>();
@@ -76,6 +81,7 @@ public class HetconsProposalStatus {
         proposalLock = new ReentrantReadWriteLock();
         participantStatusLock = new ReentrantReadWriteLock();
         this.service = service;
+        rnd = new Random(new Date().getTime());
 
     }
 
@@ -133,7 +139,7 @@ public class HetconsProposalStatus {
     }
 
     public long getConsensuTimeout() {
-        return consensusTimeout;
+        return consensusTimeout * (100 + rnd.nextInt(100)) / 100;
     }
 
     public void setConsensuTimeout(long consensuTimeout) {
@@ -167,6 +173,7 @@ public class HetconsProposalStatus {
     public ExecutorService getTimer() {
         return restartStatus.getService();
     }
+
 
     public void setTimer(ExecutorService timer) {
         this.timer = timer;

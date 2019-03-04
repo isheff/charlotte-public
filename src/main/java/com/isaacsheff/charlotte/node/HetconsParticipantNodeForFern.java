@@ -13,6 +13,8 @@ import com.isaacsheff.charlotte.fern.HetconsFern;
 import com.isaacsheff.charlotte.proto.*;
 import com.isaacsheff.charlotte.yaml.Config;
 
+import com.isaacsheff.charlotte.yaml.Contact;
+import com.isaacsheff.charlotte.yaml.JsonContact;
 import com.xinwenwang.hetcons.HetconsParticipantService;
 import com.xinwenwang.hetcons.HetconsUtil;
 import com.xinwenwang.hetcons.config.HetconsConfig;
@@ -103,8 +105,12 @@ public class HetconsParticipantNodeForFern extends HetconsParticipantService {
                             final Collection<Reference> quorum2b) {
     HetconsValue value = HetconsUtil.get2bValue(getBlock(quorum2b.iterator().next()).getHetconsBlock().getHetconsMessage().getM2B(), this);
     String loggerString = "";
-    for (CryptoId id : quora.getMembersList())
-      loggerString += HetconsUtil.cryptoIdToString(id) + "\n";
+//    Contact contact = getConfig().getContact(quora.getOwner());
+//    loggerString += "\n\n\t" + contact.getUrl() + ":" + contact.getPort() + "\n\n";
+//    for (CryptoId id : quora.getMembersList()) {
+//      contact = getConfig().getContact(id);
+//      loggerString += contact.getUrl() + ":" + contact.getPort() + "\n";
+//    }
     logger.info("Consensus Decided on value " + value.getNum() + "\n" + loggerString + "\n");
     getFern().observersDecide(quora, quorum2b);
   }

@@ -5,10 +5,12 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.isaacsheff.charlotte.fern.HetconsFern;
 import com.isaacsheff.charlotte.node.HetconsParticipantNodeForFern;
 import com.isaacsheff.charlotte.yaml.Config;
+import com.xinwenwang.hetcons.HetconsParticipantService;
 
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Logger;
 
 import static java.lang.Integer.parseInt;
 
@@ -36,6 +38,7 @@ public class HetconsExperimentFernNode extends HetconsParticipantNodeForFern {
     }
 
     public static void main(String[] args) {
+        Logger.getLogger(HetconsParticipantService.class.getName()).info("Hetcons Version 0.0.1");
         try {
             launchServer(args[0]);
             if (args.length < 3) {

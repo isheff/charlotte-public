@@ -200,55 +200,45 @@ public class HetconsObserverStatus {
         if (!currentStatus.getProposer())
             return true;
 
+        setupTimerForRestart(currentStatus, proposalStatusID, null, 0);
+
         // set timer for 1b, if we didn't receive enough 1bs after the timeout, we restart the consensus.
-        synchronized (currentStatus.getGeneralLock()) {
-
-            synchronized (currentStatus.getRestartStatus().getLock()) {
-
-                if (currentStatus.getTimer() == null)
-                    currentStatus.setTimer(Executors.newSingleThreadExecutor());
-
-                if (currentStatus.getRestartTimer() != null)
-                    currentStatus.getRestartTimer().cancel(true);
-
-                if (currentStatus.getM1bTimer() != null)
-                    currentStatus.getM1bTimer().cancel(true);
-
-                if (currentStatus.getM2bTimer() != null)
-                    currentStatus.getM2bTimer().cancel(true);
-
-                currentStatus.setRestartTimer(null);
-                currentStatus.setM1bTimer(null);
-                currentStatus.setM2bTimer(null);
-
-                Future<?> m1bTimer = currentStatus.getTimer().submit(() -> {
-                    logger.info(name + ": M1B TIMER("+proposalStatusID+"): Will sleep for " + currentStatus.getConsensuTimeout() + " milliseconds for timeout");
-                    try {
-                        TimeUnit.MILLISECONDS.sleep(currentStatus.getConsensuTimeout());
-                    } catch (InterruptedException ex) {
-                        logger.info(name + ": "+proposalStatusID+" M1B Timer Cancelled");
-                        return;
-                    }
-                    if (Thread.interrupted())
-                        return;
-                    synchronized (currentStatus.getGeneralLock()) {
-                        if (currentStatus.getHasDecided())
-                            return;
-                        if (currentStatus.getStage().equals(HetconsConsensusStage.M1BSent) ||
-                                currentStatus.getStage().equals(HetconsConsensusStage.M1ASent) ||
-                        currentStatus.getStage().equals(HetconsConsensusStage.M2BSent)) {
-                            logger.info(name+": Timer 1("+proposalStatusID+"): Restart consensus on " + currentStatus.getStage().toString() +
-                                    " for value " + currentStatus.getCurrentProposal().getValue());
-                            currentStatus.setStage(HetconsConsensusStage.HetconsTimeout);
-                            restartProposal(proposalStatusID,
-                                    currentStatus.getRecent1b());
-                        }
-                    }
-                });
-                currentStatus.setM1bTimer(m1bTimer);
-            }
-        }
-        logger.info(name + ": Timer 1 for " + proposalStatusID + " has been set to " + currentStatus.getConsensuTimeout());
+//        synchronized (currentStatus.getGeneralLock()) {
+//
+//            synchronized (currentStatus.getRestartStatus().getLock()) {
+//
+//                currentStatus.getRestartStatus().cancelTimers();
+//
+//                Future<?> m1bTimer = currentStatus.getTimer().submit(() -> {
+//                    logger.info(name + ": M1B TIMER("+proposalStatusID+"): Will sleep for " + currentStatus.getConsensuTimeout() + " milliseconds for timeout");
+//                    try {
+//                        TimeUnit.MILLISECONDS.sleep(currentStatus.getConsensuTimeout());
+//                    } catch (InterruptedException ex) {
+//                        logger.info(name + ": "+proposalStatusID+" M1B Timer Cancelled");
+//                        return;
+//                    }
+//                    if (Thread.interrupted())
+//                        return;
+//                    synchronized (currentStatus.getGeneralLock()) {
+//                        if (currentStatus.getHasDecided())
+//                            return;
+////                        if (currentStatus.getStage().equals(HetconsConsensusStage.M1BSent) ||
+////                                currentStatus.getStage().equals(HetconsConsensusStage.M1ASent) ||
+////                        currentStatus.getStage().equals(HetconsConsensusStage.M2BSent)) {
+//                        if (currentStatus.getRestartStatus().getLeftObserversSize() > 0) {
+//                            logger.info(name+": Timer 1("+proposalStatusID+"): Restart consensus on " + currentStatus.getStage().toString() +
+//                                    " for value " + currentStatus.getCurrentProposal().getValue());
+//                            currentStatus.setStage(HetconsConsensusStage.HetconsTimeout);
+//                            service.getExecutorServiceRestart().submit(() ->
+//                                    restartProposal(proposalStatusID, currentStatus.getRecent1b()));
+//
+//                        }
+//                    }
+//                });
+//                currentStatus.setM1bTimer(m1bTimer);
+//            }
+//        }
+//        logger.info(name + ": Timer 1 for " + proposalStatusID + " has been set to " + currentStatus.getConsensuTimeout());
         return true;
     }
 
@@ -385,57 +375,45 @@ public class HetconsObserverStatus {
         // set timer for 2b, if we didn't receive enough 1bs after the timeout, we restart the consensus.
 
         logger.info(name + ":" + "Sent M2B value is "+ HetconsUtil.get2bValue(m2a, service));
-
-        synchronized (status.getGeneralLock()) {
-
-            synchronized (status.getRestartStatus().getLock()) {
-                if (status.getTimer() == null)
-                    status.setTimer(Executors.newSingleThreadExecutor());
-
-                if (status.getRestartTimer() != null) {
-                    status.getRestartTimer().cancel(true);
-                }
-
-                if (status.getM1bTimer() != null) {
-                    status.getM1bTimer().cancel(true);
-                }
-
-                if (status.getM2bTimer() != null) {
-                    status.getM2bTimer().cancel(true);
-                }
-
-                if (status.getHasDecided() || !status.getProposer())
-                    return;
-
-                status.setRestartTimer(null);
-                status.setM1bTimer(null);
-                status.setM2bTimer(status.getTimer().submit(() -> {
-                    logger.info(name + ":M2B TIMER("+proposalID+"): Will sleep for " + status.getConsensuTimeout() + " milliseconds for timeout");
-                    try {
-                        TimeUnit.MILLISECONDS.sleep(status.getConsensuTimeout());
-                    } catch (InterruptedException ex) {
-                        logger.info(name + ": "+proposalID+" M2B Timer Cancelled");
-                        return;
-                    }
-                    if (Thread.interrupted())
-                        return;
-                    synchronized (status.getGeneralLock()) {
-                        if (status.getHasDecided())
-                            return;
-                        if (status.getStage().equals(HetconsConsensusStage.M2BSent)
-                        || status.getStage().equals(HetconsConsensusStage.M1BSent)
-                        || status.getStage().equals(HetconsConsensusStage.M1ASent)) {
-                            logger.info(name +": Timer 2("+proposalID+"): Restart consensus on " + status.getStage().toString() + " for value "
-                                    + status.getCurrentProposal().getValue());
-                            status.setStage(HetconsConsensusStage.HetconsTimeout);
-                            restartProposal(proposalID, status.getRecent2b());
-                            status.setM2bTimer(null);
-                        }
-                    }
-                }));
-            }
-        }
-        logger.info(name+": Timer 2 for " + proposalID + " has been set to " + status.getConsensuTimeout());
+        setupTimerForRestart(status, proposalID, null, 1);
+//        synchronized (status.getGeneralLock()) {
+//
+//            synchronized (status.getRestartStatus().getLock()) {
+//
+//
+//                if (status.getHasDecided() || !status.getProposer())
+//                    return;
+//
+//                status.getRestartStatus().cancelTimers();
+//                status.setM2bTimer(status.getTimer().submit(() -> {
+//                    logger.info(name + ":M2B TIMER("+proposalID+"): Will sleep for " + status.getConsensuTimeout() + " milliseconds for timeout");
+//                    try {
+//                        TimeUnit.MILLISECONDS.sleep(status.getConsensuTimeout());
+//                    } catch (InterruptedException ex) {
+//                        logger.info(name + ": "+proposalID+" M2B Timer Cancelled");
+//                        return;
+//                    }
+//                    if (Thread.interrupted())
+//                        return;
+//                    synchronized (status.getGeneralLock()) {
+//                        if (status.getHasDecided())
+//                            return;
+////                        if (status.getStage().equals(HetconsConsensusStage.M2BSent)
+////                        || status.getStage().equals(HetconsConsensusStage.M1BSent)
+////                        || status.getStage().equals(HetconsConsensusStage.M1ASent)) {
+//                        if (status.getRestartStatus().getLeftObserversSize() > 0) {
+//                            logger.info(name +": Timer 2("+proposalID+"): Restart consensus on " + status.getStage().toString() + " for value "
+//                                    + status.getCurrentProposal().getValue());
+//                            status.setStage(HetconsConsensusStage.HetconsTimeout);
+//                            status.setM2bTimer(null);
+//                            service.getExecutorServiceRestart().submit(() ->
+//                            restartProposal(proposalID, status.getRecent2b()));
+//                        }
+//                    }
+//                }));
+//            }
+//        }
+//        logger.info(name+": Timer 2 for " + proposalID + " has been set to " + status.getConsensuTimeout());
     }
 
     public void receive2b(Block block) {
@@ -461,7 +439,9 @@ public class HetconsObserverStatus {
 //        if (status == null || status.getStage() == HetconsConsensusStage.ConsensusDecided)
 
         for (Reference reference : block.getHetconsBlock().getHetconsMessage().getM2B().getQuorumOf1Bs().getBlockHashesList()) {
-            service.getBlock(reference);
+            if (service.getBlockMap().get(reference.getHash()) == null) {
+                return;
+            }
         }
 
         if (!status.verify2b(block.getHetconsBlock().getHetconsMessage().getM2B()))
@@ -505,18 +485,7 @@ public class HetconsObserverStatus {
         // Now we can decided on this 2b value for that slot.
         synchronized (status.getGeneralLock()) {
 
-            if (status.getTimer() != null) {
-                logger.info(name + "("+proposalID+"): Shutdown timers");
-                status.getTimer().shutdownNow();
-                try {
-                    /* TODO: Eliminate waiting */
-                    status.getTimer().awaitTermination(1, TimeUnit.SECONDS);
-                } catch (InterruptedException ex) {
-                    ex.printStackTrace();
-                } finally {
-                    status.setTimer(null);
-                }
-            }
+            status.getRestartStatus().shutdown();
 
             for (String slotid: status.getChainIDs()) {
                 HetconsSlotStatus slot = slotStatus.get(slotid);
@@ -551,6 +520,7 @@ public class HetconsObserverStatus {
                 .addAllMembers(p)
                 .build();
         waitingBlockQueue.remove(proposalID);
+        status.getRestartStatus().decided(this.getObserver().getId());
         service.onDecision(observerQuorum, q);
     }
 
@@ -624,10 +594,10 @@ public class HetconsObserverStatus {
     private void restartProposal(String consensusId, HetconsValue value) {
         HetconsProposalStatus status = proposalStatus.get(consensusId);
 
-        if (!status.getStage().equals(HetconsConsensusStage.HetconsTimeout)) {
-            logger.info(name + "("+consensusId+"): Called propose but the consensus is not timeout. Stage: "+status.getStage());
-            return;
-        }
+//        if (!status.getStage().equals(HetconsConsensusStage.HetconsTimeout)) {
+//            logger.info(name + "("+consensusId+"): Called propose but the consensus is not timeout. Stage: "+status.getStage());
+//            return;
+//        }
         status.setStage(HetconsConsensusStage.ConsensusRestart);
         logger.info(name + "("+consensusId+"):Restarting...");
 
@@ -662,54 +632,44 @@ public class HetconsObserverStatus {
 
         /** -------------------- Timer for Restart ----------------------------- */
         // set timer for restart 1a, if we didn't receive 1a after the timeout, we restart the consensus.
+        setupTimerForRestart(status, consensusId, value, -1);
 
-        synchronized (status.getGeneralLock()) {
-
-            synchronized (status.getRestartStatus().getLock()) {
-                if (status.getTimer() == null)
-                    status.setTimer(Executors.newSingleThreadExecutor());
-
-                if (status.getRestartTimer() != null) {
-                    status.getRestartTimer().cancel(true);
-                }
-
-                if (status.getM1bTimer() != null) {
-                    status.getM1bTimer().cancel(true);
-                }
-
-                if (status.getM2bTimer() != null) {
-                    status.getM2bTimer().cancel(true);
-                }
-
-                status.setM1bTimer(null);
-                status.setM2bTimer(null);
-                status.setRestartTimer(status.getTimer().submit(() -> {
-                    logger.info(name + ":RESTART TIMER("+consensusId+"): Will sleep for " + status.getConsensuTimeout() + " milliseconds for timeout");
-                    try {
-                        TimeUnit.MILLISECONDS.sleep(status.getConsensuTimeout());
-                    } catch (InterruptedException ex) {
-                        logger.info(name + ": "+consensusId+" Restart Timer Cancelled");
-                        return;
-                    }
-                    if (Thread.interrupted())
-                        return;
-                    synchronized (status.getGeneralLock()) {
-                        if (status.getHasDecided())
-                            return;
-                        if (status.getStage().equals(HetconsConsensusStage.M2BSent)
-                                || status.getStage().equals(HetconsConsensusStage.M1BSent)
-                                || status.getStage().equals(HetconsConsensusStage.M1ASent)) {
-                            logger.info(name +": Timer 0("+consensusId+"): Restart consensus on " + status.getStage().toString() + " for value "
-                                    + status.getCurrentProposal().getValue());
-                            status.setStage(HetconsConsensusStage.HetconsTimeout);
-                            restartProposal(consensusId, status.getRecent2b());
-                            status.setRestartTimer(null);
-                        }
-                    }
-                }));
-            }
-        }
-        logger.info(name+": Timer 0 for " + consensusId+ " has been set to " + status.getConsensuTimeout());
+//        synchronized (status.getGeneralLock()) {
+//
+//            synchronized (status.getRestartStatus().getLock()) {
+//
+//                status.getRestartStatus().cancelTimers();
+//
+//                status.setRestartTimer(status.getTimer().submit(() -> {
+//                    logger.info(name + ":RESTART TIMER("+consensusId+"): Will sleep for " + status.getConsensuTimeout() + " milliseconds for timeout");
+//                    try {
+//                        TimeUnit.MILLISECONDS.sleep(status.getConsensuTimeout());
+//                    } catch (InterruptedException ex) {
+//                        logger.info(name + ": "+consensusId+" Restart Timer Cancelled");
+//                        return;
+//                    }
+//                    if (Thread.interrupted())
+//                        return;
+//                    synchronized (status.getGeneralLock()) {
+////                        if (status.getHasDecided())
+////                            return;
+////                        if (status.getStage().equals(HetconsConsensusStage.M2BSent)
+////                                || status.getStage().equals(HetconsConsensusStage.M1BSent)
+////                                || status.getStage().equals(HetconsConsensusStage.M1ASent)) {
+//                        if (status.getRestartStatus().getLeftObserversSize() > 0) {
+//
+//                            logger.info(name +": Timer 0("+consensusId+"): Restart consensus on " + status.getStage().toString() + " for value "
+//                                    + status.getCurrentProposal().getValue());
+//                            status.setStage(HetconsConsensusStage.HetconsTimeout);
+//                            status.setRestartTimer(null);
+//                            service.getExecutorServiceRestart().submit(() ->
+//                            restartProposal(consensusId, status.getRecent2b()));
+//                        }
+//                    }
+//                }));
+//            }
+//        }
+//        logger.info(name+": Timer 0 for " + consensusId+ " has been set to " + status.getConsensuTimeout());
 
 
     }
@@ -721,6 +681,50 @@ public class HetconsObserverStatus {
         });
     }
 
+    private void setupTimerForRestart(HetconsProposalStatus status, String consensusId, HetconsValue value, int opcode) {
+
+        synchronized (status.getRestartStatus().getLock()) {
+            status.getRestartStatus().cancelTimers();
+            Future<?> timer = status.getTimer().submit(() -> {
+                logger.info(name + ":RESTART TIMER("+consensusId+"): Will sleep for " + status.getConsensuTimeout() + " milliseconds for timeout");
+                try {
+                    TimeUnit.MILLISECONDS.sleep(status.getConsensuTimeout());
+                } catch (InterruptedException ex) {
+                    logger.info(name + ": "+consensusId+" Restart Timer Cancelled");
+                    return;
+                }
+                if (Thread.interrupted())
+                    return;
+                synchronized (status.getRestartStatus().getLock()) {
+                    if (status.getRestartStatus().getLeftObserversSize() > 0) {
+
+                        logger.info(name +": Timer ("+consensusId+"): Restart consensus on " + status.getStage().toString() + " for value "
+                                + status.getCurrentProposal().getValue());
+//                        status.setStage(HetconsConsensusStage.HetconsTimeout);
+                        service.getExecutorServiceRestart().submit(() -> {
+                                    if (opcode < 0) {
+                                        restartProposal(consensusId, value);
+                                    } else if (opcode == 0) {
+                                        restartProposal(consensusId, status.getRecent1b());
+                                    } else {
+                                        restartProposal(consensusId, status.getRecent2b());
+                                    }
+                                }
+                        );
+
+                    }
+                }
+            });
+            if (opcode < 0) {
+                status.getRestartStatus().setRestartTimer(timer);
+            } else if (opcode == 0) {
+                status.getRestartStatus().setM1bTimer(timer);
+            } else {
+                status.getRestartStatus().setM2bTimer(timer);
+            }
+        }
+        logger.info(name+": Timer for " + consensusId+ " has been set to " + status.getConsensuTimeout());
+    }
 
     public HetconsObserver getObserver() {
         return observer;
