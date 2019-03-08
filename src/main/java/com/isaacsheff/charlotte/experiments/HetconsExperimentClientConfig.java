@@ -26,6 +26,15 @@ public class HetconsExperimentClientConfig extends JsonExperimentConfig {
     @JsonProperty("startingIndex")
     private int startingIndex;
 
+    @JsonProperty("doubleChainProbability")
+    private float doubleChainProbability;
+
+    @JsonProperty("doubleChainNames")
+    private List<String> doubleChainNames;
+
+    @JsonProperty("singleChainNames")
+    private List<String> singleChainNames;
+
     public HetconsExperimentClientConfig(
             @JsonProperty("fernservers") List<String> fernServers,
             @JsonProperty("blocksperexperiment") int blocksPerExperiment,
@@ -35,8 +44,10 @@ public class HetconsExperimentClientConfig extends JsonExperimentConfig {
             @JsonProperty("contactServer") String contactServer,
             @JsonProperty("chainNames") List<String> chainNames,
             @JsonProperty("startingIndex") int startingIndex,
-            @JsonProperty("timeout") int timeout
-
+            @JsonProperty("timeout") int timeout,
+            @JsonProperty("doubleChainProbability") float doubleChainProbability,
+            @JsonProperty("doubleChainNames") List<String> doubleChainNames,
+            @JsonProperty("singleChainNames") List<String> singleChainNames
     ) {
         super(fernServers,
                 Collections.emptyList(),
@@ -50,6 +61,9 @@ public class HetconsExperimentClientConfig extends JsonExperimentConfig {
         this.chainNames = chainNames;
         this.timeout = timeout;
         this.startingIndex = startingIndex;
+        this.doubleChainProbability = doubleChainProbability;
+        this.singleChainNames = singleChainNames;
+        this.doubleChainNames = doubleChainNames;
     }
 
     public String getContactServer() {
@@ -66,5 +80,9 @@ public class HetconsExperimentClientConfig extends JsonExperimentConfig {
 
     public int getStartingIndex() {
         return startingIndex;
+    }
+
+    public float getDoubleChainProbability() {
+        return doubleChainProbability;
     }
 }
