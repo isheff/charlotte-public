@@ -35,6 +35,9 @@ public class HetconsExperimentClientConfig extends JsonExperimentConfig {
     @JsonProperty("singleChainNames")
     private List<String> singleChainNames;
 
+    @JsonProperty("bitcoinSim")
+    private boolean bitcoinSim;
+
     public HetconsExperimentClientConfig(
             @JsonProperty("fernservers") List<String> fernServers,
             @JsonProperty("blocksperexperiment") int blocksPerExperiment,
@@ -47,7 +50,8 @@ public class HetconsExperimentClientConfig extends JsonExperimentConfig {
             @JsonProperty("timeout") int timeout,
             @JsonProperty("doubleChainProbability") float doubleChainProbability,
             @JsonProperty("doubleChainNames") List<String> doubleChainNames,
-            @JsonProperty("singleChainNames") List<String> singleChainNames
+            @JsonProperty("singleChainNames") List<String> singleChainNames,
+            @JsonProperty("bitcoinSim") boolean bitcoinSim
     ) {
         super(fernServers,
                 Collections.emptyList(),
@@ -64,6 +68,7 @@ public class HetconsExperimentClientConfig extends JsonExperimentConfig {
         this.doubleChainProbability = doubleChainProbability;
         this.singleChainNames = singleChainNames;
         this.doubleChainNames = doubleChainNames;
+        this.bitcoinSim = bitcoinSim;
     }
 
     public String getContactServer() {
@@ -84,5 +89,17 @@ public class HetconsExperimentClientConfig extends JsonExperimentConfig {
 
     public float getDoubleChainProbability() {
         return doubleChainProbability;
+    }
+
+    public List<String> getSingleChainNames() {
+        return singleChainNames;
+    }
+
+    public List<String> getDoubleChainNames() {
+        return doubleChainNames;
+    }
+
+    public boolean isBitcoinSim() {
+        return bitcoinSim;
     }
 }

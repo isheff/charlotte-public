@@ -4,6 +4,7 @@ import static java.util.concurrent.ConcurrentHashMap.newKeySet;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.logging.*;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -38,6 +39,9 @@ public class HetconsParticipantNodeForFern extends HetconsParticipantService {
   /** The HetconsFern Service affiliated with this node **/
   private HetconsFern fern;
 
+  /* next available slot for a chain */
+  private HashMap<Reference, Long> nextSlot;
+
   /**
    * A very minor extension of HetconsParticipantService designed to integrate with HetconsFern.
    * This basically just forwards onDecision calls to the Fern service.
@@ -53,6 +57,7 @@ public class HetconsParticipantNodeForFern extends HetconsParticipantService {
     this.hetconsConfig = hetconsConfig;
     this.fern = fern;
     this.reference2bsPerProposal = new ConcurrentHashMap<HetconsProposal, Set<Block>>();
+    nextSlot = new HashMap<>();
 //    logger.setUseParentHandlers(false);
 //    SimpleFormatter fmt = new SimpleFormatter();
 //    StreamHandler sh = new StreamHandler(System.out, fmt) {
@@ -123,6 +128,13 @@ public class HetconsParticipantNodeForFern extends HetconsParticipantService {
   @Override
   public Iterable<SendBlocksResponse> onSendBlocksInput(Block block) {
     if (block.hasIntegrityAttestation() && storeNewBlock(block) && block.getIntegrityAttestation().hasHetconsAttestation()) {
+      block.getIntegrityAttestation().getHetconsAttestation().getSlotsList().forEach(e -> {
+        Long slot = nextSlot.putIfAbsent(e.getRoot(), e.getSlot() + 1);
+        /* update next available slot */
+        if (slot != null && slot < e.getSlot() + 1) {
+          nextSlot.put(e.getRoot(), e.getSlot() + 1);
+        }
+      });
       for (CryptoId o : block.getIntegrityAttestation().getHetconsAttestation().getObserversList()) {
         sendBlock(o, block);
       }
@@ -145,4 +157,8 @@ public class HetconsParticipantNodeForFern extends HetconsParticipantService {
 //        storeNewBlock(input.getBlock());
   }
 
+  public Long getNextAvailableSlot(Reference root) {
+    nextSlot.putIfAbsent(root, 0L);
+    return nextSlot.get(root);
+  }
 }

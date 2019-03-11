@@ -2,7 +2,9 @@ package com.isaacsheff.charlotte.fern;
 
 import static com.isaacsheff.charlotte.node.HashUtil.sha3Hash;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.logging.Logger;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -20,6 +22,7 @@ import com.isaacsheff.charlotte.proto.IntegrityAttestation.ChainSlot;
 import com.isaacsheff.charlotte.proto.IntegrityAttestation.HetconsAttestation;
 import com.isaacsheff.charlotte.proto.IntegrityAttestation.SignedChainSlot;
 import com.isaacsheff.charlotte.yaml.Config;
+import com.sun.net.httpserver.Filter;
 import com.xinwenwang.hetcons.HetconsUtil;
 import com.xinwenwang.hetcons.config.HetconsConfig;
 
@@ -101,7 +104,7 @@ public class HetconsFern extends AgreementFernService {
 
 
   /**
-   * @param node a HetconsFern Service
+   * @param fern a HetconsFern Service
    * @return a new CharlotteNode which runs a Fern Service and a CharlotteNodeService
    */
   public static CharlotteNode getFernNode(final HetconsFern fern) {
@@ -208,9 +211,6 @@ public class HetconsFern extends AgreementFernService {
   /**
    * Called when Hetcons has reached a decision.
    * This will cause the Fern server to issue attestations, and populate agreementAttestationCache and hetconsAttestationCache.
-   * @param observers the set of observers that decided
-   * @param value the value they decided on
-   * @param proposal the HetconsProposal on which they decided.
    */
   public void observersDecide(final HetconsObserverQuorum q,
                               final Collection<Reference> quorum2b)  {
@@ -241,14 +241,19 @@ public class HetconsFern extends AgreementFernService {
       }
     }
     hetconsAttestationBuilder.addAllMessage2B(quorum2b);
+    hetconsAttestationBuilder.setAttestedValue(message1a.getProposal().getValue());
+    hetconsAttestationBuilder.addAllSlots(message1a.getProposal().getSlotsList());
 
-    final Block hetconsAttestation = Block.newBuilder().setIntegrityAttestation(
-      IntegrityAttestation.newBuilder().setHetconsAttestation(hetconsAttestationBuilder)).build();
+    final IntegrityAttestation attestation = IntegrityAttestation.newBuilder().setHetconsAttestation(hetconsAttestationBuilder).build();
+
+    final Block hetconsAttestation = Block.newBuilder().setIntegrityAttestation(attestation).build();
 
     getHetconsNode().onSendBlocksInput(hetconsAttestation);
 
     final RequestIntegrityAttestationResponse hetconsResponse = RequestIntegrityAttestationResponse.newBuilder().
-      setReference(Reference.newBuilder().setHash(sha3Hash(hetconsAttestation))).build();
+      setReference(Reference.newBuilder().setHash(sha3Hash(hetconsAttestation)))
+            .setAttestation(attestation)
+            .build();
 
     for (ChainSlot chainslot : message1a.getProposal().getSlotsList()) {
       // we're indexing strictly by root and slot.
@@ -304,6 +309,15 @@ public class HetconsFern extends AgreementFernService {
                && request.getPolicy().getHetconsPolicy().hasProposal()
                && request.getPolicy().getHetconsPolicy().getProposal().hasM1A()
                && request.getPolicy().getHetconsPolicy().getProposal().getM1A().hasProposal() ) {
+
+
+      for (ChainSlot c : request.getPolicy().getHetconsPolicy().getProposal().getM1A().getProposal().getSlotsList()) {
+        if (getHetconsNode().getNextAvailableSlot(c.getRoot()) != c.getSlot()) {
+          /* return next available slots to clients for re-propose */
+          responseSlotAlreadyTaken(request, responseObserver);
+          return;
+        }
+      }
       
       // send the request out (this will just show up as a duplicate if the request is already out) as a 1A.
       HetconsBlock requestBlock = HetconsBlock.newBuilder()
@@ -319,8 +333,13 @@ public class HetconsFern extends AgreementFernService {
         forEach(chainslot -> {
           try {
             // This call blocks until that slot is filled
-            responseObserver.onNext(getHetconsAttestation(chainslot, request.getPolicy().getHetconsPolicy().getObserver()));
-            responseObserver.onCompleted();
+            RequestIntegrityAttestationResponse attestationResponse = getHetconsAttestation(chainslot, request.getPolicy().getHetconsPolicy().getObserver());
+            if (attestationResponse.getAttestation().getHetconsAttestation().getAttestedValue().equals(request.getPolicy().getHetconsPolicy().getProposal().getM1A().getProposal().getValue())) {
+              responseObserver.onNext(attestationResponse);
+              responseObserver.onCompleted();
+            } else {
+              responseSlotAlreadyTaken(request, responseObserver);
+            }
           } catch (Throwable t) {
             // This is likely to happen if multiple chainSlots are filled.
             // That's ok, we can return any one of them.
@@ -331,5 +350,18 @@ public class HetconsFern extends AgreementFernService {
                "There was neither a properly formatted Agreement request nor a properly formatted Consensus request").build());
       responseObserver.onCompleted();
     }
+  }
+
+  /* If one or more slots in the request are taken by other proposals, then send back a list of chain slot that available */
+  private void responseSlotAlreadyTaken(RequestIntegrityAttestationInput request, final StreamObserver<RequestIntegrityAttestationResponse> responseObserver) {
+    List<ChainSlot> nextAvailableSlots = new ArrayList<>();
+    for (ChainSlot ci : request.getPolicy().getHetconsPolicy().getProposal().getM1A().getProposal().getSlotsList()) {
+      nextAvailableSlots.add(ChainSlot.newBuilder(ci).setSlot(getHetconsNode().getNextAvailableSlot(ci.getRoot())).build());
+    }
+    responseObserver.onNext(RequestIntegrityAttestationResponse.newBuilder().
+            setErrorMessage("One or more slots have already been taken.").
+            setAttestation(IntegrityAttestation.newBuilder().setHetconsAttestation(HetconsAttestation.newBuilder().addAllNextSlotNumbers(nextAvailableSlots).build()))
+            .build());
+    responseObserver.onCompleted();
   }
 }

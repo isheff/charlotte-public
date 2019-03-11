@@ -56,6 +56,7 @@ message Reference {
 }
 
 message IntegrityAttestation {
+
   message ChainSlot {
     Reference block = 1;
     Reference root = 2;
@@ -86,6 +87,9 @@ message IntegrityAttestation {
   message HetconsAttestation {
     repeated CryptoId observers = 1;
     repeated Reference message2b = 2;
+    repeated IntegrityAttestation.ChainSlot slots = 3;
+    HetconsValue attested_value = 4;
+    repeated IntegrityAttestation.ChainSlot next_slot_numbers = 5;
   }
   oneof integrityattestationtype_oneof {
     SignedChainSlot signedChainSlot = 1;
@@ -214,7 +218,8 @@ message RequestIntegrityAttestationInput {
 }
 message RequestIntegrityAttestationResponse {
   string errorMessage = 1;
-  Reference reference = 2;
+  Reference reference = 2; // reference to the attestation? Would prefer to add attestation inside the response.
+  IntegrityAttestation attestation = 3;
 }
 service Fern { // anything running a Fern service should also run a CharlotteNode
   rpc RequestIntegrityAttestation(RequestIntegrityAttestationInput) returns (RequestIntegrityAttestationResponse) {}
@@ -323,18 +328,6 @@ message HetconsMessage {
   charlotte.CryptoId identity = 8;
 }
 
-//message HetconsMessage {
-//  HetconsMessageType type = 4;
-//  oneof hetconsMessageType_oneof {
-//    HetconsMessage1a m1a = 1;
-//    HetconsMessage1b m1b = 2;
-//    HetconsMessage2ab m2b = 3;
-//    HetconsObserverGroup observerGroup = 5;
-//  }
-//  Reference observerGroupReferecne = 10;
-//  charlotte.Signature sig = 7;
-//  charlotte.CryptoId identity = 8;
-//}
 
 // Leader Propose the new value with a new bollot number
 message HetconsMessage1a {
