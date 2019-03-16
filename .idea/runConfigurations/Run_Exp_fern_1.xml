@@ -12,7 +12,7 @@
             <list>
               <option value="exec:java" />
               <option value="-Dexec.mainClass=com.isaacsheff.charlotte.experiments.HetconsExperimentFernNode" />
-              <option value="-Dexec.args=../Experiments/fernConfig1.yaml" />
+              <option value="-Dexec.args=target/experiments/results/bitcoinSim/charlottenode_config/127.0.0.1.yaml" />
             </list>
           </option>
           <option name="pomFileName" />

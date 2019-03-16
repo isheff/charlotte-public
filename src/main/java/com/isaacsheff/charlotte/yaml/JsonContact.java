@@ -21,6 +21,8 @@ public class JsonContact {
   /** The TCP port we should try and call this server on */
   @JsonProperty("port") private final int port;
 
+  @JsonProperty("isClient") private boolean isClient;
+
   /**
    * Create a new JsonContact.
    * This is meant to be used by the Jackson parser.
@@ -33,12 +35,26 @@ public class JsonContact {
   public JsonContact(
       @JsonProperty("x509") String x509,
       @JsonProperty("url") String url,
-      @JsonProperty("port") int port
+      @JsonProperty("port") int port,
+      @JsonProperty("isClient") boolean isClient
       ) {
     this.url = url;
     this.port = port;
     this.x509 = x509;
+    this.isClient = isClient;
   }
+//
+//  @JsonCreator
+//  public JsonContact(
+//          @JsonProperty("x509") String x509,
+//          @JsonProperty("url") String url,
+//          @JsonProperty("port") int port
+//  ) {
+//    this.url = url;
+//    this.port = port;
+//    this.x509 = x509;
+//    this.isClient = false;
+//  }
 
   /** @return the filename of the x509 certificate of this Contact, relative to the config file. */
   @JsonProperty("x509") public String getX509() {return this.x509;}
@@ -48,4 +64,8 @@ public class JsonContact {
 
   /** @return the TCP port of this contact */
   @JsonProperty("port") public int getPort() {return this.port;}
+
+  public boolean isClient() {
+    return isClient;
+  }
 }

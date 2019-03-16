@@ -91,11 +91,17 @@ message IntegrityAttestation {
     HetconsValue attested_value = 4;
     repeated IntegrityAttestation.ChainSlot next_slot_numbers = 5;
   }
+
+  message SignedHetconsAttestation {
+    HetconsAttestation attestation = 1;
+    Signature signaure = 2;
+  }
+
   oneof integrityattestationtype_oneof {
     SignedChainSlot signedChainSlot = 1;
     SignedTimestampedReferences signedTimestampedReferences = 2;
     SignedGitSimBranch signedGitSimBranch = 3;
-    HetconsAttestation hetconsAttestation = 4;
+    SignedHetconsAttestation signedHetconsAttestation = 4;
   }
 }
 

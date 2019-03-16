@@ -60,7 +60,6 @@ public class HetconsRestartStatus {
         }
         cancelTimers();
         service.shutdownNow();
-
         try {
             /* TODO: Eliminate waiting */
             service.awaitTermination(1, TimeUnit.SECONDS);
@@ -75,6 +74,7 @@ public class HetconsRestartStatus {
         synchronized (numlock) {
             this.leftObservers.remove(id);
         }
+        shutdown();
     }
 
 

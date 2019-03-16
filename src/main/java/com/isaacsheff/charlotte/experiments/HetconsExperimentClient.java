@@ -6,23 +6,22 @@ import com.google.protobuf.ByteString;
 import com.isaacsheff.charlotte.fern.HetconsFernClient;
 import com.isaacsheff.charlotte.node.CharlotteNodeService;
 import com.isaacsheff.charlotte.node.HashUtil;
-import com.isaacsheff.charlotte.node.HetconsParticipantNodeForFern;
 import com.isaacsheff.charlotte.node.SignatureUtil;
 import com.isaacsheff.charlotte.proto.*;
 import com.isaacsheff.charlotte.yaml.Config;
 import com.isaacsheff.charlotte.yaml.Contact;
 import com.isaacsheff.charlotte.yaml.JsonContact;
-import com.xinwenwang.hetcons.HetconsClientNode;
 import com.xinwenwang.hetcons.HetconsUtil;
 import com.xinwenwang.hetcons.config.ChainConfig;
 import com.xinwenwang.hetcons.config.HetconsConfig;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.net.InetAddress;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
@@ -187,11 +186,14 @@ public class HetconsExperimentClient {
                                       CharlotteNodeService service,
                                       Path expDir) {
         HashMap<String, Chain> chainMap = new HashMap<>();
+        ConcurrentMap<Hash, Long> chainSlotNumber = new ConcurrentHashMap<>();
         for (int i = 0; i < config.getBlocksPerExperiment(); i++) {
             String cn = getChain(config);
             try {
-                Chain chain = new Chain(cn, hetconsConfig, config, service, expDir, Arrays.asList(cn.split("-")));
-                chain = chainMap.putIfAbsent(cn, chain);
+                if (!chainMap.containsKey(cn)) {
+                    chainMap.put(cn, new Chain(cn, hetconsConfig, config, service, expDir, Arrays.asList(cn.split("-")), chainSlotNumber));
+                }
+                Chain chain = chainMap.get(cn);
                 chain.proposeNewBlock(i);
             } catch (FileNotFoundException ex) {
                 logger.severe(ex.getLocalizedMessage());
@@ -214,18 +216,23 @@ public class HetconsExperimentClient {
      */
     static class Chain {
 
+        static HashMap<CryptoId, HetconsFernClient> channelMap = new HashMap<>();
+
         HetconsExperimentClientConfig config;
         HetconsFernClient clientNode;
         Reference obsblkRef;
         String observerConfigFileName;
         Map<Hash, Long> chainStatus;
+        Set<Hash> chainNames;
+        Contact fernContact;
 
         Chain(String observerConfigFileName,
               HetconsConfig hetconsConfig,
               HetconsExperimentClientConfig config,
               CharlotteNodeService service,
               Path expDir,
-              List<String> subChainNames) throws FileNotFoundException {
+              List<String> subChainNames,
+              Map<Hash, Long> chainSlotStatus) throws FileNotFoundException {
             this.observerConfigFileName = observerConfigFileName;
             this.config = config;
             ChainConfig chainConfig = hetconsConfig.loadChain(observerConfigFileName);
@@ -235,8 +242,12 @@ public class HetconsExperimentClient {
             /* Contact server will be a random fern server in the current observer group */
             JsonContact contactServer = chainConfig.getObservers().get(rnd.nextInt(chainConfig.getObservers().size())).getSelf();
 //            JsonContact contactServer = config.getContacts().get(config.getContactServer());
-            Contact fernContact = new Contact(contactServer, expDir, service.getConfig());
-            clientNode = new HetconsFernClient(service, fernContact);
+            fernContact = new Contact(contactServer, expDir, service.getConfig());
+
+            if (!channelMap.containsKey(fernContact.getCryptoId())) {
+                channelMap.put(fernContact.getCryptoId(), new HetconsFernClient(service, fernContact));
+            }
+            clientNode = channelMap.get(fernContact.getCryptoId());
 
             HetconsObserverGroup group = chainConfig.getObserverGroup(expDir);
 
@@ -261,12 +272,16 @@ public class HetconsExperimentClient {
                 ex.printStackTrace();
             }
 
+            chainNames = new HashSet<>();
+
             obsblkRef = Reference.newBuilder()
                     .setHash(HashUtil.sha3Hash(observerBlock)).build();
             if (subChainNames != null) {
-                chainStatus = new HashMap<>();
+                chainStatus = chainSlotStatus;
                 subChainNames.forEach(n -> {
-                    chainStatus.putIfAbsent(Hash.newBuilder().setSha3(ByteString.copyFromUtf8(n)).build(), 0L);
+                    Hash nameHash = Hash.newBuilder().setSha3(ByteString.copyFromUtf8(n)).build();
+                    chainStatus.putIfAbsent(nameHash, 1L);
+                    chainNames.add(nameHash);
                 });
             }
         }
@@ -281,31 +296,39 @@ public class HetconsExperimentClient {
             RequestIntegrityAttestationInput  input = null;
             do {
                 input = prepareProposalBlock(i);
+                List<IntegrityAttestation.ChainSlot> slots = input.getPolicy().getHetconsPolicy().getProposal().getM1A().getProposal().getSlotsList();
                 if (response == null) {
-                    logger.info(String.format("Beginning slot for chain %s %d", observerConfigFileName, i));
+                    logger.info(String.format("%d:%d:Beginning slot for %s", i, fernContact.getPort(), slots.toString()));
+                } else {
+                    logger.info(String.format("Slot has been taken. Restry another %s", slots));
                 }
                 response = clientNode.requestIntegrityAttestation(input);
-                if (response.getErrorMessage() == null) {
-                    logger.info(String.format("Received response for chain %s %d", observerConfigFileName, i));
+                if (response.getErrorMessage() == null || response.getErrorMessage().length() == 0) {
+                    logger.info(String.format("%d:%d:Received response for %s", i, fernContact.getPort(), slots.toString()));
                 }
-                response.getAttestation().getHetconsAttestation().getNextSlotNumbersList().forEach(chainSlot -> {
+                response.getAttestation().getSignedHetconsAttestation().getAttestation().getNextSlotNumbersList().forEach(chainSlot -> {
                     chainStatus.put(chainSlot.getRoot().getHash(), chainSlot.getSlot());
                 });
-            } while (response.getErrorMessage() != null);
+            } while (response.getErrorMessage() != null && response.getErrorMessage().length() > 0);
         }
 
-        /* Prepare request block which will be sent to one of contact server */
+
+        /**
+         * Prepare request block which will be sent to one of contact server
+         * @param i
+         * @return
+         */
         RequestIntegrityAttestationInput prepareProposalBlock(int i) {
 
             /* set up proposal slots */
             ArrayList<IntegrityAttestation.ChainSlot> slots = new ArrayList<>();
-            chainStatus.forEach((k, v) -> {
+            chainNames.forEach(n -> {
                 slots.add(
                         IntegrityAttestation.ChainSlot.newBuilder()
                                 .setRoot(Reference.newBuilder()
-                                        .setHash(k)
+                                        .setHash(n)
                                         .build())
-                                .setSlot(v)
+                                .setSlot(chainStatus.get(n))
                                 .build()
                 );
             });

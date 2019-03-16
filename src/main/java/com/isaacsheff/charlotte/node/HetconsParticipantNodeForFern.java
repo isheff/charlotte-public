@@ -127,17 +127,19 @@ public class HetconsParticipantNodeForFern extends HetconsParticipantService {
    */
   @Override
   public Iterable<SendBlocksResponse> onSendBlocksInput(Block block) {
-    if (block.hasIntegrityAttestation() && storeNewBlock(block) && block.getIntegrityAttestation().hasHetconsAttestation()) {
-      block.getIntegrityAttestation().getHetconsAttestation().getSlotsList().forEach(e -> {
+    if (block.hasIntegrityAttestation() && storeNewBlock(block) && block.getIntegrityAttestation().hasSignedHetconsAttestation()) {
+      block.getIntegrityAttestation().getSignedHetconsAttestation().getAttestation().getSlotsList().forEach(e -> {
         Long slot = nextSlot.putIfAbsent(e.getRoot(), e.getSlot() + 1);
         /* update next available slot */
         if (slot != null && slot < e.getSlot() + 1) {
           nextSlot.put(e.getRoot(), e.getSlot() + 1);
         }
       });
-      for (CryptoId o : block.getIntegrityAttestation().getHetconsAttestation().getObserversList()) {
-        sendBlock(o, block);
-      }
+      getFern().saveAttestation(block.getIntegrityAttestation());
+//      for (CryptoId o : block.getIntegrityAttestation().getHetconsAttestation().getObserversList()) {
+//        sendBlock(o, block);
+//      }
+      broadcastBlock(block);
       return Collections.emptySet();
     } else {
       return super.onSendBlocksInput(block);
@@ -157,8 +159,13 @@ public class HetconsParticipantNodeForFern extends HetconsParticipantService {
 //        storeNewBlock(input.getBlock());
   }
 
+  /**
+   * Return the next available slot number for the chain with given root. If there is no root registered yet, then register this root and set the slot number to be 0.
+   * @param root
+   * @return
+   */
   public Long getNextAvailableSlot(Reference root) {
-    nextSlot.putIfAbsent(root, 0L);
+    nextSlot.putIfAbsent(root, 1L);
     return nextSlot.get(root);
   }
 }

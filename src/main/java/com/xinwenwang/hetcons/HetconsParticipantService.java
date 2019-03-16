@@ -5,6 +5,7 @@ import com.isaacsheff.charlotte.node.HashUtil;
 import com.isaacsheff.charlotte.node.SignatureUtil;
 import com.isaacsheff.charlotte.proto.*;
 import com.isaacsheff.charlotte.yaml.Config;
+import com.isaacsheff.charlotte.yaml.Contact;
 
 import java.util.*;
 import java.util.concurrent.*;
@@ -240,6 +241,14 @@ public class HetconsParticipantService extends CharlotteNodeService {
             });
     }
 
+    @Override
+    public void broadcastBlock(Block block) {
+        for (Contact contact : getConfig().getContacts().values()) {
+            if (!contact.getJsonContact().isClient()) {
+                contact.getCharlotteNodeClient().sendBlock(block);
+            }
+        }
+    }
 
     private void broadCastObserverGroupBlock(Block block) {
         HashSet<CryptoId> participants = new HashSet<>();
@@ -328,4 +337,8 @@ public class HetconsParticipantService extends CharlotteNodeService {
      */
     protected void onDecision(final HetconsObserverQuorum quoraMembers,
                               final Collection<Reference> quoraMessages) {}
+
+    public void onAttestationReceived(IntegrityAttestation.HetconsAttestation attestation) {
+        observers.get(HetconsUtil.cryptoIdToString(attestation.getObservers(0))).decideSlots(attestation);
+    }
 }

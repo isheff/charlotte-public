@@ -21,6 +21,8 @@ public class HetconsSlotStatus {
 
     private List<Reference> quorumOf2b;
 
+    private String slot;
+
     public HetconsSlotStatus(HetconsBallot ballot) {
         this.ballot = ballot;
         this.stage = StatusStage.RECEIVED1A;
@@ -28,6 +30,11 @@ public class HetconsSlotStatus {
 
     public HetconsSlotStatus() {
         this.stage = StatusStage.NOPROPOSAL;
+    }
+
+    public HetconsSlotStatus(String slot) {
+        this.stage = StatusStage.NOPROPOSAL;
+        this.slot = slot;
     }
 
     synchronized public void updateBallot(HetconsBallot ballot) {
@@ -76,6 +83,12 @@ public class HetconsSlotStatus {
         this.stage = StatusStage.DECIDED;
     }
 
+    public void decide(List<Reference> m2bs, String proposalID) {
+        activeProposal = proposalID;
+        quorumOf2b = m2bs;
+        this.stage = StatusStage.DECIDED;
+    }
+
     public void setActiveProposal(String activeProposal) {
         this.activeProposal = activeProposal;
     }
@@ -86,6 +99,10 @@ public class HetconsSlotStatus {
 
     public HetconsBallot getBallot() {
         return ballot;
+    }
+
+    public String getSlot() {
+        return slot;
     }
 }
 

@@ -1,33 +1,27 @@
-package com.isaacsheff.charlotte.fern;   
-
-import static com.isaacsheff.charlotte.node.HashUtil.sha3Hash;
-
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.logging.Logger;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.Set;
+package com.isaacsheff.charlotte.fern;
 
 import com.isaacsheff.charlotte.collections.BlockingConcurrentHashMap;
 import com.isaacsheff.charlotte.collections.BlockingMap;
-import com.isaacsheff.charlotte.collections.ConcurrentHolder;
-import com.isaacsheff.charlotte.experiments.HetconsExperimentFernNode;
 import com.isaacsheff.charlotte.node.CharlotteNode;
 import com.isaacsheff.charlotte.node.HetconsParticipantNodeForFern;
 import com.isaacsheff.charlotte.node.SignatureUtil;
 import com.isaacsheff.charlotte.proto.*;
 import com.isaacsheff.charlotte.proto.IntegrityAttestation.ChainSlot;
 import com.isaacsheff.charlotte.proto.IntegrityAttestation.HetconsAttestation;
-import com.isaacsheff.charlotte.proto.IntegrityAttestation.SignedChainSlot;
+import com.isaacsheff.charlotte.proto.IntegrityAttestation.SignedHetconsAttestation;
 import com.isaacsheff.charlotte.yaml.Config;
-import com.sun.net.httpserver.Filter;
 import com.xinwenwang.hetcons.HetconsUtil;
 import com.xinwenwang.hetcons.config.HetconsConfig;
-
-import io.grpc.ServerBuilder;
 import io.grpc.stub.StreamObserver;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.logging.Logger;
+
+import static com.isaacsheff.charlotte.node.HashUtil.sha3Hash;
 
 /**
  * A Fern Server built around Hetcons.
@@ -218,6 +212,12 @@ public class HetconsFern extends AgreementFernService {
     final HetconsAttestation.Builder hetconsAttestationBuilder = HetconsAttestation.newBuilder();
 
     CryptoId observer = q.getOwner();
+    CryptoId self = getNode().getConfig().getCryptoId();
+
+    if (!observer.equals(self)) {
+      logger.info("This node("+getNode().getConfig().getContact(self).getPort()+"} observed a quorum of a observer("+getNode().getConfig().getContact(observer).getPort()+") have been decided on a value. However, only the observer itself is allowed to issue an attestation");
+      return;
+    }
 
     hetconsAttestationBuilder.addObservers(observer);
 
@@ -243,38 +243,73 @@ public class HetconsFern extends AgreementFernService {
     hetconsAttestationBuilder.addAllMessage2B(quorum2b);
     hetconsAttestationBuilder.setAttestedValue(message1a.getProposal().getValue());
     hetconsAttestationBuilder.addAllSlots(message1a.getProposal().getSlotsList());
+    HetconsAttestation unsignedHetconsAttestation = hetconsAttestationBuilder.build();
+    SignedHetconsAttestation.Builder signedHetconsAttestation = SignedHetconsAttestation.newBuilder();
+    signedHetconsAttestation.setAttestation(unsignedHetconsAttestation);
+    signedHetconsAttestation.setSignaure(SignatureUtil.signBytes(this.getHetconsNode().getConfig().getKeyPair(), unsignedHetconsAttestation));
 
-    final IntegrityAttestation attestation = IntegrityAttestation.newBuilder().setHetconsAttestation(hetconsAttestationBuilder).build();
+    final IntegrityAttestation attestation = IntegrityAttestation.newBuilder().setSignedHetconsAttestation(signedHetconsAttestation).build();
 
     final Block hetconsAttestation = Block.newBuilder().setIntegrityAttestation(attestation).build();
 
+
     getHetconsNode().onSendBlocksInput(hetconsAttestation);
 
+//    hetconsAttestationBuilder.addAllNextSlotNumbers(nextAvailableSlots(message1a.getProposal().getSlotsList()));
+//
+//    final RequestIntegrityAttestationResponse hetconsResponse = RequestIntegrityAttestationResponse.newBuilder().
+//      setReference(Reference.newBuilder().setHash(sha3Hash(hetconsAttestation)))
+//            .setAttestation(attestation.toBuilder().setSignedHetconsAttestation(SignedHetconsAttestation.newBuilder().setAttestation(hetconsAttestationBuilder).build()))
+//            .build();
+//
+//    for (ChainSlot chainslot : message1a.getProposal().getSlotsList()) {
+//      // we're indexing strictly by root and slot.
+//      // that means different parents or whatever conflict.
+//      final ChainSlot indexableChainSlot = ChainSlot.newBuilder().
+//        setRoot(chainslot.getRoot()).
+//        setSlot(chainslot.getSlot()).
+//        build();
+//
+//      putHetconsAttestation(indexableChainSlot, observer, hetconsResponse);
+////      getAgreementAttestationCache().put(indexableChainSlot, newResponse(
+////        IntegrityPolicy.newBuilder().setFillInTheBlank(
+////          IntegrityAttestation.newBuilder().setSignedChainSlot(
+////            SignedChainSlot.newBuilder().setChainSlot(
+////              ChainSlot.newBuilder(chainslot).setBlock(
+////                value.getBlock()
+////              )
+////            )
+////          )
+////        ).build()
+////      ));
+//    }
+  }
+
+  public void saveAttestation(IntegrityAttestation attestation) {
+    HetconsAttestation hetconsAttestation = attestation.getSignedHetconsAttestation().getAttestation();
+    if (!SignatureUtil.checkSignature(hetconsAttestation, attestation.getSignedHetconsAttestation().getSignaure())) {
+      logger.info("Signature does not match");
+      return;
+    }
+    List<ChainSlot> slots = hetconsAttestation.getSlotsList();
+    HetconsAttestation.Builder builder = HetconsAttestation.newBuilder(hetconsAttestation);
+    builder.addAllNextSlotNumbers(nextAvailableSlots(slots));
     final RequestIntegrityAttestationResponse hetconsResponse = RequestIntegrityAttestationResponse.newBuilder().
-      setReference(Reference.newBuilder().setHash(sha3Hash(hetconsAttestation)))
-            .setAttestation(attestation)
+            setReference(Reference.newBuilder().setHash(sha3Hash(hetconsAttestation)))
+            .setAttestation(attestation.toBuilder().setSignedHetconsAttestation(SignedHetconsAttestation.newBuilder().setAttestation(builder).build()).build())
             .build();
 
-    for (ChainSlot chainslot : message1a.getProposal().getSlotsList()) {
+    for (ChainSlot chainslot : slots) {
       // we're indexing strictly by root and slot.
       // that means different parents or whatever conflict.
       final ChainSlot indexableChainSlot = ChainSlot.newBuilder().
-        setRoot(chainslot.getRoot()).
-        setSlot(chainslot.getSlot()).
-        build();
+              setRoot(chainslot.getRoot()).
+              setSlot(chainslot.getSlot()).
+              build();
 
-      putHetconsAttestation(indexableChainSlot, observer, hetconsResponse);
-      getAgreementAttestationCache().put(indexableChainSlot, newResponse(
-        IntegrityPolicy.newBuilder().setFillInTheBlank(
-          IntegrityAttestation.newBuilder().setSignedChainSlot(
-            SignedChainSlot.newBuilder().setChainSlot(
-              ChainSlot.newBuilder(chainslot).setBlock(
-                value.getBlock()
-              )
-            )
-          )
-        ).build()
-      ));
+      putHetconsAttestation(indexableChainSlot, hetconsAttestation.getObservers(0), hetconsResponse);
+      logger.info("This Observer "+getNode().getConfig().getContact(hetconsAttestation.getObservers(0)).getPort()+" has issued an attestation on slot " + HetconsUtil.buildConsensusId(slots));
+//      getHetconsNode().onAttestationReceived(attestation.getSignedHetconsAttestation().getAttestation());
     }
   }
 
@@ -328,17 +363,29 @@ public class HetconsFern extends AgreementFernService {
               Block.newBuilder().setHetconsBlock(requestBlock).build()
       );
 
+      ArrayList<Boolean> hasResponsed = new ArrayList<>();
+      hasResponsed.add(false);
+
       // Whichever Slot reaches consensus first for this observer, return the affiliated response
-      request.getPolicy().getHetconsPolicy().getProposal().getM1A().getProposal().getSlotsList().parallelStream().
+       request.getPolicy().getHetconsPolicy().getProposal().getM1A().getProposal().getSlotsList().parallelStream().
         forEach(chainslot -> {
           try {
             // This call blocks until that slot is filled
             RequestIntegrityAttestationResponse attestationResponse = getHetconsAttestation(chainslot, request.getPolicy().getHetconsPolicy().getObserver());
-            if (attestationResponse.getAttestation().getHetconsAttestation().getAttestedValue().equals(request.getPolicy().getHetconsPolicy().getProposal().getM1A().getProposal().getValue())) {
-              responseObserver.onNext(attestationResponse);
-              responseObserver.onCompleted();
-            } else {
-              responseSlotAlreadyTaken(request, responseObserver);
+
+            if (hasResponsed.get(0))
+              return;
+
+            synchronized (hasResponsed) {
+              if (hasResponsed.get(0))
+                return;
+              if (attestationResponse.getAttestation().getSignedHetconsAttestation().getAttestation().getAttestedValue().equals(request.getPolicy().getHetconsPolicy().getProposal().getM1A().getProposal().getValue())) {
+                responseObserver.onNext(attestationResponse);
+                responseObserver.onCompleted();
+              } else {
+                responseSlotAlreadyTaken(request, responseObserver);
+              }
+              hasResponsed.set(0, true);
             }
           } catch (Throwable t) {
             // This is likely to happen if multiple chainSlots are filled.
@@ -354,14 +401,20 @@ public class HetconsFern extends AgreementFernService {
 
   /* If one or more slots in the request are taken by other proposals, then send back a list of chain slot that available */
   private void responseSlotAlreadyTaken(RequestIntegrityAttestationInput request, final StreamObserver<RequestIntegrityAttestationResponse> responseObserver) {
-    List<ChainSlot> nextAvailableSlots = new ArrayList<>();
-    for (ChainSlot ci : request.getPolicy().getHetconsPolicy().getProposal().getM1A().getProposal().getSlotsList()) {
-      nextAvailableSlots.add(ChainSlot.newBuilder(ci).setSlot(getHetconsNode().getNextAvailableSlot(ci.getRoot())).build());
-    }
     responseObserver.onNext(RequestIntegrityAttestationResponse.newBuilder().
             setErrorMessage("One or more slots have already been taken.").
-            setAttestation(IntegrityAttestation.newBuilder().setHetconsAttestation(HetconsAttestation.newBuilder().addAllNextSlotNumbers(nextAvailableSlots).build()))
+            setAttestation(IntegrityAttestation.newBuilder().setSignedHetconsAttestation(
+                    SignedHetconsAttestation.newBuilder().setAttestation(
+                    HetconsAttestation.newBuilder().addAllNextSlotNumbers(nextAvailableSlots(request.getPolicy().getHetconsPolicy().getProposal().getM1A().getProposal().getSlotsList())).build())))
             .build());
     responseObserver.onCompleted();
+  }
+
+  private List<ChainSlot> nextAvailableSlots(List<ChainSlot> slots) {
+    List<ChainSlot> nextAvailableSlots = new ArrayList<>();
+    for (ChainSlot ci : slots) {
+      nextAvailableSlots.add(ChainSlot.newBuilder(ci).setSlot(getHetconsNode().getNextAvailableSlot(ci.getRoot())).build());
+    }
+    return nextAvailableSlots;
   }
 }

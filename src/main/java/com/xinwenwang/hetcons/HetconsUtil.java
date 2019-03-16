@@ -88,6 +88,7 @@ public class HetconsUtil {
         Collections.sort(slots2, Comparator.comparing(HetconsUtil::buildChainSlotID));
         for (IntegrityAttestation.ChainSlot slot : slots2) {
             builder.append(buildChainSlotID(slot));
+            builder.append("#");
         }
         return builder.toString();
     }
@@ -99,7 +100,7 @@ public class HetconsUtil {
      * @return a string id for chain slot
      */
     public static String buildChainSlotID(IntegrityAttestation.ChainSlot slot) {
-        return String.format("%s%d", slot.getRoot().getHash().getSha3().toStringUtf8(), slot.getSlot());
+        return String.format("%s-%d", slot.getRoot().getHash().getSha3().toStringUtf8(), slot.getSlot());
     }
 
     public static String buildChainID(List<String> chainNames) {
