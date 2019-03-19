@@ -291,7 +291,11 @@ public class HetconsExperimentClient {
          * @param i the slot number for this block to be placed.
          */
         void proposeNewBlock(int i) {
-
+            try {
+                TimeUnit.MILLISECONDS.sleep(500);
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
             RequestIntegrityAttestationResponse response = null;
             RequestIntegrityAttestationInput  input = null;
             do {

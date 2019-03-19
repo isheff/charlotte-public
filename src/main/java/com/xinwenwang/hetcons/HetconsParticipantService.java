@@ -9,6 +9,7 @@ import com.isaacsheff.charlotte.yaml.Contact;
 
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.function.Consumer;
 import java.util.logging.LogManager;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
@@ -31,6 +32,8 @@ public class HetconsParticipantService extends CharlotteNodeService {
 
     private Map<CryptoId, Set<HetconsMessage>> sentBlocSet;
     private Map<HetconsMessage, Block> sentBlocks;
+
+    private Object crossObserverSlotLock = new Object();
 
     public HetconsParticipantService(Config config) {
         super(config);
@@ -168,6 +171,8 @@ public class HetconsParticipantService extends CharlotteNodeService {
         restartTimers.putIfAbsent(HetconsUtil.buildConsensusId(proposal.getSlotsList()), new HetconsRestartStatus(observerIDs));
 //            executorService.submit(() -> {
         observerGroup.getObserversList().forEach(o -> {
+            if (!o.getId().equals(getConfig().getCryptoId()))
+                return;
             HetconsObserverStatus observerStatus = observers.get(HetconsUtil.cryptoIdToString(o.getId()));
             executorService.submit(() -> {
                 observerStatus.receive1a(inputBlock,
@@ -203,6 +208,8 @@ public class HetconsParticipantService extends CharlotteNodeService {
 
 //            executorService1b.submit(() -> {
         observerGroup.getObserversList().forEach(o -> {
+            if (!o.getId().equals(getConfig().getCryptoId()))
+                return;
             HetconsObserverStatus observerStatus = observers.get(HetconsUtil.cryptoIdToString(o.getId()));
             if (observerStatus == null) {
                 logger.warning("Got m1b but no such observer");
@@ -240,6 +247,8 @@ public class HetconsParticipantService extends CharlotteNodeService {
 
 //            executorService2b.submit(() -> {
         observerGroup.getObserversList().forEach(o -> {
+            if (!o.getId().equals(getConfig().getCryptoId()))
+                return;
             HetconsObserverStatus observerStatus = observers.get(HetconsUtil.cryptoIdToString(o.getId()));
             if (observerStatus == null) {
                 logger.warning("Got m2b but no such observer");
@@ -264,7 +273,8 @@ public class HetconsParticipantService extends CharlotteNodeService {
     public void broadcastBlock(Block block) {
         for (Contact contact : getConfig().getContacts().values()) {
             if (!contact.getJsonContact().isClient()) {
-                sendBlock(contact.getCryptoId(), block);
+                contact.getCharlotteNodeClient().sendBlock(block);
+//                sendBlock(contact.getCryptoId(), block);
             }
         }
     }
@@ -355,5 +365,27 @@ public class HetconsParticipantService extends CharlotteNodeService {
      */
     protected boolean hasAttestation(IntegrityAttestation.ChainSlot slot, CryptoId observer) {
         return false;
+    }
+
+
+    public Map<String, HetconsSlotStatus> getObserverSlotStatus(CryptoId id) {
+        String _id = HetconsUtil.cryptoIdToString(id);
+        if (observers.containsKey(_id))
+            return observers.get(_id).getSlotStatus();
+        return null;
+    }
+
+    public Object getCrossObserverSlotLock() {
+        return crossObserverSlotLock;
+    }
+
+    /**
+     * Make modify to the slots status cross all observers atomically.
+     * @param function
+     */
+    public void lockedModifySlotStatus(Runnable function) {
+        synchronized (crossObserverSlotLock) {
+            function.run();
+        }
     }
 }

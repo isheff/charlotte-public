@@ -79,6 +79,8 @@ public class HetconsFern extends AgreementFernService {
   /** All responses yet made for hetcons requests for each chain slot and observer **/
   private final ConcurrentMap<ChainSlot, BlockingMap<CryptoId, RequestIntegrityAttestationResponse>> hetconsAttestationCache;
 
+  private final BlockingQueue<ForkJoinPool> poolQueue;
+
   /**
    * Run as a main class with an arg specifying a config file name to run a Fern Hetcons server.
    * Creates and runs a new HetconsParticipantService (which is a CharlotteNodeService) which also runs this Fern Service.
@@ -135,6 +137,17 @@ public class HetconsFern extends AgreementFernService {
       new BlockingConcurrentHashMap<ChainSlot, RequestIntegrityAttestationResponse>();
     hetconsAttestationCache =
       new ConcurrentHashMap<ChainSlot, BlockingMap<CryptoId, RequestIntegrityAttestationResponse>>();
+    poolQueue = new LinkedBlockingQueue<>();
+    new Thread(() -> {
+      while (true) {
+        try {
+          poolQueue.take().shutdown();
+
+        } catch (InterruptedException ex) {
+
+        }
+      }
+    });
   }
 
   /**
@@ -419,7 +432,12 @@ public class HetconsFern extends AgreementFernService {
                   responseSlotAlreadyTaken(request, responseObserver);
                 }
                 hasResponsed.set(0, true);
-                pool.shutdownNow();
+//                System.err.println("Active threads: "+pool.getActiveThreadCount());
+                poolQueue.add(pool);
+//                pool.shutdownNow();
+//                System.err.println("is Pool Shutdown?: "+pool.isShutdown());
+//                System.err.println("is Pool terminated?: "+pool.isTerminated());
+//                System.err.println("Active threads: "+pool.getActiveThreadCount());
               }
             } catch (Throwable t) {
               // This is likely to happen if multiple chainSlots are filled.

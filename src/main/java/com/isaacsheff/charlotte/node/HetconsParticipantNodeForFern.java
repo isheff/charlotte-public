@@ -169,24 +169,15 @@ public class HetconsParticipantNodeForFern extends HetconsParticipantService {
     return nextSlot.get(root);
   }
 
-//  @Override
-//  protected boolean hasAttestation(IntegrityAttestation.ChainSlot slot, CryptoId observer) {
-//
-//    boolean ret = getFern().getHetconsAttestationCache().containsKey(slot) && getFern().getHetconsAttestationCache().get(slot).containsKey(observer);
-//
-//    if (ret) {
-//
-//      IntegrityAttestation.HetconsAttestation attestation = getFern().getHetconsAttestationCache().get(slot).get(observer).getAttestation().getSignedHetconsAttestation().getAttestation();
-//
-//      IntegrityAttestation.HetconsAttestation _attestation = IntegrityAttestation.HetconsAttestation.newBuilder(attestation).addObservers(attestation.getObservers(0)).setObservers(0, this.getConfig().getCryptoId()).build();
-//
-//      /* Resign with this node's signature */
-//      IntegrityAttestation.SignedHetconsAttestation _signed = IntegrityAttestation.SignedHetconsAttestation.newBuilder().setAttestation(_attestation).setSignaure(SignatureUtil.signBytes(getConfig().getKeyPair(), _attestation)).build();
-//
-//      /* Save new attestation */
-//      getFern().saveAttestation(IntegrityAttestation.newBuilder().
-//              setSignedHetconsAttestation(_signed).build());
-//    }
-//    return ret;
-//  }
+  /**
+   *
+   * @param slot
+   * @param observer
+   * @return
+   */
+  @Override
+  protected boolean hasAttestation(IntegrityAttestation.ChainSlot slot, CryptoId observer) {
+
+    return getFern().getHetconsAttestationCache().containsKey(slot) && getFern().getHetconsAttestationCache().get(slot).containsKey(observer);
+  }
 }

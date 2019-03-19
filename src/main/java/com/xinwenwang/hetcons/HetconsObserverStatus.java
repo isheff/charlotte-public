@@ -8,6 +8,8 @@ import io.netty.util.Timeout;
 
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
@@ -125,74 +127,54 @@ public class HetconsObserverStatus {
                 logger.info("Duplicated Request: Slot " + proposal.getSlotsList() + " has been decided\nvalue is ");
         }
 
-        List<HetconsSlotStatus> slotStatuses = new ArrayList<>();
-        synchronized (slotStatus) {
-            // Init status objects for chain ids
-            for (String slot : chainIDs) {
-                slotStatus.putIfAbsent(slot, new HetconsSlotStatus(slot));
-                HetconsSlotStatus status = slotStatus.get(slot);
-                slotStatuses.add(status);
-            }
-        }
+
 
 
         Block freshBlock = block;
-        synchronized (slotStatus) {
+        synchronized (service.getCrossObserverSlotLock()) {
+            for (CryptoId ob : obs) {
 
-            /* See if we already have 2as from another independent proposals */
-            // FIXME: update ballot number instead of discarding the proposal
-            for (HetconsSlotStatus status : slotStatuses) {
-//                synchronized (status) {
-                String m2aId = status.has2aFromOtherProposal(proposalStatusID, this);
+                Map<String, HetconsSlotStatus> slotStatus = service.getObserverSlotStatus(ob);
+                List<HetconsSlotStatus> slotStatuses = new ArrayList<>();
+                // Init status objects for chain ids
+                for (String slot : chainIDs) {
+                    slotStatus.putIfAbsent(slot, new HetconsSlotStatus(slot));
+                    HetconsSlotStatus status = slotStatus.get(slot);
+                    slotStatuses.add(status);
+                }
+
+                /* See if we already have 2as from another independent proposals */
+                // FIXME: update ballot number instead of discarding the proposal
+                for (HetconsSlotStatus status : slotStatuses) {
+                    String m2aId = status.has2aFromOtherProposal(proposalStatusID, this);
                     if (m2aId != null && !proposalStatusID.equals(m2aId)) {
                         System.err.println(name+":"+status.getSlot()+":Receive Restart but already have 2a from other proposal on " + m2aId +" instead of "+ proposalStatusID);
                         service.storeNewBlock(freshBlock);
                         return true;
-//                        status.updateBallot(proposal.getBallot());
-//                        currentStatus =  proposalStatus.get(status.getActiveProposal());
-//                        freshProposal = HetconsProposal.newBuilder(currentStatus.getCurrentProposal())
-//                                .setValue(currentStatus.getCurrentProposal().getValue())
-//                                .setBallot(proposal.getBallot()).build();
-//                        proposalStatusID = status.getActiveProposal();
-//                        HetconsMessage1a _m1a = HetconsMessage1a.newBuilder(m1a).setProposal(freshProposal).build();
-//                        HetconsMessage _message = HetconsMessage.newBuilder(block.getHetconsBlock().getHetconsMessage()).setM1A(_m1a)
-//                                .setIdentity(service.getConfig().getCryptoId())
-//                                .setObserverGroupReferecne(currentStatus.getObserverGroupReference())
-//                                .build();
-//                        HetconsBlock _hetblock = HetconsBlock.newBuilder(block.getHetconsBlock()).setHetconsMessage(_message)
-//                                .setSig(SignatureUtil.signBytes(service.getConfig().getKeyPair(), _message))
-//                                .build();
-//                        freshBlock = Block.newBuilder(block).setHetconsBlock(_hetblock).build();
-//                        break;
-//                        return false;
                     }
-//                }
-            }
+                }
 
-        // See if all slots have smaller ballot number
-            for (HetconsSlotStatus status : slotStatuses) {
-//                synchronized (status) {
+                // See if all slots have smaller ballot number
+                for (HetconsSlotStatus status : slotStatuses) {
                     if (status.hasLargerBallot(proposal.getBallot())) {
                         System.err.println("Receive Restart for proposal "+proposalStatusID+" but slot "+ status.getSlot() + " has larger ballot number!");
                         return false;
                     }
-//                }
-            }
+                }
 
-            // Update ballot number for all slots
-            for (HetconsSlotStatus status : slotStatuses) {
-//                synchronized (status) {
+                // Update ballot number for all slots
+                for (HetconsSlotStatus status : slotStatuses) {
                     status.updateBallot(proposal.getBallot());
-//                }
+                }
             }
         }
+
 
         currentStatus.updateProposal(freshProposal);
 
         // Save valid block
         // Echo 1a to all participants
         service.storeNewBlock(freshBlock);
-//        service.storeNewBlock(block);
         broadcastToParticipants(freshBlock, currentStatus.getParticipants());
 
 
@@ -323,44 +305,44 @@ public class HetconsObserverStatus {
                 .build();
 
 
-        int decidedCount = 0;
-        for (String slot: status.getChainIDs()) {
-            HetconsSlotStatus sstatus = this.slotStatus.get(slot);
-            synchronized (sstatus) {
-                if (sstatus.isDecided() && !sstatus.getActiveProposal().equals(proposalID))
+        synchronized (service.getCrossObserverSlotLock()) {
+            List<HetconsObserver> obs = service.getBlock(status.getObserverGroupReference()).getHetconsBlock().getHetconsMessage().getObserverGroup().getObserversList();
+            for (HetconsObserver ob: obs) {
+                Map<String, HetconsSlotStatus> slotStatus = service.getObserverSlotStatus(ob.getId());
+                int decidedCount = 0;
+                for (String slot: status.getChainIDs()) {
+                    HetconsSlotStatus sstatus = slotStatus.get(slot);
+                    if (sstatus.isDecided() && !sstatus.getActiveProposal().equals(proposalID))
+                        return;
+                    if (sstatus.isDecided())
+                        decidedCount++;
+                }
+
+                // If there is any decided slot but not all of them, then return
+                if (decidedCount > 0 && decidedCount != status.getChainIDs().size())
                     return;
-                if (sstatus.isDecided())
-                    decidedCount++;
-            }
-        }
 
-        // If there is any decided slot but not all of them, then return
-        if (decidedCount > 0 && decidedCount != status.getChainIDs().size())
-            return;
-
-        synchronized (slotStatus) {
-            for (String slot: status.getChainIDs()) {
-                HetconsSlotStatus sstatus = this.slotStatus.get(slot);
-//                synchronized (sstatus) {
+                for (String slot: status.getChainIDs()) {
+                    HetconsSlotStatus sstatus = slotStatus.get(slot);
                     HetconsMessage2ab slot2a = sstatus.getM2a();
                     if (slot2a != null && HetconsUtil.ballotCompare(getM1aFromReference(slot2a.getM1ARef()).getProposal().getBallot(),
                             getM1aFromReference(m2a.getM1ARef()).getProposal().getBallot()) > 0) {
                         return;
                     }
-//                }
+                }
+
+                for (String slot: status.getChainIDs()) {
+                    HetconsSlotStatus sstatus = slotStatus.get(slot);
+                    // only do updates if the slot has not decided yet.
+                    if (!sstatus.isDecided()) {
+                        sstatus.setM2a(m2a, this);
+                        sstatus.setActiveProposal(proposalID);
+                    }
+                }
             }
 
-            for (String slot: status.getChainIDs()) {
-                HetconsSlotStatus slotStatus = this.slotStatus.get(slot);
-                // only do updates if the slot has not decided yet.
-//                synchronized (slotStatus) {
-                    if (!slotStatus.isDecided()) {
-                        slotStatus.setM2a(m2a, this);
-                        slotStatus.setActiveProposal(proposalID);
-                    }
-//                }
-            }
         }
+
 
 
         logger.info(name + "Wrote to m2a");
@@ -461,22 +443,28 @@ public class HetconsObserverStatus {
         // Now we can decided on this 2b value for that slot.
         synchronized (status.getGeneralLock()) {
 
-
-            synchronized (slotStatus) {
-                for (String slotid: status.getChainIDs()) {
-                    HetconsSlotStatus slot = slotStatus.get(slotid);
-                    if (slot.isDecided()) {
-                        logger.info("Slot has been decided on value ");
-                        return;
-                    }
-                    if (HetconsUtil.ballotCompare(ballot, slot.getBallot()) < 0) {
-                        logger.info("Ballot number is smaller than the one slot has");
-                        System.err.println(name+":Ballot too low to pass status ballot check");
-                        return;
+            synchronized (service.getCrossObserverSlotLock()) {
+                List<HetconsObserver> obs = service.getBlock(status.getObserverGroupReference()).getHetconsBlock().getHetconsMessage().getObserverGroup().getObserversList();
+                for (HetconsObserver ob: obs) {
+                    Map<String, HetconsSlotStatus> slotStatus = service.getObserverSlotStatus(ob.getId());
+                    for (String slotid: status.getChainIDs()) {
+                        HetconsSlotStatus slot = slotStatus.get(slotid);
+                        if (slot.isDecided()) {
+                            logger.info("Slot has been decided on value ");
+                            return;
+                        }
+                        if (HetconsUtil.ballotCompare(ballot, slot.getBallot()) < 0) {
+                            logger.info("Ballot number is smaller than the one slot has");
+                            System.err.println(name+":Ballot too low to pass status ballot check");
+                            return;
+                        }
                     }
                 }
-                for (String slotid: status.getChainIDs()) {
-                    slotStatus.get(slotid).decide(ballot, q, proposalID);
+                for (HetconsObserver ob : obs) {
+                    Map<String, HetconsSlotStatus> slotStatus = service.getObserverSlotStatus(ob.getId());
+                    for (String slotid : status.getChainIDs()) {
+                        slotStatus.get(slotid).decide(ballot, q, proposalID);
+                    }
                 }
             }
 
@@ -694,15 +682,22 @@ public class HetconsObserverStatus {
 
     public void decideSlots(IntegrityAttestation.HetconsAttestation attestation) {
         String proposalID = HetconsUtil.buildConsensusId(attestation.getSlotsList());
-        attestation.getSlotsList().forEach(s -> {
-            String slotid = HetconsUtil.buildChainSlotID(s);
-            HetconsSlotStatus status = slotStatus.get(slotid);
-            if (status == null) {
-                status = new HetconsSlotStatus(slotid);
-                slotStatus.putIfAbsent(slotid, status);
-            }
-            slotStatus.get(slotid).decide(attestation.getMessage2BList(), proposalID);
+        service.lockedModifySlotStatus(() -> {
+            attestation.getSlotsList().forEach(s -> {
+                String slotid = HetconsUtil.buildChainSlotID(s);
+                HetconsSlotStatus status = slotStatus.get(slotid);
+                if (status == null) {
+                    status = new HetconsSlotStatus(slotid);
+                    slotStatus.putIfAbsent(slotid, status);
+                }
+                slotStatus.get(slotid).decide(attestation.getMessage2BList(), proposalID);
+            });
         });
+
+    }
+
+    public HashMap<String, HetconsSlotStatus> getSlotStatus() {
+        return slotStatus;
     }
 
 
