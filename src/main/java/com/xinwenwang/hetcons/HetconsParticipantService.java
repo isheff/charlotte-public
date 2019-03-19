@@ -181,6 +181,13 @@ public class HetconsParticipantService extends CharlotteNodeService {
         logger.info("# of threads in pool 1a is " + executorService.getActiveCount() + "/" + executorService.getCompletedTaskCount());
     }
 
+
+    /**
+     * handle 1b messsage, if enough 1b received, send out a 2b message and start restart timer.
+     * @param message1b
+     * @param id
+     * @param block
+     */
     private void handle1b(HetconsMessage1b message1b, CryptoId id, Block block) {
 
 //        logger.info("Got M1B:\n");
@@ -214,6 +221,13 @@ public class HetconsParticipantService extends CharlotteNodeService {
         }
     }
 
+
+    /**
+     * handle 2b message.
+     * @param message2b
+     * @param id
+     * @param block
+     */
     private void handle2b(HetconsMessage2ab message2b, CryptoId id, Block block) {
         HetconsObserverGroup observerGroup;
         try {
@@ -241,11 +255,16 @@ public class HetconsParticipantService extends CharlotteNodeService {
             });
     }
 
+
+    /**
+     * This broadcast method only sends messages to servers.
+     * @param block the block to send
+     */
     @Override
     public void broadcastBlock(Block block) {
         for (Contact contact : getConfig().getContacts().values()) {
             if (!contact.getJsonContact().isClient()) {
-                contact.getCharlotteNodeClient().sendBlock(block);
+                sendBlock(contact.getCryptoId(), block);
             }
         }
     }
@@ -263,23 +282,9 @@ public class HetconsParticipantService extends CharlotteNodeService {
 
     private boolean verifySignature(HetconsBlock block) {
         return SignatureUtil.checkSignature(block.getHetconsMessage(), block.getSig());
-//        switch (message.getType()) {
-//            case M1a:
-//                return SignatureUtil.checkSignature(message.getM1A(), message.getSig());
-//            case OBSERVERGROUP:
-//                return SignatureUtil.checkSignature(message.getObserverGroup(), message.getSig());
-//            case M1b:
-//                return SignatureUtil.checkSignature(message.getM1B(), message.getSig());
-//            case M2b:
-//                return SignatureUtil.checkSignature(message.getM2B(), message.getSig());
-//            case UNRECOGNIZED:
-//                return false;
-//            default:
-//                return false;
-//        }
     }
 
-    /**
+    /*
      * Only send block with same hetcons messages at most once
      * @param cryptoid identifies the server we want to send to
      * @param block the block we want to send
@@ -339,6 +344,16 @@ public class HetconsParticipantService extends CharlotteNodeService {
                               final Collection<Reference> quoraMessages) {}
 
     public void onAttestationReceived(IntegrityAttestation.HetconsAttestation attestation) {
-        observers.get(HetconsUtil.cryptoIdToString(attestation.getObservers(0))).decideSlots(attestation);
+        if (observers.containsKey(HetconsUtil.cryptoIdToString(attestation.getObservers(0))))
+            observers.get(HetconsUtil.cryptoIdToString(attestation.getObservers(0))).decideSlots(attestation);
+    }
+
+    /**
+     * If given slot has an attestation from the given observer, then save that attaestion on the behalf of current server.
+     * @param slot
+     * @return
+     */
+    protected boolean hasAttestation(IntegrityAttestation.ChainSlot slot, CryptoId observer) {
+        return false;
     }
 }

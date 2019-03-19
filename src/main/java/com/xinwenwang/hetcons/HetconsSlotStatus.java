@@ -46,8 +46,11 @@ public class HetconsSlotStatus {
         }
     }
 
-    public boolean has2aFromOtherProposal(String id, HetconsObserverStatus observerStatus) {
-        return !(m2a == null || id.equals(HetconsUtil.buildConsensusId(observerStatus.getM1aFromReference(m2a.getM1ARef()).getProposal().getSlotsList())));
+    public String has2aFromOtherProposal(String id, HetconsObserverStatus observerStatus) {
+        if (m2a == null)
+            return null;
+        String activeId = HetconsUtil.buildConsensusId(observerStatus.getM1aFromReference(m2a.getM1ARef()).getProposal().getSlotsList());
+        return activeId;
     }
 
     public boolean hasLargerBallot(HetconsBallot ballot) {

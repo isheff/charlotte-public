@@ -300,7 +300,7 @@ public class HetconsExperimentClient {
                 if (response == null) {
                     logger.info(String.format("%d:%d:Beginning slot for %s", i, fernContact.getPort(), slots.toString()));
                 } else {
-                    logger.info(String.format("Slot has been taken. Restry another %s", slots));
+                    logger.info(String.format("%d:%d:Slot has been taken. Restry another %s", i, fernContact.getPort(), slots));
                 }
                 response = clientNode.requestIntegrityAttestation(input);
                 if (response.getErrorMessage() == null || response.getErrorMessage().length() == 0) {

@@ -9,6 +9,7 @@ import io.netty.util.Timeout;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 public class HetconsObserverStatus {
 
@@ -56,8 +57,16 @@ public class HetconsObserverStatus {
                              String chainName) {
 
         HetconsMessage1a m1a = block.getHetconsBlock().getHetconsMessage().getM1A();
+        List<CryptoId> obs = service.getBlock(block.getHetconsBlock().getHetconsMessage().getObserverGroupReferecne()).getHetconsBlock().getHetconsMessage().getObserverGroup().getObserversList().stream().map(o -> o.getId()).collect(Collectors.toList());
 
         HetconsProposal proposal = m1a.getProposal();
+
+        for (IntegrityAttestation.ChainSlot chainSlot : proposal.getSlotsList()) {
+            for (CryptoId ob : obs) {
+                if (service.hasAttestation(chainSlot, ob))
+                    return false;
+            }
+        }
 
         String proposalStatusID = HetconsUtil.buildConsensusId(proposal.getSlotsList());
 
@@ -70,13 +79,13 @@ public class HetconsObserverStatus {
         if (proposalStatus.containsKey(proposalStatusID)) {
             if (!(proposal.getBallot().getBallotSequence().compareTo(
                     proposalStatus.get(proposalStatusID).getCurrentProposal().getBallot().getBallotSequence()) > 0)) {
-                System.err.println("Receive Restart but haven't pass ballot test on "+ proposalStatusID);
+                System.err.println(name+":Receive Restart but haven't pass ballot test on "+ proposalStatusID);
                 return false;
             }
             System.err.println(name+":Receive Restart on "+ proposalStatusID);
         }
 
-        quorums.put(chainName, new HetconsQuorumStatus(observerQuorums, chainName));
+        quorums.putIfAbsent(chainName, new HetconsQuorumStatus(observerQuorums, chainName));
 
         HetconsProposalStatus incomingStatus = new HetconsProposalStatus(HetconsConsensusStage.Proposed,
                 proposal,
@@ -89,26 +98,29 @@ public class HetconsObserverStatus {
         synchronized (proposalStatus) {
             boolean hasPrev = null != proposalStatus.putIfAbsent(proposalStatusID, incomingStatus);
             currentStatus = proposalStatus.get(proposalStatusID);
-            currentStatus.setProposer(timeout != 0);
-            currentStatus.setConsensuTimeout(timeout);
-            if (currentStatus.getProposer())
-                logger.info("I am the proposer for " + proposalStatusID);
+            if (!hasPrev) {
+                currentStatus.setProposer(timeout != 0);
+                currentStatus.setConsensuTimeout(timeout);
+                if (currentStatus.getProposer())
+                    logger.info("I am the proposer for " + proposalStatusID);
+            }
         }
 
         HetconsProposal freshProposal = incomingStatus.getCurrentProposal();
 
 
-        if (incomingStatus != currentStatus) {
-            /* proposal with larger ballot number should be saved and use that number in the future */
-            if (!(incomingStatus.getCurrentProposal().getBallot().getBallotSequence().compareTo(
-                    currentStatus.getCurrentProposal().getBallot().getBallotSequence()) >= 0)) {
-                System.err.println("Receive Restart but haven't pass ballot test 2 on "+ proposalStatusID);
-                return false;
-            }
-        }
+//        if (incomingStatus != currentStatus) {
+//            /* proposal with larger ballot number should be saved and use that number in the future */
+//            if (!(incomingStatus.getCurrentProposal().getBallot().getBallotSequence().compareTo(
+//                    currentStatus.getCurrentProposal().getBallot().getBallotSequence()) >= 0)) {
+//                System.err.println("Receive Restart but haven't pass ballot test 2 on "+ proposalStatusID);
+//                return false;
+//            }
+//        }
 
 
         synchronized (currentStatus.getGeneralLock()) {
+            /* we still want this round of proposal proceed because it might come from other observer who has not received enough 2b to decide */
             if (currentStatus.getHasDecided())
                 logger.info("Duplicated Request: Slot " + proposal.getSlotsList() + " has been decided\nvalue is ");
         }
@@ -124,18 +136,34 @@ public class HetconsObserverStatus {
         }
 
 
+        Block freshBlock = block;
         synchronized (slotStatus) {
 
             /* See if we already have 2as from another independent proposals */
             // FIXME: update ballot number instead of discarding the proposal
             for (HetconsSlotStatus status : slotStatuses) {
 //                synchronized (status) {
-                    if (status.has2aFromOtherProposal(proposalStatusID, this)) {
-                        status.updateBallot(proposal.getBallot());
-                        currentStatus =  proposalStatus.get(status.getActiveProposal());
-                        freshProposal = HetconsProposal.newBuilder(currentStatus.getCurrentProposal()).setBallot(proposal.getBallot()).build();
-                        System.err.println(name+":"+status.getSlot()+":Receive Restart but already have 2a from other proposal on " + status.getActiveProposal() +" instead of "+ proposalStatusID);
-                        break;
+                String m2aId = status.has2aFromOtherProposal(proposalStatusID, this);
+                    if (m2aId != null && !proposalStatusID.equals(m2aId)) {
+                        System.err.println(name+":"+status.getSlot()+":Receive Restart but already have 2a from other proposal on " + m2aId +" instead of "+ proposalStatusID);
+                        service.storeNewBlock(freshBlock);
+                        return true;
+//                        status.updateBallot(proposal.getBallot());
+//                        currentStatus =  proposalStatus.get(status.getActiveProposal());
+//                        freshProposal = HetconsProposal.newBuilder(currentStatus.getCurrentProposal())
+//                                .setValue(currentStatus.getCurrentProposal().getValue())
+//                                .setBallot(proposal.getBallot()).build();
+//                        proposalStatusID = status.getActiveProposal();
+//                        HetconsMessage1a _m1a = HetconsMessage1a.newBuilder(m1a).setProposal(freshProposal).build();
+//                        HetconsMessage _message = HetconsMessage.newBuilder(block.getHetconsBlock().getHetconsMessage()).setM1A(_m1a)
+//                                .setIdentity(service.getConfig().getCryptoId())
+//                                .setObserverGroupReferecne(currentStatus.getObserverGroupReference())
+//                                .build();
+//                        HetconsBlock _hetblock = HetconsBlock.newBuilder(block.getHetconsBlock()).setHetconsMessage(_message)
+//                                .setSig(SignatureUtil.signBytes(service.getConfig().getKeyPair(), _message))
+//                                .build();
+//                        freshBlock = Block.newBuilder(block).setHetconsBlock(_hetblock).build();
+//                        break;
 //                        return false;
                     }
 //                }
@@ -163,17 +191,18 @@ public class HetconsObserverStatus {
 
         // Save valid block
         // Echo 1a to all participants
-        service.storeNewBlock(block);
-        broadcastToParticipants(block, currentStatus.getParticipants());
+        service.storeNewBlock(freshBlock);
+//        service.storeNewBlock(block);
+        broadcastToParticipants(freshBlock, currentStatus.getParticipants());
 
 
-        logger.info(name + ": Echo 1as value is " + proposal.getValue());
+//        logger.info(name + ": Echo 1as value is " + proposal.getValue());
 //        System.err.println(name + ": Echo 1as value is " + proposal.getValue());
 
         // Send 1b
         // FIXME: use reference
         Reference m1aRef = Reference.newBuilder().setHash(
-                HashUtil.sha3Hash(block)
+                HashUtil.sha3Hash(freshBlock)
         ).build();
 
         HetconsMessage1b m1b = prepareM1b(m1a, m1aRef, proposalStatusID);
@@ -184,7 +213,7 @@ public class HetconsObserverStatus {
         HetconsMessage m = HetconsMessage.newBuilder()
                 .setType(HetconsMessageType.M1b)
                 .setM1B(m1b)
-                .setObserverGroupReferecne(block.getHetconsBlock().getHetconsMessage().getObserverGroupReferecne())
+                .setObserverGroupReferecne(freshBlock.getHetconsBlock().getHetconsMessage().getObserverGroupReferecne())
                 .setIdentity(service.getConfig().getCryptoId())
                 .build();
 
@@ -195,14 +224,16 @@ public class HetconsObserverStatus {
         broadcastToParticipants(Block.newBuilder().setHetconsBlock(b).build(), currentStatus.getParticipants());
         currentStatus.setStage(HetconsConsensusStage.M1BSent);
 
-        logger.info("Sent 1Bs value is " + HetconsUtil.get1bValue(m1b, service) + " " + proposalStatusID);
-        logger.info("ballot is " + proposal.getBallot().getBallotSequence());
+//        logger.info("Sent 1Bs value is " + HetconsUtil.get1bValue(m1b, service) + " " + proposalStatusID);
+//        logger.info("ballot is " + proposal.getBallot().getBallotSequence());
 //        System.err.println(name + ": Echo 1b") ;
+
+        String _proposalID = proposalStatusID;
 
         /* Consume all waiting blocks here, not decided yet whether this should be submitted to other threads */
         service.getExecutorService().submit(() -> {
-            while(!waitingBlockQueue.get(proposalStatusID).isEmpty()) {
-                Block waitingBlock = waitingBlockQueue.get(proposalStatusID).pollFirst();
+            while(!waitingBlockQueue.get(_proposalID).isEmpty()) {
+                Block waitingBlock = waitingBlockQueue.get(_proposalID).pollFirst();
                 if (waitingBlock == null)
                     continue;
                 if (waitingBlock.getHetconsBlock().getHetconsMessage().getType() == HetconsMessageType.M1b)
@@ -378,6 +409,7 @@ public class HetconsObserverStatus {
                 proposal.getBallot().getBallotSequence()
         ) > 0) {
             logger.info(name + ":" + "M2B discard because of lower ballot number value is " + HetconsUtil.get2bValue(block.getHetconsBlock().getHetconsMessage().getM2B(), service));
+            System.err.println(name+":Ballot too lower for 2b to proceed");
             return;
         }
 //        if (status == null || status.getStage() == HetconsConsensusStage.ConsensusDecided)
@@ -439,6 +471,7 @@ public class HetconsObserverStatus {
                     }
                     if (HetconsUtil.ballotCompare(ballot, slot.getBallot()) < 0) {
                         logger.info("Ballot number is smaller than the one slot has");
+                        System.err.println(name+":Ballot too low to pass status ballot check");
                         return;
                     }
                 }
