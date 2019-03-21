@@ -90,6 +90,7 @@ message IntegrityAttestation {
     repeated IntegrityAttestation.ChainSlot slots = 3;
     HetconsValue attested_value = 4;
     repeated IntegrityAttestation.ChainSlot next_slot_numbers = 5;
+//    Reference observer_group_reference =6;
   }
 
   message SignedHetconsAttestation {

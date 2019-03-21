@@ -204,6 +204,7 @@ public class HetconsExperimentClient {
     }
 
     private static String getChain(HetconsExperimentClientConfig config) {
+//        return config.getSingleChainNames().get(0);
         if (rnd.nextFloat() > config.getDoubleChainProbability()) {
             return config.getDoubleChainNames().get(rnd.nextInt(config.getDoubleChainNames().size()));
         } else {
@@ -241,6 +242,7 @@ public class HetconsExperimentClient {
             }
             /* Contact server will be a random fern server in the current observer group */
             JsonContact contactServer = chainConfig.getObservers().get(rnd.nextInt(chainConfig.getObservers().size())).getSelf();
+//            JsonContact contactServer = chainConfig.getObservers().get(0).getSelf();
 //            JsonContact contactServer = config.getContacts().get(config.getContactServer());
             fernContact = new Contact(contactServer, expDir, service.getConfig());
 
@@ -291,11 +293,11 @@ public class HetconsExperimentClient {
          * @param i the slot number for this block to be placed.
          */
         void proposeNewBlock(int i) {
-            try {
-                TimeUnit.MILLISECONDS.sleep(500);
-            } catch (Exception ex) {
-                ex.printStackTrace();
-            }
+//            try {
+//                TimeUnit.MILLISECONDS.sleep(500);
+//            } catch (Exception ex) {
+//                ex.printStackTrace();
+//            }
             RequestIntegrityAttestationResponse response = null;
             RequestIntegrityAttestationInput  input = null;
             do {
@@ -304,9 +306,10 @@ public class HetconsExperimentClient {
                 if (response == null) {
                     logger.info(String.format("%d:%d:Beginning slot for %s", i, fernContact.getPort(), slots.toString()));
                 } else {
-                    logger.info(String.format("%d:%d:Slot has been taken. Restry another %s", i, fernContact.getPort(), slots));
+                    logger.info(String.format("%d:%d:Slot has been taken. Retry another %s", i, fernContact.getPort(), slots));
                 }
                 response = clientNode.requestIntegrityAttestation(input);
+                logger.info("Response back for "+slots.toString());
                 if (response.getErrorMessage() == null || response.getErrorMessage().length() == 0) {
                     logger.info(String.format("%d:%d:Received response for %s", i, fernContact.getPort(), slots.toString()));
                 }

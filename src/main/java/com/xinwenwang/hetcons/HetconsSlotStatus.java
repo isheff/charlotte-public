@@ -59,11 +59,16 @@ public class HetconsSlotStatus {
 
 
     /**
-     * Only update once message 2a.
+     * Only update once message 2a unless the proposal is aborted. Thus, if m2a is null, this function will reset m2a.
      * @param m2a the m2a to be used for this slot.
      */
     synchronized public void setM2a(HetconsMessage2ab m2a, HetconsObserverStatus observerStatus) {
-
+        if (m2a == null) {
+            /* Reset m2a */
+            this.m2a = null;
+            this.stage = StatusStage.RECEIVED1A;
+            return;
+        }
         if (this.m2a == null || observerStatus.getM1aFromReference(this.m2a.getM1ARef()).getProposal().getBallot().getBallotSequence().compareTo(
                 observerStatus.getM1aFromReference(m2a.getM1ARef()).getProposal().getBallot().getBallotSequence()
         ) < 0) {

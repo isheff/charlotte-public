@@ -240,6 +240,10 @@ public class HetconsProposalStatus {
         ConsensusID = consensusID;
     }
 
+    public String getProposalID() {
+        return proposalID;
+    }
+
     public List<String> getChainIDs() {
         return chainIDs;
     }
@@ -381,6 +385,8 @@ public class HetconsProposalStatus {
         Reference m1bRef;
         Reference m2bRef;
         List<QuorumStatus> quorumStatuses;
+        int count2b = 0;
+        int count1b = 0;
 
         ParticipantStatus(CryptoId id) {
             this.id = id;
@@ -410,16 +416,24 @@ public class HetconsProposalStatus {
         }
 
         QuorumStatus check1bQuorum() {
-            for (QuorumStatus q : quorumStatuses)
-                if (q.isEnough1b())
+            for (int i = 0; i < quorumStatuses.size(); i++) {
+                QuorumStatus q = quorumStatuses.get(((i+count1b) % quorumStatuses.size()));
+                if (q.isEnough1b()) {
+                    count1b ++;
                     return q;
+                }
+            }
             return null;
         }
 
         QuorumStatus check2bQuorum() {
-            for (QuorumStatus q : quorumStatuses)
-                if (q.isEnough2b())
+            for (int i = 0; i < quorumStatuses.size(); i++) {
+                QuorumStatus q = quorumStatuses.get(((i+count2b) % quorumStatuses.size()));
+                if (q.isEnough2b()) {
+                    count2b ++;
                     return q;
+                }
+            }
             return null;
         }
     }

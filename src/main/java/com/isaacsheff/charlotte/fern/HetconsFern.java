@@ -13,9 +13,12 @@ import com.isaacsheff.charlotte.yaml.Config;
 import com.xinwenwang.hetcons.HetconsUtil;
 import com.xinwenwang.hetcons.config.HetconsConfig;
 import io.grpc.stub.StreamObserver;
+import org.apache.commons.lang3.tuple.MutablePair;
+import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Date;
 import java.util.List;
 import java.util.concurrent.*;
 import java.util.logging.Logger;
@@ -79,7 +82,8 @@ public class HetconsFern extends AgreementFernService {
   /** All responses yet made for hetcons requests for each chain slot and observer **/
   private final ConcurrentMap<ChainSlot, BlockingMap<CryptoId, RequestIntegrityAttestationResponse>> hetconsAttestationCache;
 
-  private final BlockingQueue<ForkJoinPool> poolQueue;
+  private final ConcurrentMap<String, Pair<Object, Integer>> requestResponseTable;
+//  private final BlockingQueue<ForkJoinPool> poolQueue;
 
   /**
    * Run as a main class with an arg specifying a config file name to run a Fern Hetcons server.
@@ -137,17 +141,18 @@ public class HetconsFern extends AgreementFernService {
       new BlockingConcurrentHashMap<ChainSlot, RequestIntegrityAttestationResponse>();
     hetconsAttestationCache =
       new ConcurrentHashMap<ChainSlot, BlockingMap<CryptoId, RequestIntegrityAttestationResponse>>();
-    poolQueue = new LinkedBlockingQueue<>();
-    new Thread(() -> {
-      while (true) {
-        try {
-          poolQueue.take().shutdown();
-
-        } catch (InterruptedException ex) {
-
-        }
-      }
-    });
+    requestResponseTable = new ConcurrentHashMap<>();
+//    poolQueue = new LinkedBlockingQueue<>();
+//    new Thread(() -> {
+//      while (true) {
+//        try {
+//          poolQueue.take().shutdown();
+//
+//        } catch (InterruptedException ex) {
+//
+//        }
+//      }
+//    });
   }
 
   /**
@@ -332,18 +337,19 @@ public class HetconsFern extends AgreementFernService {
             .setAttestation(attestation.toBuilder().setSignedHetconsAttestation(SignedHetconsAttestation.newBuilder().setAttestation(builder).build()).build())
             .build();
 
-    for (ChainSlot chainslot : slots) {
-      // we're indexing strictly by root and slot.
-      // that means different parents or whatever conflict.
-      final ChainSlot indexableChainSlot = ChainSlot.newBuilder().
-              setRoot(chainslot.getRoot()).
-              setSlot(chainslot.getSlot()).
-              build();
+    synchronized (getHetconsNode().getCrossObserverSlotLock()) {
+      for (ChainSlot chainslot : slots) {
+        // we're indexing strictly by root and slot.
+        // that means different parents or whatever conflict.
+        final ChainSlot indexableChainSlot = ChainSlot.newBuilder().
+                setRoot(chainslot.getRoot()).
+                setSlot(chainslot.getSlot()).
+                build();
 
-      putHetconsAttestation(indexableChainSlot, hetconsAttestation.getObservers(0), hetconsResponse);
-//      new Exception().printStackTrace();
-      logger.info("This Observer "+getNode().getConfig().getContact(hetconsAttestation.getObservers(0)).getPort()+" has issued an attestation on slot " + HetconsUtil.buildConsensusId(slots));
-      getHetconsNode().onAttestationReceived(attestation.getSignedHetconsAttestation().getAttestation());
+        putHetconsAttestation(indexableChainSlot, hetconsAttestation.getObservers(0), hetconsResponse);
+        getHetconsNode().onAttestationReceived(attestation.getSignedHetconsAttestation().getAttestation());
+      }
+      logger.info("The Observer "+getNode().getConfig().getContact(hetconsAttestation.getObservers(0)).getPort()+" has issued an attestation on slot " + HetconsUtil.buildConsensusId(slots));
     }
   }
 
@@ -397,8 +403,6 @@ public class HetconsFern extends AgreementFernService {
               Block.newBuilder().setHetconsBlock(requestBlock).build()
       );
 
-      ArrayList<Boolean> hasResponsed = new ArrayList<>();
-      hasResponsed.add(false);
 
       ForkJoinPool pool = new ForkJoinPool();
       Block observers = this.getHetconsNode().getBlock(request.getPolicy().getHetconsPolicy().getProposal().getObserverGroupReferecne());
@@ -407,34 +411,44 @@ public class HetconsFern extends AgreementFernService {
         CryptoId id = o.getId();
         obs.add(id);
       }
-      List<ChainSlot> slots = request.getPolicy().getHetconsPolicy().getProposal().getM1A().getProposal().getSlotsList();
+      final List<ChainSlot> slots = request.getPolicy().getHetconsPolicy().getProposal().getM1A().getProposal().getSlotsList();
+      String proposalID =  HetconsUtil.buildConsensusId(slots) + HetconsUtil.cryptoIdToString(request.getPolicy().getHetconsPolicy().getProposal().getIdentity());
+      requestResponseTable.putIfAbsent(proposalID, new MutablePair<>(new Object(), 0));
       for (ChainSlot slot : slots) {
         for (CryptoId ob : obs) {
           // Whichever Slot reaches consensus first for this observer, return the affiliated response
           pool.submit(() -> {
             try {
               // This call blocks until that slot is filled
-//              RequestIntegrityAttestationResponse attestationResponse = getHetconsAttestation(chainslot, request.getPolicy().getHetconsPolicy().getObserver());
               RequestIntegrityAttestationResponse attestationResponse = getHetconsAttestation(slot, ob);
 
-              if (hasResponsed.get(0))
+              if (requestResponseTable.get(proposalID).getRight() > obs.size() * slots.size())
                 return;
 
-              synchronized (hasResponsed) {
-                if (hasResponsed.get(0))
+              synchronized (requestResponseTable.get(proposalID).getLeft()) {
+                if (requestResponseTable.get(proposalID).getRight() > obs.size() * slots.size())
                   return;
+                int numResponse = requestResponseTable.get(proposalID).getRight();
+                requestResponseTable.get(proposalID).setValue(numResponse+1);
                 HetconsAttestation receivedAttestation = attestationResponse.getAttestation().getSignedHetconsAttestation().getAttestation();
                 HetconsValue requestValue = request.getPolicy().getHetconsPolicy().getProposal().getM1A().getProposal().getValue();
                 if (receivedAttestation.getSlotsList().equals(slots) && receivedAttestation.getAttestedValue().equals(requestValue)) {
-                  responseObserver.onNext(attestationResponse);
-                  responseObserver.onCompleted();
+                  if (requestResponseTable.get(proposalID).getRight() == obs.size() * slots.size()) {
+                      /* we wait all response arrived */
+                    responseObserver.onNext(attestationResponse);
+                    responseObserver.onCompleted();
+                    System.err.println(proposalID+" response sent");
+                  }
+                  return;
                 } else {
+                  requestResponseTable.get(proposalID).setValue(obs.size() * slots.size() + 1);
+                  System.err.println("Abort on "+proposalID+" at value "+requestValue);
+                  getHetconsNode().abortProposal(HetconsUtil.buildConsensusId(slots));
                   responseSlotAlreadyTaken(request, responseObserver);
                 }
-                hasResponsed.set(0, true);
 //                System.err.println("Active threads: "+pool.getActiveThreadCount());
-                poolQueue.add(pool);
-//                pool.shutdownNow();
+//                poolQueue.add(pool);
+                  pool.shutdownNow();
 //                System.err.println("is Pool Shutdown?: "+pool.isShutdown());
 //                System.err.println("is Pool terminated?: "+pool.isTerminated());
 //                System.err.println("Active threads: "+pool.getActiveThreadCount());
@@ -446,6 +460,11 @@ public class HetconsFern extends AgreementFernService {
           });
         }
       }
+//      try {
+//        pool.awaitTermination(Integer.MAX_VALUE, TimeUnit.SECONDS);
+//      } catch (InterruptedException ex) {
+//
+//      }
     } else {
       responseObserver.onNext(RequestIntegrityAttestationResponse.newBuilder().setErrorMessage(
                "There was neither a properly formatted Agreement request nor a properly formatted Consensus request").build());
@@ -462,6 +481,7 @@ public class HetconsFern extends AgreementFernService {
                     HetconsAttestation.newBuilder().addAllNextSlotNumbers(nextAvailableSlots(request.getPolicy().getHetconsPolicy().getProposal().getM1A().getProposal().getSlotsList())).build())))
             .build());
     responseObserver.onCompleted();
+    System.err.println("Next response sent for " + HetconsUtil.buildConsensusId(request.getPolicy().getHetconsPolicy().getProposal().getM1A().getProposal().getSlotsList()));
   }
 
   private List<ChainSlot> nextAvailableSlots(List<ChainSlot> slots) {

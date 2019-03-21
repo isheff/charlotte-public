@@ -354,8 +354,11 @@ public class HetconsParticipantService extends CharlotteNodeService {
                               final Collection<Reference> quoraMessages) {}
 
     public void onAttestationReceived(IntegrityAttestation.HetconsAttestation attestation) {
-        if (observers.containsKey(HetconsUtil.cryptoIdToString(attestation.getObservers(0))))
-            observers.get(HetconsUtil.cryptoIdToString(attestation.getObservers(0))).decideSlots(attestation);
+        if (observers.containsKey(HetconsUtil.cryptoIdToString(attestation.getObservers(0)))) {
+//            observers.get(HetconsUtil.cryptoIdToString(attestation.getObservers(0))).decideSlots(attestation);
+
+            observers.get(HetconsUtil.cryptoIdToString(getConfig().getCryptoId())).decideSlots(attestation);
+        }
     }
 
     /**
@@ -363,8 +366,8 @@ public class HetconsParticipantService extends CharlotteNodeService {
      * @param slot
      * @return
      */
-    protected boolean hasAttestation(IntegrityAttestation.ChainSlot slot, CryptoId observer) {
-        return false;
+    protected IntegrityAttestation.HetconsAttestation hasAttestation(IntegrityAttestation.ChainSlot slot, CryptoId observer) {
+        return null;
     }
 
 
@@ -387,5 +390,11 @@ public class HetconsParticipantService extends CharlotteNodeService {
         synchronized (crossObserverSlotLock) {
             function.run();
         }
+    }
+
+    public void abortProposal(String proposalID) {
+        System.err.println(proposalID+" Aborted");
+        observers.get(HetconsUtil.cryptoIdToString(getConfig().getCryptoId())).abortProposal(proposalID);
+        System.err.println(proposalID+" return from aborted");
     }
 }

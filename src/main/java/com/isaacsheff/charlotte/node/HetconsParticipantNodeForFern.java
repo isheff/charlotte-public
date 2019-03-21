@@ -176,8 +176,11 @@ public class HetconsParticipantNodeForFern extends HetconsParticipantService {
    * @return
    */
   @Override
-  protected boolean hasAttestation(IntegrityAttestation.ChainSlot slot, CryptoId observer) {
+  protected IntegrityAttestation.HetconsAttestation hasAttestation(IntegrityAttestation.ChainSlot slot, CryptoId observer) {
 
-    return getFern().getHetconsAttestationCache().containsKey(slot) && getFern().getHetconsAttestationCache().get(slot).containsKey(observer);
+    if(getFern().getHetconsAttestationCache().containsKey(slot) && getFern().getHetconsAttestationCache().get(slot).containsKey(observer)) {
+      return getFern().getHetconsAttestationCache().get(slot).get(observer).getAttestation().getSignedHetconsAttestation().getAttestation();
+    }
+    return null;
   }
 }
