@@ -204,11 +204,10 @@ public class HetconsExperimentClient {
     }
 
     private static String getChain(HetconsExperimentClientConfig config) {
-//        return config.getSingleChainNames().get(0);
         if (rnd.nextFloat() > config.getDoubleChainProbability()) {
-            return config.getDoubleChainNames().get(rnd.nextInt(config.getDoubleChainNames().size()));
-        } else {
             return config.getSingleChainNames().get(rnd.nextInt(config.getSingleChainNames().size()));
+        } else {
+            return config.getDoubleChainNames().get(rnd.nextInt(config.getDoubleChainNames().size()));
         }
     }
 
@@ -304,14 +303,17 @@ public class HetconsExperimentClient {
                 input = prepareProposalBlock(i);
                 List<IntegrityAttestation.ChainSlot> slots = input.getPolicy().getHetconsPolicy().getProposal().getM1A().getProposal().getSlotsList();
                 if (response == null) {
-                    logger.info(String.format("%d:%d:Beginning slot for %s", i, fernContact.getPort(), slots.toString()));
+//                    logger.info(String.format("%d:%d:Beginning slot for %s", i, fernContact.getPort(), slots.toString()));
+                    logger.info(String.format("Beginning slot for %s", i));
                 } else {
-                    logger.info(String.format("%d:%d:Slot has been taken. Retry another %s", i, fernContact.getPort(), slots));
+//                    logger.info(String.format("%d:%d:Retry: Slot has been taken. Retry another %s", i, fernContact.getPort(), slots));
+                    logger.info(String.format("Retry: Slot has been taken. Retry %s", i));
                 }
                 response = clientNode.requestIntegrityAttestation(input);
-                logger.info("Response back for "+slots.toString());
+//                logger.info("Response back for "+slots.toString());
                 if (response.getErrorMessage() == null || response.getErrorMessage().length() == 0) {
-                    logger.info(String.format("%d:%d:Received response for %s", i, fernContact.getPort(), slots.toString()));
+//                    logger.info(String.format("%d:%d:Received response for %s", i, fernContact.getPort(), slots.toString()));
+                    logger.info(String.format("Received response for %s", i));
                 }
                 response.getAttestation().getSignedHetconsAttestation().getAttestation().getNextSlotNumbersList().forEach(chainSlot -> {
                     chainStatus.put(chainSlot.getRoot().getHash(), chainSlot.getSlot());
