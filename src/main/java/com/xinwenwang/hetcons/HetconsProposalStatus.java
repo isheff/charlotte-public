@@ -599,7 +599,7 @@ public class HetconsProposalStatus {
 
         HetconsValue get1bValue() {
             if (m2a != null) {
-                logger.info("Has 2a " + m2a);
+                // logger.info("Has 2a " + m2a);
                 return m2a;
             }
             else
@@ -608,7 +608,7 @@ public class HetconsProposalStatus {
 
         HetconsValue get2bValue() {
             if (m2a != null) {
-                logger.info("Has 2a " + m2a);
+                // logger.info("Has 2a " + m2a);
                 return m2a;
             }
             else

@@ -98,12 +98,12 @@ public class HetconsFern extends AgreementFernService {
    */
   public static void main(String[] args) throws InterruptedException{
     if (args.length < 1) {
-      System.out.println("Correct Usage: FernService configFileName.yaml");
+      // System.out.println("Correct Usage: FernService configFileName.yaml");
       return;
     }
     final Thread thread = new Thread(getFernNode(args[0]));
     thread.start();
-    logger.info("Fern service started on new thread");
+    // logger.info("Fern service started on new thread");
     thread.join();
   }
 
@@ -259,7 +259,7 @@ public class HetconsFern extends AgreementFernService {
     CryptoId self = getNode().getConfig().getCryptoId();
 
     if (!observer.equals(self)) {
-      logger.info("This node("+getNode().getConfig().getContact(self).getPort()+"} observed a quorum of a observer("+getNode().getConfig().getContact(observer).getPort()+") have been decided on a value. However, only the observer itself is allowed to issue an attestation");
+      // logger.info("This node("+getNode().getConfig().getContact(self).getPort()+"} observed a quorum of a observer("+getNode().getConfig().getContact(observer).getPort()+") have been decided on a value. However, only the observer itself is allowed to issue an attestation");
       return;
     }
 
@@ -332,7 +332,7 @@ public class HetconsFern extends AgreementFernService {
   public void saveAttestation(IntegrityAttestation attestation) {
     HetconsAttestation hetconsAttestation = attestation.getSignedHetconsAttestation().getAttestation();
     if (!SignatureUtil.checkSignature(hetconsAttestation, attestation.getSignedHetconsAttestation().getSignaure())) {
-      logger.info("Signature does not match");
+      // logger.info("Signature does not match");
       return;
     }
     List<ChainSlot> slots = hetconsAttestation.getSlotsList();
@@ -355,7 +355,7 @@ public class HetconsFern extends AgreementFernService {
         putHetconsAttestation(indexableChainSlot, hetconsAttestation.getObservers(0), hetconsResponse);
         getHetconsNode().onAttestationReceived(attestation.getSignedHetconsAttestation().getAttestation());
       }
-      logger.info("The Observer "+getNode().getConfig().getContact(hetconsAttestation.getObservers(0)).getPort()+" has issued an attestation on slot " + HetconsUtil.buildConsensusId(slots));
+      // logger.info("The Observer "+getNode().getConfig().getContact(hetconsAttestation.getObservers(0)).getPort()+" has issued an attestation on slot " + HetconsUtil.buildConsensusId(slots));
     }
   }
 
@@ -452,10 +452,10 @@ public class HetconsFern extends AgreementFernService {
                   responseObserver.onNext(attestationResponse);
                   responseObserver.onCompleted();
                   requestResponseTable.get(proposalID).clear();
-                  System.err.println(proposalID+" response sent");
+                  // System.err.println(proposalID+" response sent");
                 } else {
                   requestResponseTable.get(proposalID).forEach(Thread::interrupt);
-                  System.err.println("Abort on "+proposalID+" at value "+requestValue);
+                  // System.err.println("Abort on "+proposalID+" at value "+requestValue);
                   getHetconsNode().abortProposal(HetconsUtil.buildConsensusId(slots));
                   responseSlotAlreadyTaken(request, responseObserver);
                 }
@@ -484,7 +484,7 @@ public class HetconsFern extends AgreementFernService {
                     HetconsAttestation.newBuilder().addAllNextSlotNumbers(nextAvailableSlots(request.getPolicy().getHetconsPolicy().getProposal().getM1A().getProposal().getSlotsList())).build())))
             .build());
     responseObserver.onCompleted();
-    System.err.println("Next response sent for " + HetconsUtil.buildConsensusId(request.getPolicy().getHetconsPolicy().getProposal().getM1A().getProposal().getSlotsList()));
+    // System.err.println("Next response sent for " + HetconsUtil.buildConsensusId(request.getPolicy().getHetconsPolicy().getProposal().getM1A().getProposal().getSlotsList()));
   }
 
   private List<ChainSlot> nextAvailableSlots(List<ChainSlot> slots) {

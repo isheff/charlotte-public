@@ -61,7 +61,7 @@ public class HetconsParticipantService extends CharlotteNodeService {
      */
     public Iterable<SendBlocksResponse> onSendBlocksInput(Block block) {
 
-        logger.info("Block arrived " + block.getHetconsBlock().getHetconsMessage().getType());
+        // logger.info("Block arrived " + block.getHetconsBlock().getHetconsMessage().getType());
 
         if (!block.hasHetconsBlock()) {
             //TODO: handle error
@@ -69,7 +69,7 @@ public class HetconsParticipantService extends CharlotteNodeService {
         }
 
         if (!storeNewBlock(block)) {
-            logger.info("Discard duplicated block " + block.getHetconsBlock().getHetconsMessage().getType());
+            // logger.info("Discard duplicated block " + block.getHetconsBlock().getHetconsMessage().getType());
             return Collections.emptySet();
         }
 
@@ -99,8 +99,8 @@ public class HetconsParticipantService extends CharlotteNodeService {
                         throw new HetconsException(HetconsErrorCode.NO_2B_MESSAGES);
                     break;
                 case OBSERVERGROUP:
-//                    logger.info(String.format("Receive Observer group block %s", block.getHetconsMessage()));
-                    logger.info("Receive Observer group block");
+//                    // logger.info(String.format("Receive Observer group block %s", block.getHetconsMessage()));
+                    // logger.info("Receive Observer group block");
                     storeNewBlock(block);
 //                    broadcastBlock(block);
                     broadCastObserverGroupBlock(block);
@@ -179,11 +179,11 @@ public class HetconsParticipantService extends CharlotteNodeService {
                         proposal.getTimeout(),
                         o.getQuorumsList(),
                         HetconsUtil.buildChainID(observerGroup.getRootsList()));
-                logger.info("RETURN FROM RECEIVE1A");
+                // logger.info("RETURN FROM RECEIVE1A");
 //            });
         });
             });
-        logger.info("# of threads in pool 1a is " + executorService.getActiveCount() + "/" + executorService.getCompletedTaskCount());
+        // logger.info("# of threads in pool 1a is " + executorService.getActiveCount() + "/" + executorService.getCompletedTaskCount());
     }
 
 
@@ -217,15 +217,15 @@ public class HetconsParticipantService extends CharlotteNodeService {
             }
             executorService1b.submit(() -> {
                 observerStatus.receive1b(block);
-                logger.info("RETURN FROM RECEIVE1B");
+                // logger.info("RETURN FROM RECEIVE1B");
 //                return;
 //            });
         });
             });
-        logger.info("# of threads in pool 1b is " + executorService1b.getActiveCount() + "/" + executorService1b.getCompletedTaskCount());
-        if (executorService1b.getActiveCount() > 100) {
-            logger.info("larger than 100");
-        }
+        // logger.info("# of threads in pool 1b is " + executorService1b.getActiveCount() + "/" + executorService1b.getCompletedTaskCount());
+//        if (executorService1b.getActiveCount() > 100) {
+            // logger.info("larger than 100");
+//        }
     }
 
 
@@ -256,11 +256,11 @@ public class HetconsParticipantService extends CharlotteNodeService {
             }
             executorService2b.submit(() -> {
                 observerStatus.receive2b(block);
-                logger.info("RETURN FROM RECEIVE2B");
+                // logger.info("RETURN FROM RECEIVE2B");
 //                return;
 //            });
         });
-        logger.info("# of threads in pool 2b is " + executorService2b.getActiveCount() + "/" + executorService2b.getCompletedTaskCount());
+        // logger.info("# of threads in pool 2b is " + executorService2b.getActiveCount() + "/" + executorService2b.getCompletedTaskCount());
             });
     }
 
@@ -393,8 +393,8 @@ public class HetconsParticipantService extends CharlotteNodeService {
     }
 
     public void abortProposal(String proposalID) {
-        System.err.println(proposalID+" Aborted");
+        // System.err.println(proposalID+" Aborted");
         observers.get(HetconsUtil.cryptoIdToString(getConfig().getCryptoId())).abortProposal(proposalID);
-        System.err.println(proposalID+" return from aborted");
+        // System.err.println(proposalID+" return from aborted");
     }
 }
