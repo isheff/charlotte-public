@@ -676,6 +676,7 @@ public class HetconsObserverStatus {
         synchronized (status.getRestartStatus().getLock()) {
             status.getRestartStatus().cancelTimers();
             Future<?> timer = status.getTimer().submit(() -> {
+                status.getRestartStatus().setRestartThread(Thread.currentThread());
                 logger.info(name + ":RESTART TIMER("+consensusId+"): Will sleep for " + status.getConsensuTimeout() + " milliseconds for timeout");
                 try {
                     TimeUnit.MILLISECONDS.sleep(status.getConsensuTimeout());

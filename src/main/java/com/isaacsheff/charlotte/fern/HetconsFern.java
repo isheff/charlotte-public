@@ -72,7 +72,7 @@ public class HetconsFern extends AgreementFernService {
 
   /** Use logger for logging events in this class. */
   private static final Logger logger = Logger.getLogger(HetconsFern.class.getName());
-  
+
   /** The HetconsNode (which is also a CharlotteNode Service) that also inhabits this server **/
   private final HetconsParticipantNodeForFern hetconsNode;
 
@@ -82,8 +82,13 @@ public class HetconsFern extends AgreementFernService {
   /** All responses yet made for hetcons requests for each chain slot and observer **/
   private final ConcurrentMap<ChainSlot, BlockingMap<CryptoId, RequestIntegrityAttestationResponse>> hetconsAttestationCache;
 
-  private final ConcurrentMap<String, Pair<Object, Integer>> requestResponseTable;
-//  private final BlockingQueue<ForkJoinPool> poolQueue;
+  /* an map from proposalID to a queue of threads that waiting for attestation related to the proposal */
+  private final ConcurrentMap<String, ConcurrentLinkedQueue<Thread>> requestResponseTable;
+
+  /* the pool of threads which will waiting attestation response from other observer */
+  private final ForkJoinPool responseWaitingPool;
+
+
 
   /**
    * Run as a main class with an arg specifying a config file name to run a Fern Hetcons server.
@@ -142,6 +147,7 @@ public class HetconsFern extends AgreementFernService {
     hetconsAttestationCache =
       new ConcurrentHashMap<ChainSlot, BlockingMap<CryptoId, RequestIntegrityAttestationResponse>>();
     requestResponseTable = new ConcurrentHashMap<>();
+    responseWaitingPool = new ForkJoinPool();
 //    poolQueue = new LinkedBlockingQueue<>();
 //    new Thread(() -> {
 //      while (true) {
@@ -200,7 +206,7 @@ public class HetconsFern extends AgreementFernService {
      return oldObserverToResponse.put(observer, response);
    }
  }
- 
+
   /**
    * Retrieve a value from hetconsAttestationCache, waiting, if necessary, until there is one.
    * @param slot the ChainSlot this value is in
@@ -393,65 +399,72 @@ public class HetconsFern extends AgreementFernService {
           return;
         }
       }
-      
+
       // send the request out (this will just show up as a duplicate if the request is already out) as a 1A.
       HetconsBlock requestBlock = HetconsBlock.newBuilder()
               .setHetconsMessage(request.getPolicy().getHetconsPolicy().getProposal())
               .setSig(SignatureUtil.signBytes(getHetconsNode().getConfig().getKeyPair(), request.getPolicy().getHetconsPolicy().getProposal()))
               .build();
+
       getHetconsNode().onSendBlocksInput(
               Block.newBuilder().setHetconsBlock(requestBlock).build()
       );
 
+      Block observers     = this.getHetconsNode().getBlock(request.getPolicy().getHetconsPolicy().getProposal().getObserverGroupReferecne());
+      List<CryptoId> obs  = new ArrayList<>();
 
-      ForkJoinPool pool = new ForkJoinPool();
-      Block observers = this.getHetconsNode().getBlock(request.getPolicy().getHetconsPolicy().getProposal().getObserverGroupReferecne());
-      List<CryptoId> obs = new ArrayList<>();
       for (HetconsObserver o : observers.getHetconsBlock().getHetconsMessage().getObserverGroup().getObserversList()) {
         CryptoId id = o.getId();
         obs.add(id);
       }
+
       final List<ChainSlot> slots = request.getPolicy().getHetconsPolicy().getProposal().getM1A().getProposal().getSlotsList();
-      String proposalID =  HetconsUtil.buildConsensusId(slots) + HetconsUtil.cryptoIdToString(request.getPolicy().getHetconsPolicy().getProposal().getIdentity());
-      requestResponseTable.putIfAbsent(proposalID, new MutablePair<>(new Object(), 0));
+      String proposalID           = HetconsUtil.buildConsensusId(slots) + HetconsUtil.cryptoIdToString(request.getPolicy().getHetconsPolicy().getProposal().getIdentity());
+
+      requestResponseTable.putIfAbsent(proposalID, new ConcurrentLinkedQueue<>());
+
       for (ChainSlot slot : slots) {
         for (CryptoId ob : obs) {
           // Whichever Slot reaches consensus first for this observer, return the affiliated response
-          pool.submit(() -> {
+          responseWaitingPool.submit(() -> {
             try {
               // This call blocks until that slot is filled
+
+              /* bookkeeping thread for this proposal */
+              requestResponseTable.get(proposalID).add(Thread.currentThread());
+
               RequestIntegrityAttestationResponse attestationResponse = getHetconsAttestation(slot, ob);
 
-              if (requestResponseTable.get(proposalID).getRight() > obs.size() * slots.size())
+              /* return if this proposal has been responded */
+              if (requestResponseTable.get(proposalID).isEmpty())
                 return;
 
-              synchronized (requestResponseTable.get(proposalID).getLeft()) {
-                if (requestResponseTable.get(proposalID).getRight() > obs.size() * slots.size())
+              synchronized (requestResponseTable.get(proposalID)) {
+                if (requestResponseTable.get(proposalID).isEmpty())
                   return;
-                int numResponse = requestResponseTable.get(proposalID).getRight();
-                requestResponseTable.get(proposalID).setValue(numResponse+1);
-                HetconsAttestation receivedAttestation = attestationResponse.getAttestation().getSignedHetconsAttestation().getAttestation();
-                HetconsValue requestValue = request.getPolicy().getHetconsPolicy().getProposal().getM1A().getProposal().getValue();
+
+                HetconsAttestation  receivedAttestation = attestationResponse.getAttestation().getSignedHetconsAttestation().getAttestation();
+                HetconsValue        requestValue        = request.getPolicy().getHetconsPolicy().getProposal().getM1A().getProposal().getValue();
+
+
                 if (receivedAttestation.getSlotsList().equals(slots) && receivedAttestation.getAttestedValue().equals(requestValue)) {
-                  if (requestResponseTable.get(proposalID).getRight() == obs.size() * slots.size()) {
-                      /* we wait all response arrived */
+
+                  if (requestResponseTable.get(proposalID).size() == 1) {
+                    /* we wait all response arrived */
                     responseObserver.onNext(attestationResponse);
                     responseObserver.onCompleted();
+                    requestResponseTable.get(proposalID).clear();
                     System.err.println(proposalID+" response sent");
+                  } else {
+                    requestResponseTable.get(proposalID).remove(Thread.currentThread());
                   }
-                  return;
                 } else {
-                  requestResponseTable.get(proposalID).setValue(obs.size() * slots.size() + 1);
+                  requestResponseTable.get(proposalID).forEach(Thread::interrupt);
+                  requestResponseTable.get(proposalID).clear();
                   System.err.println("Abort on "+proposalID+" at value "+requestValue);
                   getHetconsNode().abortProposal(HetconsUtil.buildConsensusId(slots));
                   responseSlotAlreadyTaken(request, responseObserver);
                 }
-//                System.err.println("Active threads: "+pool.getActiveThreadCount());
-//                poolQueue.add(pool);
-                  pool.shutdownNow();
-//                System.err.println("is Pool Shutdown?: "+pool.isShutdown());
-//                System.err.println("is Pool terminated?: "+pool.isTerminated());
-//                System.err.println("Active threads: "+pool.getActiveThreadCount());
               }
             } catch (Throwable t) {
               // This is likely to happen if multiple chainSlots are filled.
@@ -460,11 +473,6 @@ public class HetconsFern extends AgreementFernService {
           });
         }
       }
-//      try {
-//        pool.awaitTermination(Integer.MAX_VALUE, TimeUnit.SECONDS);
-//      } catch (InterruptedException ex) {
-//
-//      }
     } else {
       responseObserver.onNext(RequestIntegrityAttestationResponse.newBuilder().setErrorMessage(
                "There was neither a properly formatted Agreement request nor a properly formatted Consensus request").build());

@@ -5,12 +5,11 @@ import com.isaacsheff.charlotte.proto.CryptoId;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 public class HetconsRestartStatus {
+
+    private static final ExecutorService gService = Executors.newCachedThreadPool();
 
     private Future<?> m1bTimer;
     private Future<?> m2bTimer;
@@ -18,14 +17,14 @@ public class HetconsRestartStatus {
 
     private Set<CryptoId> leftObservers;
 
-    private ExecutorService service;
+    /* global */
+    private Thread restartThread;
 
     private Object lock = new Object();
     private Object numlock = new Object();
 
     public HetconsRestartStatus(List<CryptoId> leftObservers) {
         this.leftObservers = new HashSet<>(leftObservers);
-        service = Executors.newSingleThreadExecutor();
     }
 
     public Future<?> getM1bTimer() {
@@ -51,6 +50,8 @@ public class HetconsRestartStatus {
         m1bTimer = null;
         m2bTimer = null;
         restartTimer = null;
+        if (restartThread != null)
+            restartThread.interrupt();
     }
 
     public void shutdown() {
@@ -59,10 +60,9 @@ public class HetconsRestartStatus {
                 return;
         }
         cancelTimers();
-        service.shutdownNow();
         try {
             /* TODO: Eliminate waiting */
-            service.awaitTermination(1, TimeUnit.SECONDS);
+            gService.awaitTermination(1, TimeUnit.SECONDS);
         } catch (InterruptedException ex) {
             ex.printStackTrace();
         } finally {
@@ -85,7 +85,11 @@ public class HetconsRestartStatus {
     }
 
     public ExecutorService getService() {
-        return service;
+        return gService;
+    }
+
+    public void setRestartThread(Thread restartThread) {
+        this.restartThread = restartThread;
     }
 
     public Object getLock() {
