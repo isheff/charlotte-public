@@ -448,23 +448,18 @@ public class HetconsFern extends AgreementFernService {
 
 
                 if (receivedAttestation.getSlotsList().equals(slots) && receivedAttestation.getAttestedValue().equals(requestValue)) {
-
-                  if (requestResponseTable.get(proposalID).size() == 1) {
-                    /* we wait all response arrived */
-                    responseObserver.onNext(attestationResponse);
-                    responseObserver.onCompleted();
-                    requestResponseTable.get(proposalID).clear();
-                    System.err.println(proposalID+" response sent");
-                  } else {
-                    requestResponseTable.get(proposalID).remove(Thread.currentThread());
-                  }
+                  /* we only wait for 1 response arrived */
+                  responseObserver.onNext(attestationResponse);
+                  responseObserver.onCompleted();
+                  requestResponseTable.get(proposalID).clear();
+                  System.err.println(proposalID+" response sent");
                 } else {
                   requestResponseTable.get(proposalID).forEach(Thread::interrupt);
-                  requestResponseTable.get(proposalID).clear();
                   System.err.println("Abort on "+proposalID+" at value "+requestValue);
                   getHetconsNode().abortProposal(HetconsUtil.buildConsensusId(slots));
                   responseSlotAlreadyTaken(request, responseObserver);
                 }
+                requestResponseTable.get(proposalID).clear();
               }
             } catch (Throwable t) {
               // This is likely to happen if multiple chainSlots are filled.
