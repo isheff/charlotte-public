@@ -430,17 +430,19 @@ public class HetconsFern extends AgreementFernService {
             try {
               // This call blocks until that slot is filled
 
-              /* bookkeeping thread for this proposal */
-              requestResponseTable.get(proposalID).add(Thread.currentThread());
+              synchronized (requestResponseTable.get(proposalID)) {
+                /* bookkeeping thread for this proposal */
+                requestResponseTable.get(proposalID).add(Thread.currentThread());
+              }
 
               RequestIntegrityAttestationResponse attestationResponse = getHetconsAttestation(slot, ob);
 
               /* return if this proposal has been responded */
-              if (requestResponseTable.get(proposalID).isEmpty())
+              if (requestResponseTable.get(proposalID).isEmpty() || Thread.interrupted())
                 return;
 
               synchronized (requestResponseTable.get(proposalID)) {
-                if (requestResponseTable.get(proposalID).isEmpty())
+                if (requestResponseTable.get(proposalID).isEmpty() || Thread.interrupted())
                   return;
 
                 HetconsAttestation  receivedAttestation = attestationResponse.getAttestation().getSignedHetconsAttestation().getAttestation();
@@ -454,11 +456,11 @@ public class HetconsFern extends AgreementFernService {
                   requestResponseTable.get(proposalID).clear();
                   // System.err.println(proposalID+" response sent");
                 } else {
-                  requestResponseTable.get(proposalID).forEach(Thread::interrupt);
                   // System.err.println("Abort on "+proposalID+" at value "+requestValue);
                   getHetconsNode().abortProposal(HetconsUtil.buildConsensusId(slots));
                   responseSlotAlreadyTaken(request, responseObserver);
                 }
+                requestResponseTable.get(proposalID).forEach(Thread::interrupt);
                 requestResponseTable.get(proposalID).clear();
               }
             } catch (Throwable t) {
