@@ -88,7 +88,7 @@ public class HetconsRestartStatus {
         return gService;
     }
 
-    public void setRestartThread(Thread restartThread) {
+    public synchronized void setRestartThread(Thread restartThread) {
         this.restartThread = restartThread;
     }
 

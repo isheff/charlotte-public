@@ -47,6 +47,9 @@ public class HetconsProposalStatus {
     private String proposalID;
     private HetconsRestartStatus restartStatus;
 
+    private Date startTime;
+    private long timeoutAccumulator = 0;
+
     private Random rnd;
 
     private static final Logger logger = Logger.getLogger(CharlotteNodeService.class.getName());
@@ -81,7 +84,7 @@ public class HetconsProposalStatus {
         proposalLock = new ReentrantReadWriteLock();
         participantStatusLock = new ReentrantReadWriteLock();
         this.service = service;
-        rnd = new Random(new Date().getTime());
+        rnd = new Random(new Date().getTime() + this.hashCode());
 
     }
 
@@ -140,6 +143,10 @@ public class HetconsProposalStatus {
 
     public long getConsensuTimeout() {
         return consensusTimeout * (100 + rnd.nextInt(100)) / 100;
+    }
+
+    public long getTimeoutOffset() {
+        return rnd.nextBoolean() ? 1 : 0;
     }
 
     public void setConsensuTimeout(long consensuTimeout) {
@@ -272,6 +279,17 @@ public class HetconsProposalStatus {
         return generalLock;
     }
 
+    public void incTimeoutAccumulator(long value) {
+        if (timeoutAccumulator == 0)
+            timeoutAccumulator += value;
+        else
+            timeoutAccumulator *= 2;
+    }
+
+    public long getTimeoutAccumulator() {
+        return timeoutAccumulator;
+    }
+
     /** -----------------------version 2 ----------------------------------*/
 
     public void initQuorum(HetconsQuorumStatus q) {
@@ -378,6 +396,16 @@ public class HetconsProposalStatus {
         });
         return quorumStatus.isEnough1b();
     }
+
+    public synchronized void record() {
+        if (startTime == null)
+            startTime = new Date();
+    }
+
+    public synchronized long finalized() {
+        return new Date().getTime() - startTime.getTime();
+    }
+
 
     class ParticipantStatus {
 

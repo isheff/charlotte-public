@@ -14,6 +14,7 @@ import com.isaacsheff.charlotte.yaml.JsonContact;
 import com.xinwenwang.hetcons.HetconsUtil;
 import com.xinwenwang.hetcons.config.ChainConfig;
 import com.xinwenwang.hetcons.config.HetconsConfig;
+import com.xinwenwang.hetcons.config.ObserverConfig;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -211,9 +212,11 @@ public class HetconsExperimentClient {
 
     private static String getChain(HetconsExperimentClientConfig config) {
         if (rnd.nextFloat() > config.getDoubleChainProbability()) {
-            return config.getSingleChainNames().get(rnd.nextInt(config.getSingleChainNames().size()));
+        return config.getSingleChainNames().get(0);
+//            return config.getSingleChainNames().get(rnd.nextInt(config.getSingleChainNames().size()));
         } else {
-            return config.getDoubleChainNames().get(rnd.nextInt(config.getDoubleChainNames().size()));
+            //return config.getDoubleChainNames().get(rnd.nextInt(config.getDoubleChainNames().size()));
+            return config.getDoubleChainNames().get(0);
         }
     }
 
@@ -230,7 +233,8 @@ public class HetconsExperimentClient {
         String observerConfigFileName;
         Map<Hash, Long> chainStatus;
         Set<Hash> chainNames;
-        Contact fernContact;
+        List<Contact> fernContact;
+        CharlotteNodeService localService;
 
         Chain(String observerConfigFileName,
               HetconsConfig hetconsConfig,
@@ -241,20 +245,28 @@ public class HetconsExperimentClient {
               Map<Hash, Long> chainSlotStatus) throws FileNotFoundException {
             this.observerConfigFileName = observerConfigFileName;
             this.config = config;
+            this.localService = service;
             ChainConfig chainConfig = hetconsConfig.loadChain(observerConfigFileName);
             if (chainConfig == null) {
                 throw new FileNotFoundException("Chain Config file: "+observerConfigFileName+" was not found");
             }
             /* Contact server will be a random fern server in the current observer group */
-            JsonContact contactServer = chainConfig.getObservers().get(rnd.nextInt(chainConfig.getObservers().size())).getSelf();
+            fernContact = new ArrayList<>();
+          for (ObserverConfig obCfg : chainConfig.getObservers()) {
+              fernContact.add(new Contact(obCfg.getSelf(), expDir, service.getConfig()));
+          }
+//            JsonContact contactServer = chainConfig.getObservers().get(rnd.nextInt(chainConfig.getObservers().size())).getSelf();
 //            JsonContact contactServer = chainConfig.getObservers().get(0).getSelf();
 //            JsonContact contactServer = config.getContacts().get(config.getContactServer());
-            fernContact = new Contact(contactServer, expDir, service.getConfig());
+//            fernContact = new Contact(contactServer, expDir, service.getConfig());
 
-            if (!channelMap.containsKey(fernContact.getCryptoId())) {
-                channelMap.put(fernContact.getCryptoId(), new HetconsFernClient(service, fernContact));
-            }
-            clientNode = channelMap.get(fernContact.getCryptoId());
+//            Contact _fernContact = fernContact.get(0);
+//
+//            if (!channelMap.containsKey(_fernContact.getCryptoId())) {
+//                channelMap.put(_fernContact.getCryptoId(), new HetconsFernClient(service, _fernContact));
+//            }
+//            clientNode = channelMap.get(_fernContact.getCryptoId());
+            clientNode = getClientNode();
 
             HetconsObserverGroup group = chainConfig.getObserverGroup(expDir);
 
@@ -294,6 +306,19 @@ public class HetconsExperimentClient {
         }
 
         /**
+         * Randomly return a client node which connect
+         * @return
+         */
+        HetconsFernClient getClientNode() {
+//          Contact contact = fernContact.get(rnd.nextInt(fernContact.size()));
+            Contact contact = fernContact.get(0);
+          if (!channelMap.containsKey(contact.getCryptoId())) {
+              channelMap.put(contact.getCryptoId(), new HetconsFernClient(localService, contact));
+          }
+          return channelMap.get(contact.getCryptoId());
+        }
+
+        /**
          * Propose a new block to be appended to the end of current chain
          * @param i the slot number for this block to be placed.
          */
@@ -303,6 +328,7 @@ public class HetconsExperimentClient {
 //            } catch (Exception ex) {
 //                ex.printStackTrace();
 //            }
+            HetconsFernClient clientNode = getClientNode();
             RequestIntegrityAttestationResponse response = null;
             RequestIntegrityAttestationInput  input = null;
             do {
@@ -310,16 +336,16 @@ public class HetconsExperimentClient {
 //                List<IntegrityAttestation.ChainSlot> slots = input.getPolicy().getHetconsPolicy().getProposal().getM1A().getProposal().getSlotsList();
                 if (response == null) {
 //                    logger.info(String.format("%d:%d:Beginning slot for %s", i, fernContact.getPort(), slots.toString()));
-                    logger.info(String.format("Beginning slot for %s", i));
+                    logger.info(String.format("Beginning slot for %d:%d", i, chainNames.size()));
                 } else {
 //                    logger.info(String.format("%d:%d:Retry: Slot has been taken. Retry another %s", i, fernContact.getPort(), slots));
-                    logger.info(String.format("Retry: Slot has been taken. Retry %s", i));
+                    logger.info(String.format("Retry: Slot has been taken. Retry %d:%d", i, chainNames.size()));
                 }
                 response = clientNode.requestIntegrityAttestation(input);
 //                logger.info("Response back for "+slots.toString());
                 if (response.getErrorMessage() == null || response.getErrorMessage().length() == 0) {
 //                    logger.info(String.format("%d:%d:Received response for %s", i, fernContact.getPort(), slots.toString()));
-                    logger.info(String.format("Received response for %s", i));
+                    logger.info(String.format("Received response for %d:%d", i, chainNames.size()));
                 }
                 response.getAttestation().getSignedHetconsAttestation().getAttestation().getNextSlotNumbersList().forEach(chainSlot -> {
                     chainStatus.put(chainSlot.getRoot().getHash(), chainSlot.getSlot());

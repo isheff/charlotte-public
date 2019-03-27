@@ -468,6 +468,7 @@ public class HetconsFern extends AgreementFernService {
                 requestResponseTable.get(proposalID).clear();
               }
             } catch (Throwable t) {
+              t.printStackTrace();
               // This is likely to happen if multiple chainSlots are filled.
               // That's ok, we can return any one of them.
             }
