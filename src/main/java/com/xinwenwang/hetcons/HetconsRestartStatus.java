@@ -60,14 +60,14 @@ public class HetconsRestartStatus {
                 return;
         }
         cancelTimers();
-        try {
-            /* TODO: Eliminate waiting */
-            gService.awaitTermination(1, TimeUnit.SECONDS);
-        } catch (InterruptedException ex) {
-            ex.printStackTrace();
-        } finally {
-
-        }
+//        try {
+//            /* TODO: Eliminate waiting */
+//            gService.awaitTermination(1, TimeUnit.SECONDS);
+//        } catch (InterruptedException ex) {
+//            ex.printStackTrace();
+//        } finally {
+//
+//        }
     }
 
     public void decided(CryptoId id) {

@@ -86,7 +86,7 @@ public class HetconsFern extends AgreementFernService {
   private final ConcurrentMap<String, ConcurrentLinkedQueue<Thread>> requestResponseTable;
 
   /* the pool of threads which will waiting attestation response from other observer */
-  private final ForkJoinPool responseWaitingPool;
+  private final ExecutorService responseWaitingPool;
 
 
 
@@ -147,7 +147,7 @@ public class HetconsFern extends AgreementFernService {
     hetconsAttestationCache =
       new ConcurrentHashMap<ChainSlot, BlockingMap<CryptoId, RequestIntegrityAttestationResponse>>();
     requestResponseTable = new ConcurrentHashMap<>();
-    responseWaitingPool = new ForkJoinPool();
+    responseWaitingPool = Executors.newCachedThreadPool();
 //    poolQueue = new LinkedBlockingQueue<>();
 //    new Thread(() -> {
 //      while (true) {
@@ -448,8 +448,10 @@ public class HetconsFern extends AgreementFernService {
                 HetconsAttestation  receivedAttestation = attestationResponse.getAttestation().getSignedHetconsAttestation().getAttestation();
                 HetconsValue        requestValue        = request.getPolicy().getHetconsPolicy().getProposal().getM1A().getProposal().getValue();
 
+                String receivedProposalID = HetconsUtil.buildConsensusId(receivedAttestation.getSlotsList());
+                String requestProposalID = HetconsUtil.buildConsensusId(slots);
 
-                if (receivedAttestation.getSlotsList().equals(slots) && receivedAttestation.getAttestedValue().equals(requestValue)) {
+                if (receivedProposalID.equals(requestProposalID) && receivedAttestation.getAttestedValue().equals(requestValue)) {
                   /* we only wait for 1 response arrived */
                   responseObserver.onNext(attestationResponse);
                   responseObserver.onCompleted();
@@ -457,8 +459,10 @@ public class HetconsFern extends AgreementFernService {
                   // System.err.println(proposalID+" response sent");
                 } else {
                   // System.err.println("Abort on "+proposalID+" at value "+requestValue);
-                  getHetconsNode().abortProposal(HetconsUtil.buildConsensusId(slots));
-                  responseSlotAlreadyTaken(request, responseObserver);
+                  if (!receivedAttestation.equals(requestProposalID)) {
+                    getHetconsNode().abortProposal(HetconsUtil.buildConsensusId(slots));
+                    responseSlotAlreadyTaken(request, responseObserver);
+                  }
                 }
                 requestResponseTable.get(proposalID).forEach(Thread::interrupt);
                 requestResponseTable.get(proposalID).clear();

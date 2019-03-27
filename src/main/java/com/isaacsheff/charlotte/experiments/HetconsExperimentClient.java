@@ -187,6 +187,10 @@ public class HetconsExperimentClient {
                                       Path expDir) {
         HashMap<String, Chain> chainMap = new HashMap<>();
         ConcurrentMap<Hash, Long> chainSlotNumber = new ConcurrentHashMap<>();
+        logger.info("Start BitcoinSim...");
+        logger.info("# of blocks: "+config.getBlocksPerExperiment());
+        logger.info("# of chains: "+config.getSingleChainNames().size());
+        logger.info("Starting value: "+config.getStartingIndex());
         for (int i = 0; i < config.getBlocksPerExperiment(); i++) {
             String cn = getChain(config);
             try {
@@ -200,6 +204,8 @@ public class HetconsExperimentClient {
                 System.exit(1);
             }
         }
+        logger.info("BitcoinSim Completed");
+        System.exit(0);
 
     }
 
@@ -301,7 +307,7 @@ public class HetconsExperimentClient {
             RequestIntegrityAttestationInput  input = null;
             do {
                 input = prepareProposalBlock(i);
-                List<IntegrityAttestation.ChainSlot> slots = input.getPolicy().getHetconsPolicy().getProposal().getM1A().getProposal().getSlotsList();
+//                List<IntegrityAttestation.ChainSlot> slots = input.getPolicy().getHetconsPolicy().getProposal().getM1A().getProposal().getSlotsList();
                 if (response == null) {
 //                    logger.info(String.format("%d:%d:Beginning slot for %s", i, fernContact.getPort(), slots.toString()));
                     logger.info(String.format("Beginning slot for %s", i));

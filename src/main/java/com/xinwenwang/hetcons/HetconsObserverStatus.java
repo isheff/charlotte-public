@@ -183,10 +183,10 @@ public class HetconsObserverStatus {
                     status.updateBallot(proposal.getBallot());
                 }
             }
+            currentStatus.updateProposal(freshProposal);
         }
 
 
-        currentStatus.updateProposal(freshProposal);
 
         // Save valid block
         // Echo 1a to all participants
@@ -335,6 +335,8 @@ public class HetconsObserverStatus {
 
         synchronized (service.getCrossObserverSlotLock()) {
 //            List<HetconsObserver> obs = service.getBlock(status.getObserverGroupReference()).getHetconsBlock().getHetconsMessage().getObserverGroup().getObserversList();
+          if (HetconsUtil.ballotCompare(status.getCurrentProposal().getBallot(), proposal.getBallot()) > 0)
+              return;
             for (CryptoId ob: obs) {
                 Map<String, HetconsSlotStatus> slotStatus = service.getObserverSlotStatus(ob);
                 int decidedCount = 0;
