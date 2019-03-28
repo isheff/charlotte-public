@@ -145,8 +145,8 @@ public class HetconsProposalStatus {
         return consensusTimeout * (100 + rnd.nextInt(100)) / 100;
     }
 
-    public long getTimeoutOffset() {
-        return rnd.nextBoolean() ? 1 : 0;
+    public float getTimeoutOffset() {
+        return rnd.nextFloat();
     }
 
     public void setConsensuTimeout(long consensuTimeout) {
@@ -282,8 +282,14 @@ public class HetconsProposalStatus {
     public void incTimeoutAccumulator(long value) {
         if (timeoutAccumulator == 0)
             timeoutAccumulator += value;
-        else
-            timeoutAccumulator *= 2;
+        else {
+            if (timeoutAccumulator > 3 * consensusTimeout) {
+                timeoutAccumulator = Math.round(timeoutAccumulator * rnd.nextFloat());
+//                System.err.println(proposalID + ":timeout number is " + timeoutAccumulator);
+            } else {
+                timeoutAccumulator *= 2;
+            }
+        }
     }
 
     public long getTimeoutAccumulator() {

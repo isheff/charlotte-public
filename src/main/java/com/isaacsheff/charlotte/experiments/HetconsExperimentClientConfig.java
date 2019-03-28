@@ -38,6 +38,9 @@ public class HetconsExperimentClientConfig extends JsonExperimentConfig {
     @JsonProperty("bitcoinSim")
     private boolean bitcoinSim;
 
+    @JsonProperty("contention")
+    private boolean contention;
+
     public HetconsExperimentClientConfig(
             @JsonProperty("fernservers") List<String> fernServers,
             @JsonProperty("blocksperexperiment") int blocksPerExperiment,
@@ -51,7 +54,8 @@ public class HetconsExperimentClientConfig extends JsonExperimentConfig {
             @JsonProperty("doubleChainProbability") float doubleChainProbability,
             @JsonProperty("doubleChainNames") List<String> doubleChainNames,
             @JsonProperty("singleChainNames") List<String> singleChainNames,
-            @JsonProperty("bitcoinSim") boolean bitcoinSim
+            @JsonProperty("bitcoinSim") boolean bitcoinSim,
+            @JsonProperty("contention") boolean contention
     ) {
         super(fernServers,
                 Collections.emptyList(),
@@ -69,6 +73,7 @@ public class HetconsExperimentClientConfig extends JsonExperimentConfig {
         this.singleChainNames = singleChainNames;
         this.doubleChainNames = doubleChainNames;
         this.bitcoinSim = bitcoinSim;
+        this.contention = contention;
     }
 
     public String getContactServer() {
@@ -101,5 +106,9 @@ public class HetconsExperimentClientConfig extends JsonExperimentConfig {
 
     public boolean isBitcoinSim() {
         return bitcoinSim;
+    }
+
+    public boolean isContention() {
+        return contention;
     }
 }

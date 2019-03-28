@@ -192,14 +192,14 @@ public class HetconsExperimentClient {
         logger.info("# of blocks: "+config.getBlocksPerExperiment());
         logger.info("# of chains: "+config.getSingleChainNames().size());
         logger.info("Starting value: "+config.getStartingIndex());
-        for (int i = 0; i < config.getBlocksPerExperiment(); i++) {
+        for (int i = 0; i < config.getBlocksPerExperiment();) {
             String cn = getChain(config);
             try {
                 if (!chainMap.containsKey(cn)) {
                     chainMap.put(cn, new Chain(cn, hetconsConfig, config, service, expDir, Arrays.asList(cn.split("-")), chainSlotNumber));
                 }
                 Chain chain = chainMap.get(cn);
-                chain.proposeNewBlock(i);
+                i += chain.proposeNewBlock(i);
             } catch (FileNotFoundException ex) {
                 logger.severe(ex.getLocalizedMessage());
                 System.exit(1);
@@ -212,11 +212,11 @@ public class HetconsExperimentClient {
 
     private static String getChain(HetconsExperimentClientConfig config) {
         if (rnd.nextFloat() > config.getDoubleChainProbability()) {
-        return config.getSingleChainNames().get(0);
-//            return config.getSingleChainNames().get(rnd.nextInt(config.getSingleChainNames().size()));
+//        return config.getSingleChainNames().et(0);
+            return config.getSingleChainNames().get(rnd.nextInt(config.getSingleChainNames().size()));
         } else {
-            //return config.getDoubleChainNames().get(rnd.nextInt(config.getDoubleChainNames().size()));
-            return config.getDoubleChainNames().get(0);
+            return config.getDoubleChainNames().get(rnd.nextInt(config.getDoubleChainNames().size()));
+//            return config.getDoubleChainNames().get(0);
         }
     }
 
@@ -310,8 +310,13 @@ public class HetconsExperimentClient {
          * @return
          */
         HetconsFernClient getClientNode() {
-//          Contact contact = fernContact.get(rnd.nextInt(fernContact.size()));
-            Contact contact = fernContact.get(0);
+            Contact contact;
+            if (config.isContention()) {
+                contact = localService.getConfig().getContact(config.getContactServer());
+            } else {
+                contact = fernContact.get(rnd.nextInt(fernContact.size()));
+            }
+//            Contact contact = fernContact.get(rnd.nextInt(fernContact.size()));
           if (!channelMap.containsKey(contact.getCryptoId())) {
               channelMap.put(contact.getCryptoId(), new HetconsFernClient(localService, contact));
           }
@@ -322,7 +327,7 @@ public class HetconsExperimentClient {
          * Propose a new block to be appended to the end of current chain
          * @param i the slot number for this block to be placed.
          */
-        void proposeNewBlock(int i) {
+        int proposeNewBlock(int i) {
 //            try {
 //                TimeUnit.MILLISECONDS.sleep(500);
 //            } catch (Exception ex) {
@@ -331,7 +336,9 @@ public class HetconsExperimentClient {
             HetconsFernClient clientNode = getClientNode();
             RequestIntegrityAttestationResponse response = null;
             RequestIntegrityAttestationInput  input = null;
+            int proposeCount = 0;
             do {
+                proposeCount ++;
                 input = prepareProposalBlock(i);
 //                List<IntegrityAttestation.ChainSlot> slots = input.getPolicy().getHetconsPolicy().getProposal().getM1A().getProposal().getSlotsList();
                 if (response == null) {
@@ -351,6 +358,7 @@ public class HetconsExperimentClient {
                     chainStatus.put(chainSlot.getRoot().getHash(), chainSlot.getSlot());
                 });
             } while (response.getErrorMessage() != null && response.getErrorMessage().length() > 0);
+            return proposeCount;
         }
 
 

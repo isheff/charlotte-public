@@ -16,10 +16,7 @@ import io.grpc.stub.StreamObserver;
 import org.apache.commons.lang3.tuple.MutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.*;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -85,6 +82,8 @@ public class HetconsFern extends AgreementFernService {
   /* an map from proposalID to a queue of threads that waiting for attestation related to the proposal */
   private final ConcurrentMap<String, ConcurrentLinkedQueue<Thread>> requestResponseTable;
 
+  private final HashMap<String, Boolean> requestResponseComplete;
+
   /* the pool of threads which will waiting attestation response from other observer */
   private final ExecutorService responseWaitingPool;
 
@@ -147,6 +146,7 @@ public class HetconsFern extends AgreementFernService {
     hetconsAttestationCache =
       new ConcurrentHashMap<ChainSlot, BlockingMap<CryptoId, RequestIntegrityAttestationResponse>>();
     requestResponseTable = new ConcurrentHashMap<>();
+    requestResponseComplete = new HashMap<>();
     responseWaitingPool = Executors.newCachedThreadPool();
 //    poolQueue = new LinkedBlockingQueue<>();
 //    new Thread(() -> {
@@ -422,6 +422,7 @@ public class HetconsFern extends AgreementFernService {
       String proposalID           = HetconsUtil.buildConsensusId(slots) + HetconsUtil.cryptoIdToString(request.getPolicy().getHetconsPolicy().getProposal().getIdentity());
 
       requestResponseTable.putIfAbsent(proposalID, new ConcurrentLinkedQueue<>());
+      requestResponseComplete.putIfAbsent(proposalID, false);
 
       for (ChainSlot slot : slots) {
         for (CryptoId ob : obs) {
@@ -438,12 +439,18 @@ public class HetconsFern extends AgreementFernService {
               RequestIntegrityAttestationResponse attestationResponse = getHetconsAttestation(slot, ob);
 
               /* return if this proposal has been responded */
-              if (requestResponseTable.get(proposalID).isEmpty() || Thread.interrupted())
+              if (requestResponseComplete.get(proposalID))
                 return;
 
+//              if (requestResponseTable.get(proposalID).isEmpty() || Thread.interrupted())
+//                return;
+
               synchronized (requestResponseTable.get(proposalID)) {
-                if (requestResponseTable.get(proposalID).isEmpty() || Thread.interrupted())
+                if (requestResponseComplete.get(proposalID))
                   return;
+
+//                if (requestResponseTable.get(proposalID).isEmpty() || Thread.interrupted())
+//                  return;
 
                 HetconsAttestation  receivedAttestation = attestationResponse.getAttestation().getSignedHetconsAttestation().getAttestation();
                 HetconsValue        requestValue        = request.getPolicy().getHetconsPolicy().getProposal().getM1A().getProposal().getValue();
@@ -466,6 +473,7 @@ public class HetconsFern extends AgreementFernService {
                 }
                 requestResponseTable.get(proposalID).forEach(Thread::interrupt);
                 requestResponseTable.get(proposalID).clear();
+                requestResponseComplete.put(proposalID, true);
               }
             } catch (Throwable t) {
               t.printStackTrace();
