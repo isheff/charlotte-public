@@ -229,6 +229,7 @@ public class HetconsObserverStatus {
                 .build();
 
         broadcastToParticipants(Block.newBuilder().setHetconsBlock(b).build(), currentStatus.getParticipants());
+        currentStatus.updateRecent1b(m1b.hasM2A(), HetconsUtil.get1bValue(m1b, service), m1a.getProposal().getBallot());
         currentStatus.setStage(HetconsConsensusStage.M1BSent);
 
 //        // logger.info("Sent 1Bs value is " + HetconsUtil.get1bValue(m1b, service) + " " + proposalStatusID);

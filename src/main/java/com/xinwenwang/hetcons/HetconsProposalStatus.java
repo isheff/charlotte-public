@@ -84,7 +84,7 @@ public class HetconsProposalStatus {
         proposalLock = new ReentrantReadWriteLock();
         participantStatusLock = new ReentrantReadWriteLock();
         this.service = service;
-        rnd = new Random(new Date().getTime() + this.hashCode());
+        rnd = new Random(new Date().getTime() + this.hashCode() + service.hashCode());
 
     }
 
@@ -283,7 +283,8 @@ public class HetconsProposalStatus {
         if (timeoutAccumulator == 0)
             timeoutAccumulator += value;
         else {
-            if (timeoutAccumulator > 3 * consensusTimeout) {
+            long ceilingTimeout = consensusTimeout == 0 ? 2000 : consensusTimeout;
+            if (timeoutAccumulator > 3 * ceilingTimeout) {
                 timeoutAccumulator = Math.round(timeoutAccumulator * rnd.nextFloat());
 //                System.err.println(proposalID + ":timeout number is " + timeoutAccumulator);
             } else {
@@ -320,6 +321,11 @@ public class HetconsProposalStatus {
     public void updateRecent2b(HetconsValue value, HetconsBallot ballot) {
         roundStatus.update2BValue(value, ballot);
     }
+
+    public void updateRestartValue(HetconsValue value, HetconsBallot ballot) {
+
+    }
+
 
     public HetconsValue getRecent1b() {
         return roundStatus.get1bValue();
@@ -595,13 +601,17 @@ public class HetconsProposalStatus {
 
     class RoundStatus {
 
-        List<HetconsValue> m1bValue;
+        Set<HetconsValue> m1bValue;
         HetconsBallot m1bBallot;
         boolean has2A = false;
         HetconsValue m2a;
 
-        List<HetconsValue> m2bValue;
+        Set<HetconsValue> m2bValue;
         HetconsBallot m2bBallot;
+
+        Set<HetconsValue> receivedValueCheck;
+        List<HetconsValue> receivedValues;
+        int nextCandidateCounter = 0;
 
         RoundStatus() {
             resetRoundStatus();
@@ -609,8 +619,10 @@ public class HetconsProposalStatus {
         }
 
         void resetRoundStatus() {
-            m1bValue = new ArrayList<>();
-            m2bValue = new ArrayList<>();
+            m1bValue = new HashSet<>();
+            m2bValue = new HashSet<>();
+            receivedValues = new ArrayList<>();
+            receivedValueCheck = new HashSet<>();
         }
 
 
@@ -620,14 +632,18 @@ public class HetconsProposalStatus {
 
             if (m1bBallot == null || HetconsUtil.ballotCompare(ballot, m1bBallot) >= 0) {
                 this.m1bBallot = ballot;
-                this.m1bValue.add(value);
+//                this.m1bValue.add(value);
+                if (this.receivedValueCheck.add(value))
+                    this.receivedValues.add(value);
             }
         }
 
         void update2BValue(HetconsValue value, HetconsBallot ballot) {
             if (m2bBallot == null || HetconsUtil.ballotCompare(ballot, m2bBallot) >= 0) {
                 this.m2bBallot = ballot;
-                this.m2bValue.add(value);
+//                this.m2bValue.add(value);
+                if (this.receivedValueCheck.add(value))
+                    this.receivedValues.add(value);
             }
         }
 
@@ -636,8 +652,12 @@ public class HetconsProposalStatus {
                 // logger.info("Has 2a " + m2a);
                 return m2a;
             }
-            else
-                return m1bValue.get(new Random().nextInt(m1bValue.size()));
+            else {
+                return getNextCandidateValue();
+            }
+//                return m1bValue.get(new Random().nextInt(m1bValue.size()));
+//                return receivedValues. get(new Random().nextInt(m1bValue.size()));
+
         }
 
         HetconsValue get2bValue() {
@@ -645,8 +665,18 @@ public class HetconsProposalStatus {
                 // logger.info("Has 2a " + m2a);
                 return m2a;
             }
-            else
-                return m2bValue.get(new Random().nextInt(m2bValue.size()));
+            else {
+                return getNextCandidateValue();
+            }
+//                return m2bValue.get(new Random().nextInt(m2bValue.size()));
+        }
+
+        /**
+         * @return a value for restarting proposal in a round robin way.
+         */
+        HetconsValue getNextCandidateValue() {
+            nextCandidateCounter = (nextCandidateCounter + 1) % receivedValues.size();
+            return receivedValues.get(nextCandidateCounter);
         }
 
     }
