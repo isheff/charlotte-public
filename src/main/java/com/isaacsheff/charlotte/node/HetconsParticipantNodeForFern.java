@@ -116,7 +116,7 @@ public class HetconsParticipantNodeForFern extends HetconsParticipantService {
 //      contact = getConfig().getContact(id);
 //      loggerString += contact.getUrl() + ":" + contact.getPort() + "\n";
 //    }
-    logger.info("Consensus Decided on value " + value.getNum() + "\n" + loggerString + "\n");
+//    logger.info("Consensus Decided on value " + value.getNum() + "\n" + loggerString + "\n");
     getFern().observersDecide(quora, quorum2b);
   }
 

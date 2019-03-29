@@ -298,6 +298,7 @@ public class HetconsFern extends AgreementFernService {
 
 
     getHetconsNode().onSendBlocksInput(hetconsAttestation);
+    logger.info("This Fern " + getHetconsNode().getConfig().getContact(self).getUrl() + " decided slot " + HetconsUtil.buildConsensusId(message1a.getProposal().getSlotsList()) + " on value " + value.getNum());
 
 //    hetconsAttestationBuilder.addAllNextSlotNumbers(nextAvailableSlots(message1a.getProposal().getSlotsList()));
 //
@@ -462,14 +463,14 @@ public class HetconsFern extends AgreementFernService {
                   /* we only wait for 1 response arrived */
                   responseObserver.onNext(attestationResponse);
                   responseObserver.onCompleted();
-                  requestResponseTable.get(proposalID).clear();
+//                  requestResponseTable.get(proposalID).clear();
                   // System.err.println(proposalID+" response sent");
                 } else {
                   // System.err.println("Abort on "+proposalID+" at value "+requestValue);
-                  if (!receivedAttestation.equals(requestProposalID)) {
-                    getHetconsNode().abortProposal(HetconsUtil.buildConsensusId(slots));
-                    responseSlotAlreadyTaken(request, responseObserver);
+                  if (!receivedProposalID.equals(requestProposalID)) {
+                    getHetconsNode().abortProposal(requestProposalID);
                   }
+                  responseSlotAlreadyTaken(request, responseObserver);
                 }
                 requestResponseTable.get(proposalID).forEach(Thread::interrupt);
                 requestResponseTable.get(proposalID).clear();
