@@ -298,7 +298,7 @@ public class HetconsFern extends AgreementFernService {
 
 
     getHetconsNode().onSendBlocksInput(hetconsAttestation);
-    logger.info("This Fern " + getHetconsNode().getConfig().getContact(self).getUrl() + " decided slot " + HetconsUtil.buildConsensusId(message1a.getProposal().getSlotsList()) + " on value " + value.getNum());
+    logger.info("This Fern " + getHetconsNode().getConfig().getContact(self).getPort() + " decided slot " + HetconsUtil.buildConsensusId(message1a.getProposal().getSlotsList()) + " on value " + value.getNum());
 
 //    hetconsAttestationBuilder.addAllNextSlotNumbers(nextAvailableSlots(message1a.getProposal().getSlotsList()));
 //

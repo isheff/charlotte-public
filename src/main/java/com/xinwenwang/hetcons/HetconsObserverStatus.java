@@ -97,6 +97,10 @@ public class HetconsObserverStatus {
         }
 
         if (proposalStatus.containsKey(proposalStatusID)) {
+            if (timeout != 0) {
+                System.err.println(name+": already get a proposal, to reduce contention, ignore this proposal for "+proposalStatusID);
+                return true;
+            }
             if (!(proposal.getBallot().getBallotSequence().compareTo(
                     proposalStatus.get(proposalStatusID).getCurrentProposal().getBallot().getBallotSequence()) >= 0)) {
                 System.err.println(name+":Receive Restart but haven't pass ballot test on "+ proposalStatusID);

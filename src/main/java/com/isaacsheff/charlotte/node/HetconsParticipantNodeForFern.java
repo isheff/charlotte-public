@@ -128,13 +128,17 @@ public class HetconsParticipantNodeForFern extends HetconsParticipantService {
   @Override
   public Iterable<SendBlocksResponse> onSendBlocksInput(Block block) {
     if (block.hasIntegrityAttestation() && storeNewBlock(block) && block.getIntegrityAttestation().hasSignedHetconsAttestation()) {
-      block.getIntegrityAttestation().getSignedHetconsAttestation().getAttestation().getSlotsList().forEach(e -> {
-        Long slot = nextSlot.putIfAbsent(e.getRoot(), e.getSlot() + 1);
-        /* update next available slot */
-        if (slot != null && slot < e.getSlot() + 1) {
-          nextSlot.put(e.getRoot(), e.getSlot() + 1);
-        }
-      });
+
+      synchronized (nextSlot) {
+        block.getIntegrityAttestation().getSignedHetconsAttestation().getAttestation().getSlotsList().forEach(e -> {
+          Long slot = nextSlot.putIfAbsent(e.getRoot(), e.getSlot() + 1);
+          /* update next available slot */
+          if (slot != null && slot < e.getSlot() + 1) {
+            nextSlot.put(e.getRoot(), e.getSlot() + 1);
+          }
+        });
+      }
+
       getFern().saveAttestation(block.getIntegrityAttestation());
 //      for (CryptoId o : block.getIntegrityAttestation().getHetconsAttestation().getObserversList()) {
 //        sendBlock(o, block);
@@ -165,8 +169,10 @@ public class HetconsParticipantNodeForFern extends HetconsParticipantService {
    * @return
    */
   public Long getNextAvailableSlot(Reference root) {
-    nextSlot.putIfAbsent(root, 1L);
-    return nextSlot.get(root);
+    synchronized (nextSlot) {
+      nextSlot.putIfAbsent(root, 1L);
+      return nextSlot.get(root);
+    }
   }
 
   /**

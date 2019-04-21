@@ -15,15 +15,14 @@ import com.xinwenwang.hetcons.HetconsUtil;
 import com.xinwenwang.hetcons.config.ChainConfig;
 import com.xinwenwang.hetcons.config.HetconsConfig;
 import com.xinwenwang.hetcons.config.ObserverConfig;
+import io.grpc.Deadline;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.logging.Logger;
 
 public class HetconsExperimentClient {
@@ -235,6 +234,7 @@ public class HetconsExperimentClient {
         Set<Hash> chainNames;
         List<Contact> fernContact;
         CharlotteNodeService localService;
+        ExecutorService stateChangeListener = Executors.newSingleThreadExecutor();
 
         Chain(String observerConfigFileName,
               HetconsConfig hetconsConfig,
@@ -343,13 +343,16 @@ public class HetconsExperimentClient {
 //                List<IntegrityAttestation.ChainSlot> slots = input.getPolicy().getHetconsPolicy().getProposal().getM1A().getProposal().getSlotsList();
                 if (response == null) {
 //                    logger.info(String.format("%d:%d:Beginning slot for %s", i, fernContact.getPort(), slots.toString()));
-                    logger.info(String.format("Beginning slot for %d:%d", i, chainNames.size()));
+                    logger.info(String.format(clientNode.getContact().getPort() + ":Beginning slot for %d:%d", i, chainNames.size()));
                 } else {
 //                    logger.info(String.format("%d:%d:Retry: Slot has been taken. Retry another %s", i, fernContact.getPort(), slots));
-                    logger.info(String.format("Retry: Slot has been taken. Retry %d:%d", i, chainNames.size()));
+                    logger.info(String.format(clientNode.getContact().getPort() + ":Retry: Slot has been taken. Retry %d:%d", i, chainNames.size()));
                 }
-                response = clientNode.requestIntegrityAttestation(input);
+
+                response = clientNode.getBlockingStub().withDeadline(Deadline.after(30, TimeUnit.SECONDS)).requestIntegrityAttestation(input);
 //                logger.info("Response back for "+slots.toString());
+                if (response == null)
+                    continue;
                 if (response.getErrorMessage() == null || response.getErrorMessage().length() == 0) {
 //                    logger.info(String.format("%d:%d:Received response for %s", i, fernContact.getPort(), slots.toString()));
                     logger.info(String.format("Received response for %d:%d", i, chainNames.size()));
