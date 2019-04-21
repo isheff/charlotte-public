@@ -12,6 +12,8 @@ import com.isaacsheff.charlotte.proto.IntegrityAttestation.SignedHetconsAttestat
 import com.isaacsheff.charlotte.yaml.Config;
 import com.xinwenwang.hetcons.HetconsUtil;
 import com.xinwenwang.hetcons.config.HetconsConfig;
+import io.grpc.Context;
+import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import org.apache.commons.lang3.tuple.MutablePair;
 import org.apache.commons.lang3.tuple.Pair;
@@ -439,6 +441,11 @@ public class HetconsFern extends AgreementFernService {
 
               RequestIntegrityAttestationResponse attestationResponse = getHetconsAttestation(slot, ob);
 
+              if (Context.current().isCancelled()) {
+                responseObserver.onError(Status.CANCELLED.withDescription("Cancelled by client").asRuntimeException());
+                return;
+              }
+
               /* return if this proposal has been responded */
               if (requestResponseComplete.get(proposalID))
                 return;
@@ -461,8 +468,13 @@ public class HetconsFern extends AgreementFernService {
 
                 if (receivedProposalID.equals(requestProposalID) && receivedAttestation.getAttestedValue().equals(requestValue)) {
                   /* we only wait for 1 response arrived */
-                  responseObserver.onNext(attestationResponse);
-                  responseObserver.onCompleted();
+                  try {
+                    responseObserver.onNext(attestationResponse);
+                    responseObserver.onCompleted();
+                  } catch (RuntimeException ex) {
+                    logger.info(ex.getMessage());
+
+                  }
 //                  requestResponseTable.get(proposalID).clear();
                   // System.err.println(proposalID+" response sent");
                 } else {
@@ -493,13 +505,17 @@ public class HetconsFern extends AgreementFernService {
 
   /* If one or more slots in the request are taken by other proposals, then send back a list of chain slot that available */
   private void responseSlotAlreadyTaken(RequestIntegrityAttestationInput request, final StreamObserver<RequestIntegrityAttestationResponse> responseObserver) {
-    responseObserver.onNext(RequestIntegrityAttestationResponse.newBuilder().
-            setErrorMessage("One or more slots have already been taken.").
-            setAttestation(IntegrityAttestation.newBuilder().setSignedHetconsAttestation(
-                    SignedHetconsAttestation.newBuilder().setAttestation(
-                    HetconsAttestation.newBuilder().addAllNextSlotNumbers(nextAvailableSlots(request.getPolicy().getHetconsPolicy().getProposal().getM1A().getProposal().getSlotsList())).build())))
-            .build());
-    responseObserver.onCompleted();
+    try {
+      responseObserver.onNext(RequestIntegrityAttestationResponse.newBuilder().
+          setErrorMessage("One or more slots have already been taken.").
+          setAttestation(IntegrityAttestation.newBuilder().setSignedHetconsAttestation(
+              SignedHetconsAttestation.newBuilder().setAttestation(
+                  HetconsAttestation.newBuilder().addAllNextSlotNumbers(nextAvailableSlots(request.getPolicy().getHetconsPolicy().getProposal().getM1A().getProposal().getSlotsList())).build())))
+          .build());
+      responseObserver.onCompleted();
+    } catch (RuntimeException ex) {
+
+    }
     // System.err.println("Next response sent for " + HetconsUtil.buildConsensusId(request.getPolicy().getHetconsPolicy().getProposal().getM1A().getProposal().getSlotsList()));
   }
 

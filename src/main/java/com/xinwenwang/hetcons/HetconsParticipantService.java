@@ -174,6 +174,10 @@ public class HetconsParticipantService extends CharlotteNodeService {
             if (!o.getId().equals(getConfig().getCryptoId()))
                 return;
             HetconsObserverStatus observerStatus = observers.get(HetconsUtil.cryptoIdToString(o.getId()));
+//            if (observerStatus.getProposalStatus().containsKey(HetconsUtil.buildConsensusId(proposal.getSlotsList()))
+//            && proposal.getTimeout() != 0) {
+//                return;
+//            }
             executorService.submit(() -> {
                 observerStatus.receive1a(inputBlock,
                         proposal.getTimeout(),

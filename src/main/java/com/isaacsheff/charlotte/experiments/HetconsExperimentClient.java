@@ -16,6 +16,7 @@ import com.xinwenwang.hetcons.config.ChainConfig;
 import com.xinwenwang.hetcons.config.HetconsConfig;
 import com.xinwenwang.hetcons.config.ObserverConfig;
 import io.grpc.Deadline;
+import io.grpc.StatusRuntimeException;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -349,10 +350,15 @@ public class HetconsExperimentClient {
                     logger.info(String.format(clientNode.getContact().getPort() + ":Retry: Slot has been taken. Retry %d:%d", i, chainNames.size()));
                 }
 
-                response = clientNode.getBlockingStub().withDeadline(Deadline.after(30, TimeUnit.SECONDS)).requestIntegrityAttestation(input);
-//                logger.info("Response back for "+slots.toString());
-                if (response == null)
+                try {
+                    response = clientNode.getBlockingStub().withDeadline(Deadline.after(30, TimeUnit.SECONDS)).requestIntegrityAttestation(input);
+//                    response = clientNode.getBlockingStub().withDeadline(Deadline.after(1, TimeUnit.MILLISECONDS)).requestIntegrityAttestation(input);
+                } catch (StatusRuntimeException ex) {
+                    proposeCount --;
                     continue;
+                }
+//                response = clientNode.requestIntegrityAttestation(input);
+//                logger.info("Response back for "+slots.toString());
                 if (response.getErrorMessage() == null || response.getErrorMessage().length() == 0) {
 //                    logger.info(String.format("%d:%d:Received response for %s", i, fernContact.getPort(), slots.toString()));
                     logger.info(String.format("Received response for %d:%d", i, chainNames.size()));
@@ -360,7 +366,7 @@ public class HetconsExperimentClient {
                 response.getAttestation().getSignedHetconsAttestation().getAttestation().getNextSlotNumbersList().forEach(chainSlot -> {
                     chainStatus.put(chainSlot.getRoot().getHash(), chainSlot.getSlot());
                 });
-            } while (response.getErrorMessage() != null && response.getErrorMessage().length() > 0);
+            } while ((response == null) || (response.getErrorMessage() != null && response.getErrorMessage().length() > 0));
             return proposeCount;
         }
 
