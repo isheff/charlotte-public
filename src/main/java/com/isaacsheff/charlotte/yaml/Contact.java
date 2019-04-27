@@ -164,7 +164,7 @@ public class Contact {
    * @param delayInterval the builder will pseudorandomly delay between 0 and delayInterval NANOSECONDS
    * @return A ChannelBuilder for this contact's url and port
    */
-  public NettyChannelBuilder getChannelBuilder(long delayInterval) {
+  private NettyChannelBuilder getChannelBuilder(long delayInterval) {
     try {
       logger.log(Level.INFO, "Channel Start Delay is happening now: " + now());
       TimeUnit.NANOSECONDS.sleep(Math.floorMod((new Random(
@@ -188,12 +188,7 @@ public class Contact {
    * @return A Managed Channel talking to the server this Contact describes.
    */
   public ManagedChannel getManagedChannel() {
-    return getChannelBuilder(1000000000l /** 1 second */).
-             withOption(ChannelOption.SO_REUSEADDR, true).
-             useTransportSecurity().
-             disableRetry().
-             sslContext(getSslContext()).
-             build();
+    return getManagedChannel(1000000000l /** 1 second */);
   }
 
   /**
@@ -209,6 +204,7 @@ public class Contact {
   public ManagedChannel getManagedChannel(long delayInterval) {
     return getChannelBuilder(delayInterval).
              withOption(ChannelOption.SO_REUSEADDR, true).
+             withOption(ChannelOption.TCP_NODELAY, true).
              useTransportSecurity().
              disableRetry().
              sslContext(getSslContext()).
