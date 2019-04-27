@@ -1,0 +1,9 @@
+---
+participants:
+  - x509: server.pem
+    url: alice.com
+    port: 9123
+
+  - x509: server.pem
+    url: bob.com
+    port: 9124

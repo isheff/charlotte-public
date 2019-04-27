@@ -174,6 +174,7 @@ public class Contact {
     } catch (InterruptedException e) {
       logger.log(Level.SEVERE, "Interrupted while trying to sleep prior to channel building", e);
     }
+    logger.info("Establishing a new channel to " + getUrl() + ":" + getPort());
     return NettyChannelBuilder.forAddress(getUrl(),getPort());
   }
 
@@ -206,8 +207,10 @@ public class Contact {
              withOption(ChannelOption.SO_REUSEADDR, true).
              withOption(ChannelOption.TCP_NODELAY, true).
              useTransportSecurity().
-             disableRetry().
+//             disableRetry().
+             enableRetry().
              sslContext(getSslContext()).
+             maxInboundMessageSize(Integer.MAX_VALUE).
              build();
   }
 

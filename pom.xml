@@ -237,6 +237,14 @@
              </systemProperties>
           </configuration>
         </plugin>
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <configuration>
+                <source>10</source>
+                <target>10</target>
+            </configuration>
+        </plugin>
 
     </plugins>
   </build>
@@ -524,8 +532,9 @@
       </build>
     </profile>
 
+    <!--Hetcons Experiment-->
     <profile>
-      <id>agreement-n-client</id>
+      <id>hetcons-experiment-client</id>
       <build>
         <plugins>
           <!-- For executable jars with dependencies included https://mvnrepository.com/artifact/org.apache.maven.plugins/maven-assembly-plugin -->
@@ -536,7 +545,7 @@
             </configuration>
             <executions>
               <execution>
-                <id>agreement-n-client</id>
+                <id>hetcons-experiment-client</id>
                 <phase>package</phase>
                 <goals>
                   <goal>single</goal>
@@ -544,13 +553,13 @@
                 <configuration>
                   <archive>
                     <manifest>
-                      <mainClass>com.isaacsheff.charlotte.experiments.AgreementNClient</mainClass>
+                      <mainClass>com.isaacsheff.charlotte.experiments.HetconsExperimentClient</mainClass>
                     </manifest>
                   </archive>
                   <descriptorRefs>
                     <descriptorRef>jar-with-dependencies</descriptorRef>
                   </descriptorRefs>
-                  <finalName>agreement_n_client</finalName>
+                  <finalName>hetcons_experiment_client</finalName>
                 </configuration>
               </execution>
             </executions>
@@ -560,7 +569,7 @@
     </profile>
 
     <profile>
-      <id>agreement-n-fern</id>
+      <id>hetcons-experiment-fern</id>
       <build>
         <plugins>
           <!-- For executable jars with dependencies included https://mvnrepository.com/artifact/org.apache.maven.plugins/maven-assembly-plugin -->
@@ -571,7 +580,7 @@
             </configuration>
             <executions>
               <execution>
-                <id>agreement-n-fern</id>
+                <id>hetcons-experiment-fern</id>
                 <phase>package</phase>
                 <goals>
                   <goal>single</goal>
@@ -579,83 +588,13 @@
                 <configuration>
                   <archive>
                     <manifest>
-                      <mainClass>com.isaacsheff.charlotte.experiments.AgreementNFern</mainClass>
+                      <mainClass>com.isaacsheff.charlotte.experiments.HetconsExperimentFernNode</mainClass>
                     </manifest>
                   </archive>
                   <descriptorRefs>
                     <descriptorRef>jar-with-dependencies</descriptorRef>
                   </descriptorRefs>
-                  <finalName>agreement_n_fern</finalName>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-
-    <profile>
-      <id>agreement-nw-fern</id>
-      <build>
-        <plugins>
-          <!-- For executable jars with dependencies included https://mvnrepository.com/artifact/org.apache.maven.plugins/maven-assembly-plugin -->
-          <plugin>
-            <artifactId>maven-assembly-plugin</artifactId>
-            <configuration>
-              <appendAssemblyId>false</appendAssemblyId>
-            </configuration>
-            <executions>
-              <execution>
-                <id>agreement-nw-fern</id>
-                <phase>package</phase>
-                <goals>
-                  <goal>single</goal>
-                </goals>
-                <configuration>
-                  <archive>
-                    <manifest>
-                      <mainClass>com.isaacsheff.charlotte.experiments.AgreementNWFern</mainClass>
-                    </manifest>
-                  </archive>
-                  <descriptorRefs>
-                    <descriptorRef>jar-with-dependencies</descriptorRef>
-                  </descriptorRefs>
-                  <finalName>agreement_nw_fern</finalName>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-
-    <profile>
-      <id>agreement-nw-wilbur</id>
-      <build>
-        <plugins>
-          <!-- For executable jars with dependencies included https://mvnrepository.com/artifact/org.apache.maven.plugins/maven-assembly-plugin -->
-          <plugin>
-            <artifactId>maven-assembly-plugin</artifactId>
-            <configuration>
-              <appendAssemblyId>false</appendAssemblyId>
-            </configuration>
-            <executions>
-              <execution>
-                <id>agreement-nw-wilbur</id>
-                <phase>package</phase>
-                <goals>
-                  <goal>single</goal>
-                </goals>
-                <configuration>
-                  <archive>
-                    <manifest>
-                      <mainClass>com.isaacsheff.charlotte.experiments.AgreementNWilbur</mainClass>
-                    </manifest>
-                  </archive>
-                  <descriptorRefs>
-                    <descriptorRef>jar-with-dependencies</descriptorRef>
-                  </descriptorRefs>
-                  <finalName>agreement_nw_wilbur</finalName>
+                  <finalName>hetcons_experiment_fern</finalName>
                 </configuration>
               </execution>
             </executions>

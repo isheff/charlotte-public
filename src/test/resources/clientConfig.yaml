@@ -1,0 +1,33 @@
+---
+me: alice
+privatekey: private-key.pem
+blocksperexperiment: 1
+fernservers:
+    - observer1
+    - observer2
+    - observer3
+    - observer4
+contactServer: observer1
+chainNames:
+    - abc
+contacts:
+  alice:
+    x509: server5.pem
+    url: localhost
+    port: 8005
+  observer1:
+    x509: server1.pem
+    url: localhost
+    port: 8001
+  observer2:
+    x509: server2.pem
+    url: localhost
+    port: 8002
+  observer3:
+    x509: server3.pem
+    url: localhost
+    port: 8003
+  observer4:
+    x509: server4.pem
+    url: localhost
+    port: 8004

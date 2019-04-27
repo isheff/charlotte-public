@@ -20,15 +20,16 @@ public class HetconsConfig {
     private static final Logger logger = Logger.getLogger(HetconsConfig.class.getName());
 
 
-    protected static File configFileDirectory;
-    private HashMap<String, ChainConfig> configHashMap;
+    protected Path configFileDirectory;
+    private HashMap<List<String>, ChainConfig> configHashMap;
 
 
-    public boolean loadChain(String name) {
+    public ChainConfig loadChain(String name) {
         ChainConfig config = parseHetconsYaml(Paths.get(configFileDirectory.toString(), name+".yaml"));
-        if (config != null)
-            configHashMap.put(config.getId(), config);
-        return config != null;
+        if (config != null) {
+            configHashMap.put(config.getRoot(), config);
+        }
+        return config;
     }
 
     public ChainConfig getChainConfig(String hash) {
@@ -51,17 +52,20 @@ public class HetconsConfig {
 //        HetconsConfig.configFileDirectory = new File(configFileDirectory);
 //    }
 
+    public HetconsConfig(Path path) {
+        this.configFileDirectory = path;
+        this.configHashMap = new HashMap<List<String>, ChainConfig>();
+    }
+
     public HetconsConfig() {
-        if (HetconsConfig.configFileDirectory == null)
-            this.configFileDirectory = new File(".");
-        this.configHashMap = new HashMap<>();
+        this(Paths.get("."));
     }
 
-    public static void setConfigFileDirectory(String fileDirectory) {
-        HetconsConfig.configFileDirectory = new File(fileDirectory);
+    public void setConfigFileDirectory(String fileDirectory) {
+        this.configFileDirectory = Paths.get(fileDirectory);
     }
 
-    public static File getConfigFileDirectory() {
+    public Path getConfigFileDirectory() {
         return configFileDirectory;
     }
 
@@ -82,6 +86,8 @@ public class HetconsConfig {
     static public void updateChainConfig() {
         //TODO: May or may not need this
     }
+
+
 
 
 

@@ -5,36 +5,38 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.isaacsheff.charlotte.proto.HetconsObserverGroup;
 import com.isaacsheff.charlotte.yaml.JsonContact;
 
+import java.nio.file.Path;
 import java.util.List;
 import java.util.stream.Collectors;
 
 public class ChainConfig {
 
-    @JsonProperty("id") private String id;
+    @JsonProperty("root") private List<String> roots;
 
     @JsonProperty("observers") private List<ObserverConfig> observers;
 
     @JsonCreator
     public ChainConfig(
-            @JsonProperty("id") String id,
+            @JsonProperty("root") List<String> root,
             @JsonProperty("observers") List<ObserverConfig> observers
     ) {
         this.observers = observers;
-        this.id = id;
+        this.roots = root;
     }
 
-    public String getId() {
-        return id;
+    public List<String> getRoot() {
+        return roots;
     }
 
     public List<ObserverConfig> getObservers() {
         return observers;
     }
 
-    public HetconsObserverGroup getObserverGroup() {
+    public HetconsObserverGroup getObserverGroup(Path dir) {
         return HetconsObserverGroup.newBuilder()
+                .addAllRoots(roots)
                 .addAllObservers(observers.stream().map(observerConfig -> {
-                  return observerConfig.toHetconsObserver();
+                  return observerConfig.toHetconsObserver(dir);
                 }).collect(Collectors.toList()))
                 .build();
     }

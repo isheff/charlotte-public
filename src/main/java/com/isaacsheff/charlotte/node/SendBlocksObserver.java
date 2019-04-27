@@ -1,5 +1,6 @@
 package com.isaacsheff.charlotte.node;
 
+import static com.isaacsheff.charlotte.node.HashUtil.sha3Hash;
 import static com.isaacsheff.charlotte.node.SignatureUtil.createCryptoId;
 
 import java.security.cert.Certificate;
@@ -10,6 +11,8 @@ import java.util.logging.Logger;
 import javax.net.ssl.SSLPeerUnverifiedException;
 import javax.net.ssl.SSLSession;
 
+import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.util.JsonFormat;
 import com.isaacsheff.charlotte.proto.CryptoId;
 import com.isaacsheff.charlotte.proto.SendBlocksInput;
 import com.isaacsheff.charlotte.proto.SendBlocksResponse;
@@ -45,6 +48,7 @@ public class SendBlocksObserver implements StreamObserver<SendBlocksInput> {
   /** The Public Key of the client from which this incoming stream is being sent, or null, if we can't identify it. */
   private final PublicKey publicKey;
 
+  private String loggingString;
   /**
    * Constructor.
    * A sendBlocks request has just arrived at the service.
@@ -78,6 +82,10 @@ public class SendBlocksObserver implements StreamObserver<SendBlocksInput> {
     this.publicKey = publicKey;
     this.cryptoId = cryptoId;
     this.contact = contact;
+    loggingString=",\n \"originUrl\":\"" + contact.getUrl() + "\"" +
+            ",\n \"originPort\":\"" + contact.getPort() + "\"" +
+            ",\n \"destinationUrl\":\"" + service.getConfig().getContact(service.getConfig().getMe()).getUrl() + "\"" +
+            ",\n \"destinationPort\":\"" + service.getConfig().getContact(service.getConfig().getMe()).getPort() + "\"";
   }
 
   /** @return the CharlotteNodeService associated with this Observer. */
@@ -104,6 +112,14 @@ public class SendBlocksObserver implements StreamObserver<SendBlocksInput> {
    * @param input the new SendBlocksInput that has just arrived on the wire.
    */
   public void onNext(SendBlocksInput input) {
+//    try {
+//      logger.info("{ \"Receive Block\":"+ JsonFormat.printer().print(sha3Hash(input.getBlock()))+
+//              (input.getBlock().hasHetconsBlock() ? ("\n Message Type: " +input.getBlock().getHetconsBlock().getHetconsMessage().getType()) : "") +
+//              loggingString +
+//              ",\n \"size\":" + input.getSerializedSize() + " }");
+//    } catch (InvalidProtocolBufferException e) {
+//      logger.log(Level.SEVERE, "Invalid protocol buffer parsed as Block", e);
+//    }
     for (SendBlocksResponse response : (getCharlotteNodeService().onSendBlocksInput(input, this))) {
       getResponseObserver().onNext(response);
     }

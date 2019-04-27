@@ -34,13 +34,5 @@ public class App {
    */
   static {Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());}
   public static void main( String[] args ) {
-    GenerateX509.generateKeyFiles("src/test/resources/server.pem",
-                                  "src/test/resources/private-key.pem",
-                                  "isheff.cs.cornell.edu",
-                                  "128.84.155.11");
-    KeyPair keyPair = (new Config("src/test/resources/config.yaml")).getKeyPair();
-    Block challenge = Block.newBuilder().setStr("hello, world!").build();
-    System.out.println(SignatureUtil.checkSignature(challenge, SignatureUtil.signBytes(keyPair, challenge)));
-
   }
 }

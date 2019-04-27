@@ -85,6 +85,7 @@ message Reference {
 }
 
 message IntegrityAttestation {
+
   message ChainSlot {
     Reference block = 1;
     Reference root = 2;
@@ -115,7 +116,17 @@ message IntegrityAttestation {
   message HetconsAttestation {
     repeated CryptoId observers = 1;
     repeated Reference message2b = 2;
+    repeated IntegrityAttestation.ChainSlot slots = 3;
+    HetconsValue attested_value = 4;
+    repeated IntegrityAttestation.ChainSlot next_slot_numbers = 5;
+//    Reference observer_group_reference =6;
   }
+
+  message SignedHetconsAttestation {
+    HetconsAttestation attestation = 1;
+    Signature signaure = 2;
+  }
+
   oneof integrityattestationtype_oneof {
     AnyWithReference any = 1; // Fill in your own Integrity policy type
 
@@ -124,7 +135,8 @@ message IntegrityAttestation {
     SignedChainSlot signedChainSlot = 2;
     SignedTimestampedReferences signedTimestampedReferences = 3;
     SignedGitSimBranch signedGitSimBranch = 4;
-    HetconsAttestation hetconsAttestation = 5;
+    // HetconsAttestation hetconsAttestation = 5;
+    SignedHetconsAttestation signedHetconsAttestation = 6;
   }
 }
 
@@ -176,7 +188,7 @@ message Block {
     AvailabilityAttestation availabilityAttestation = 4;
     IntegrityAttestation integrityAttestation = 5;
     SignedGitSimCommit signedGitSimCommit= 6;
-    HetconsMessage hetconsMessage = 7;
+    HetconsBlock hetconsBlock = 7;
   }
 }
 
@@ -264,7 +276,8 @@ message RequestIntegrityAttestationInput {
 }
 message RequestIntegrityAttestationResponse {
   string errorMessage = 1;
-  Reference reference = 2;
+  Reference reference = 2; // reference to the attestation? Would prefer to add attestation inside the response.
+  IntegrityAttestation attestation = 3;
 }
 service Fern { // anything running a Fern service should also run a CharlotteNode
   rpc RequestIntegrityAttestation(RequestIntegrityAttestationInput) returns (RequestIntegrityAttestationResponse) {}
@@ -302,19 +315,6 @@ enum HetconsProposalType {
   BlockSlot = 0;
 }
 
-
-//message HetconsParticipatedAccountsInfo {
-//  charlotte.Hash chainHash = 1;
-//  HetconsSlot slot = 2;
-//}
-
-message HetconsSlot {
-  oneof slot_type_oneof {
-    int64 blockSlotNumber = 1;
-    IntegrityAttestation.ChainSlot chainSlot = 2;
-  }
-}
-
 message HetconsBallot {
     oneof ballot_onefo {
         int64 ballotNumber = 1;
@@ -333,15 +333,19 @@ message HetconsProposal {
   int64 timeout = 7;
 }
 
-// references of a quorum of 1bs or 2bs.
-message HetconsQuorumRefs {
-  repeated charlotte.Hash blockHashes = 1;
-}
 
 message HetconsObserverQuorum {
+
+  message Spec {
+    string base = 1;
+    int32 size = 2;
+  }
+
   charlotte.CryptoId owner = 1;
-  repeated charlotte.CryptoId memebers = 3;
-  // TODO: fault type?
+  repeated charlotte.CryptoId members = 2;
+  repeated Spec specs = 3;
+  string name = 4;
+  bool main = 5;
 }
 
 message HetconsObserver {
@@ -352,16 +356,22 @@ message HetconsObserver {
 // the group of observers that the message to be sent.
 message HetconsObserverGroup {
   repeated HetconsObserver observers = 1;
+  repeated string roots = 2;
 }
 
 
 // Main Messages
-
 enum HetconsMessageType {
   M1a = 0;
   M1b = 1;
   M2b = 2;
   PROPOSAL = 3;
+  OBSERVERGROUP = 4;
+}
+
+message HetconsBlock {
+  HetconsMessage hetcons_message = 1;
+  charlotte.Signature sig = 2;
 }
 
 message HetconsMessage {
@@ -370,12 +380,12 @@ message HetconsMessage {
     HetconsMessage1a m1a = 1;
     HetconsMessage1b m1b = 2;
     HetconsMessage2ab m2b = 3;
-    HetconsProposal proposal = 5;
+    HetconsObserverGroup observerGroup = 5;
   }
-  HetconsObserverGroup observerGroup = 6;
-  charlotte.Signature sig = 7;
+  Reference observerGroupReferecne = 10;
   charlotte.CryptoId identity = 8;
 }
+
 
 // Leader Propose the new value with a new bollot number
 message HetconsMessage1a {
@@ -384,17 +394,20 @@ message HetconsMessage1a {
 
 // Acceptors reply to the leader with (Proposal for bollet b, and previous accepted proposal which is a 2a message
 message HetconsMessage1b {
-  HetconsMessage1a m1a = 1;
+  charlotte.Reference m1a_ref = 1;
   HetconsMessage2ab m2a = 2;
-  HetconsValue value = 3;
 
 }
 
 // 2a and 2b messages have the same format. The difference is that the sig in 2a should be the host server itself.
 message HetconsMessage2ab {
-  HetconsProposal proposal = 1;
+  charlotte.Reference m1a_ref = 1;
   HetconsQuorumRefs quorum_of_1bs = 2;
-  HetconsValue value = 3;
+}
+
+// references of a quorum of 1bs or 2bs.
+message HetconsQuorumRefs {
+  repeated charlotte.Reference block_hashes = 1;
 }
 
 

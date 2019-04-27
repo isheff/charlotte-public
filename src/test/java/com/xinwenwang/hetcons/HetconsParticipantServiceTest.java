@@ -4,24 +4,23 @@ import static com.isaacsheff.charlotte.node.PortUtil.getFreshPort;
 
 import com.google.protobuf.ByteString;
 import com.isaacsheff.charlotte.node.CharlotteNode;
-import com.isaacsheff.charlotte.node.CharlotteNodeServiceTest;
 import com.isaacsheff.charlotte.proto.*;
 import com.isaacsheff.charlotte.yaml.*;
 import com.xinwenwang.hetcons.config.HetconsConfig;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Logger;
 import java.util.logging.Level;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class HetconsParticipantServiceTest extends HetconsTest {
 
@@ -34,7 +33,6 @@ public class HetconsParticipantServiceTest extends HetconsTest {
     // 1b sent correctly
 
 
-    @Test
     void proposeNewBlock() {
 
         ArrayList<JsonContact> testContacts = new ArrayList<>();
@@ -66,11 +64,11 @@ public class HetconsParticipantServiceTest extends HetconsTest {
                 "clientNode",
                 contacts);
 
-        HetconsConfig.setConfigFileDirectory(testDirectory);
+//        HetconsConfig.setConfigFileDirectory(testDirectory);
 
         ArrayList<Thread> threads = new ArrayList<>();
 
-        startNewService(serverJsonConfig, threads);
+        Config serverConfig = startNewService(serverJsonConfig, threads);
         for (int i = 3; i <= 10; i ++) {
             startNewService(new JsonConfig("private-key"+i+".pem",
                     "server"+(i),
@@ -98,7 +96,7 @@ public class HetconsParticipantServiceTest extends HetconsTest {
          * Set up observer group
          */
         HetconsObserverQuorum quorum = HetconsObserverQuorum.newBuilder()
-                .addAllMemebers(quorumMembers)
+                .addAllMembers(quorumMembers)
                 .setOwner(serverContact.getCryptoId())
 //                .setSize(quorumMembers.size())
                 .build();
@@ -128,9 +126,18 @@ public class HetconsParticipantServiceTest extends HetconsTest {
                         .build())
                 .setSlot(1)
                 .build();
+        IntegrityAttestation.ChainSlot slot2 = IntegrityAttestation.ChainSlot.newBuilder()
+                .setRoot(Reference.newBuilder()
+                        .setHash(Hash.newBuilder().setSha3(ByteString.copyFromUtf8("efg")).build())
+                        .build())
+                .setSlot(1)
+                .build();
 
         ArrayList<IntegrityAttestation.ChainSlot> slots= new ArrayList<>();
+        ArrayList<IntegrityAttestation.ChainSlot> slots2= new ArrayList<>();
         slots.add(slot);
+        slots.add(slot2);
+        slots2.add(slot2);
         HetconsValue value = HetconsValue.newBuilder()
                 .setNum(100).build();
 
@@ -144,8 +151,8 @@ public class HetconsParticipantServiceTest extends HetconsTest {
          * start the test
          */
 //        assertEquals(0, map.size(), "sizebefore propose, there should no prosals avalaible");
-        client.propose(slots, value, ballot, observerGroup, 1000);
-        client.propose(slots, value1, ballot1, observerGroup, 1000);
+        client.propose(slots, value, ballot, observerGroup, 10000);
+        client.propose(slots2, value1, ballot1, observerGroup, 10000);
 
         try {
             TimeUnit.SECONDS.sleep(10);
@@ -153,22 +160,34 @@ public class HetconsParticipantServiceTest extends HetconsTest {
             logger.log(Level.SEVERE, "Interrupt got");
             return;
         }
+        threads.forEach(t -> {
+            t.interrupt();
+        });
 //        assertEquals(1, map.size(), "Propose successfully");
 //        assertEquals(1, map.get("abc|1").getCurrentProposal().getBallot().getBallotNumber(), "ballot number different");
 //        assertEquals(100, map.get("abc|1").getCurrentProposal().getValue().getNum(), "value different");
     }
 
 
-    private HashMap<String, HetconsStatus> startNewService(JsonConfig config, List<Thread> threads) {
+    private Config startNewService(JsonConfig config, List<Thread> threads) {
 
         Config serverConfig = new Config(config, Paths.get(testDirectory));
-        HetconsConfig hetconsConfig = new HetconsConfig();
-        HetconsParticipantService service = new HetconsParticipantService(serverConfig, hetconsConfig);
+        HetconsParticipantService service = new HetconsParticipantService(serverConfig);
         CharlotteNode node = new CharlotteNode(service);
-        HashMap<String, HetconsStatus> map = service.getProposalStatusHashMap();
+//        HashMap<String, HetconsProposalStatus> map = service.getProposalStatusHashMap();
         final Thread thread = new Thread(node);
         threads.add(thread);
         thread.start();
-        return map;
+        return serverConfig;
+    }
+
+    @Test
+    void testProposalNewBlock() {
+        assertDoesNotThrow(new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                proposeNewBlock();
+            }
+        });
     }
 }

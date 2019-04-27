@@ -21,7 +21,9 @@ public class ConcurrentHolder<T> {
       while (v == null) {
         try {
           this.wait();
-        } catch (InterruptedException e) {}
+        } catch (InterruptedException e) {
+          break;
+        }
         v = this.value;
       }
     }

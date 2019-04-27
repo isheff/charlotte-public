@@ -1,6 +1,5 @@
 package com.isaacsheff.charlotte.yaml;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
@@ -21,6 +20,26 @@ public class JsonContact {
   /** The TCP port we should try and call this server on */
   @JsonProperty("port") private final int port;
 
+  /** Is this contact a Hetcons client? */
+  @JsonProperty("isClient") private boolean isClient = false;
+
+  /**
+   * Create a new JsonContact.
+   * These contacts are expected to have a URL, TCP Port, and X509 certificate (public key).
+   * @param x509 the filename of the x509 certificate, relative to the location of the config file.
+   * @param url Some kind of identifier for the server, maybe an IP, maybe a DNS thing, whatever. 
+   * @param port The TCP port we should try and call this server on 
+   */
+  public JsonContact(
+          String x509,
+          String url,
+          int port
+  ) {
+    this.url = url;
+    this.port = port;
+    this.x509 = x509;
+  }
+
   /**
    * Create a new JsonContact.
    * This is meant to be used by the Jackson parser.
@@ -29,15 +48,16 @@ public class JsonContact {
    * @param url Some kind of identifier for the server, maybe an IP, maybe a DNS thing, whatever. 
    * @param port The TCP port we should try and call this server on 
    */
-  @JsonCreator
   public JsonContact(
-      @JsonProperty("x509") String x509,
-      @JsonProperty("url") String url,
-      @JsonProperty("port") int port
-      ) {
+          @JsonProperty("x509") String x509,
+          @JsonProperty("url") String url,
+          @JsonProperty("port") int port,
+          @JsonProperty("isClient") boolean isClient
+  ) {
     this.url = url;
     this.port = port;
     this.x509 = x509;
+    this.isClient = isClient;
   }
 
   /** @return the filename of the x509 certificate of this Contact, relative to the config file. */
@@ -48,4 +68,7 @@ public class JsonContact {
 
   /** @return the TCP port of this contact */
   @JsonProperty("port") public int getPort() {return this.port;}
+
+  /** @return Is this contact a Hetcons client? */
+  @JsonProperty("isClient") public boolean isClient() {return this.isClient;}
 }
