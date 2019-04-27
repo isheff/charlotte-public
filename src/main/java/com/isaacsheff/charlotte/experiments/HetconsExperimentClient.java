@@ -39,6 +39,8 @@ public class HetconsExperimentClient {
      */
     public static void main(String[] args) throws IOException, InterruptedException {
 
+        logger.info("Hetcons Client Version 0.0.1");
+
         final HetconsExperimentClientConfig config =
                 (new ObjectMapper(new YAMLFactory())).readValue(Paths.get(args[0]).toFile(), HetconsExperimentClientConfig.class);
 
@@ -199,7 +201,7 @@ public class HetconsExperimentClient {
                     chainMap.put(cn, new Chain(cn, hetconsConfig, config, service, expDir, Arrays.asList(cn.split("-")), chainSlotNumber));
                 }
                 Chain chain = chainMap.get(cn);
-                i += chain.proposeNewBlock(i);
+                i = chain.proposeNewBlock(i);
             } catch (FileNotFoundException ex) {
                 logger.severe(ex.getLocalizedMessage());
                 System.exit(1);
@@ -334,40 +336,45 @@ public class HetconsExperimentClient {
 //            } catch (Exception ex) {
 //                ex.printStackTrace();
 //            }
+            int index = i;
             HetconsFernClient clientNode = getClientNode();
             RequestIntegrityAttestationResponse response = null;
-            RequestIntegrityAttestationInput  input = null;
-            int proposeCount = 0;
+            RequestIntegrityAttestationInput    input = null;
+//            int proposeCount = i;
+            int nextSlot;
             do {
-                proposeCount ++;
-                input = prepareProposalBlock(i);
+                input = prepareProposalBlock(index);
 //                List<IntegrityAttestation.ChainSlot> slots = input.getPolicy().getHetconsPolicy().getProposal().getM1A().getProposal().getSlotsList();
                 if (response == null) {
 //                    logger.info(String.format("%d:%d:Beginning slot for %s", i, fernContact.getPort(), slots.toString()));
-                    logger.info(String.format(clientNode.getContact().getPort() + ":Beginning slot for %d:%d", i, chainNames.size()));
+//                    logger.info(String.format(clientNode.getContact().getPort() + ":Beginning slot for %d:%d", i, chainNames.size()));
+                    logger.info(String.format(":Beginning slot for %d:%d", index, chainNames.size()));
                 } else {
 //                    logger.info(String.format("%d:%d:Retry: Slot has been taken. Retry another %s", i, fernContact.getPort(), slots));
-                    logger.info(String.format(clientNode.getContact().getPort() + ":Retry: Slot has been taken. Retry %d:%d", i, chainNames.size()));
+                    logger.info(String.format(clientNode.getContact().getPort() + ":Retry: Slot has been taken. Retry %d:%d", index, chainNames.size()));
+//                    logger.info(String.format(":Retry: Slot has been taken. Retry %d:%d", i, chainNames.size()));
                 }
 
                 try {
                     response = clientNode.getBlockingStub().withDeadline(Deadline.after(30, TimeUnit.SECONDS)).requestIntegrityAttestation(input);
 //                    response = clientNode.getBlockingStub().withDeadline(Deadline.after(1, TimeUnit.MILLISECONDS)).requestIntegrityAttestation(input);
                 } catch (StatusRuntimeException ex) {
-                    proposeCount --;
                     continue;
                 }
 //                response = clientNode.requestIntegrityAttestation(input);
 //                logger.info("Response back for "+slots.toString());
                 if (response.getErrorMessage() == null || response.getErrorMessage().length() == 0) {
 //                    logger.info(String.format("%d:%d:Received response for %s", i, fernContact.getPort(), slots.toString()));
-                    logger.info(String.format("Received response for %d:%d", i, chainNames.size()));
+                    logger.info(String.format("Received response for %d:%d", index, chainNames.size()));
                 }
-                response.getAttestation().getSignedHetconsAttestation().getAttestation().getNextSlotNumbersList().forEach(chainSlot -> {
+                nextSlot = Integer.MAX_VALUE;
+                for (IntegrityAttestation.ChainSlot chainSlot : response.getAttestation().getSignedHetconsAttestation().getAttestation().getNextSlotNumbersList()) {
                     chainStatus.put(chainSlot.getRoot().getHash(), chainSlot.getSlot());
-                });
+                    nextSlot = Math.min((int)chainSlot.getSlot(), nextSlot);
+                }
+                i = nextSlot;
             } while ((response == null) || (response.getErrorMessage() != null && response.getErrorMessage().length() > 0));
-            return proposeCount;
+            return i;
         }
 
 
